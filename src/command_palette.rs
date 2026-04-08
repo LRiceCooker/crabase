@@ -1,6 +1,50 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
+/// Fuzzy match: checks if all characters in `pattern` appear in order in `text`.
+/// Returns a score (higher = better match) or None if no match.
+/// Bonuses: consecutive matches, word-boundary matches, prefix matches.
+fn fuzzy_score(pattern: &str, text: &str) -> Option<i32> {
+    if pattern.is_empty() {
+        return Some(0);
+    }
+
+    let pattern_lower: Vec<char> = pattern.to_lowercase().chars().collect();
+    let text_lower: Vec<char> = text.to_lowercase().chars().collect();
+    let text_chars: Vec<char> = text.chars().collect();
+
+    let mut score: i32 = 0;
+    let mut pattern_idx = 0;
+    let mut prev_match_idx: Option<usize> = None;
+
+    for (i, &ch) in text_lower.iter().enumerate() {
+        if pattern_idx < pattern_lower.len() && ch == pattern_lower[pattern_idx] {
+            score += 1;
+
+            // Bonus for consecutive matches
+            if let Some(prev) = prev_match_idx {
+                if i == prev + 1 {
+                    score += 5;
+                }
+            }
+
+            // Bonus for matching at word boundary (start, after space/separator)
+            if i == 0 || matches!(text_chars.get(i.wrapping_sub(1)), Some(' ' | '_' | '-')) {
+                score += 3;
+            }
+
+            prev_match_idx = Some(i);
+            pattern_idx += 1;
+        }
+    }
+
+    if pattern_idx == pattern_lower.len() {
+        Some(score)
+    } else {
+        None
+    }
+}
+
 #[component]
 pub fn CommandPalette(
     show: ReadSignal<bool>,
@@ -26,11 +70,19 @@ pub fn CommandPalette(
 
     move || {
         if show.get() {
-            let q = query.get().to_lowercase();
-            let filtered: Vec<_> = commands
+            let q = query.get();
+            let mut scored: Vec<_> = commands
                 .iter()
-                .filter(|(name, _)| q.is_empty() || name.to_lowercase().contains(&q))
+                .filter_map(|cmd| {
+                    if q.is_empty() {
+                        Some((cmd, 0))
+                    } else {
+                        fuzzy_score(&q, cmd.0).map(|s| (cmd, s))
+                    }
+                })
                 .collect();
+            scored.sort_by(|a, b| b.1.cmp(&a.1));
+            let filtered: Vec<_> = scored.into_iter().map(|(cmd, _)| cmd).collect();
 
             Some(view! {
                 <div class="fixed inset-0 z-50 flex justify-center items-start pt-[15vh]">
@@ -75,5 +127,65 @@ pub fn CommandPalette(
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_pattern_matches_everything() {
+        assert_eq!(fuzzy_score("", "Restore Backup"), Some(0));
+        assert_eq!(fuzzy_score("", ""), Some(0));
+    }
+
+    #[test]
+    fn exact_match() {
+        assert!(fuzzy_score("Restore Backup", "Restore Backup").is_some());
+    }
+
+    #[test]
+    fn case_insensitive() {
+        let lower = fuzzy_score("restore", "Restore Backup");
+        let upper = fuzzy_score("RESTORE", "Restore Backup");
+        assert!(lower.is_some());
+        assert!(upper.is_some());
+        assert_eq!(lower, upper);
+    }
+
+    #[test]
+    fn fuzzy_subsequence_matches() {
+        // "rb" matches "Restore Backup" (R...B...)
+        assert!(fuzzy_score("rb", "Restore Backup").is_some());
+        // "reb" matches "Restore Backup" (Re...B...)
+        assert!(fuzzy_score("reb", "Restore Backup").is_some());
+    }
+
+    #[test]
+    fn no_match_when_chars_missing() {
+        assert!(fuzzy_score("xyz", "Restore Backup").is_none());
+        assert!(fuzzy_score("rz", "Restore Backup").is_none());
+    }
+
+    #[test]
+    fn no_match_when_pattern_longer_than_text() {
+        assert!(fuzzy_score("abcdef", "abc").is_none());
+    }
+
+    #[test]
+    fn consecutive_matches_score_higher() {
+        // "res" is consecutive in "Restore" → higher score than "r_e_s" scattered
+        let consecutive = fuzzy_score("res", "Restore Backup").unwrap();
+        let scattered = fuzzy_score("reb", "Restore Backup").unwrap();
+        assert!(consecutive > scattered);
+    }
+
+    #[test]
+    fn word_boundary_bonus() {
+        // "rb" matches at word boundaries (R of Restore, B of Backup)
+        let score = fuzzy_score("rb", "Restore Backup").unwrap();
+        // Both matches are at word boundaries, so should get boundary bonuses
+        assert!(score > 2); // base 2 (1 per char) + bonuses
     }
 }

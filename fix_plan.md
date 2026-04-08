@@ -23,7 +23,7 @@
 
 ### Command Palette
 - [x] UI : overlay style VS Code (Cmd+Shift+P), input + liste de résultats
-- [ ] Fuzzy search sur les noms de commandes
+- [x] Fuzzy search sur les noms de commandes
 - [ ] Commande "Restore Backup" : ouvre le panneau restore
 
 ### Restore Backup
