@@ -30,7 +30,7 @@
 - [x] UI : panneau avec sélecteur de fichier (.tar.gz) + bouton "Lancer le restore"
 - [x] Backend : Tauri command `restore_backup(file_path)` — décompresse .tar.gz, trouve le .pgsql, lance pg_restore
 - [x] Streaming des logs pg_restore en temps réel vers le frontend (Tauri events)
-- [ ] Afficher succès/échec à la fin du restore
+- [x] Afficher succès/échec à la fin du restore
 
 ## Terminé
 <!-- Les tâches complétées sont déplacées ici -->

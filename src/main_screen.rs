@@ -31,6 +31,7 @@ pub fn MainScreen() -> impl IntoView {
     let (restore_picking, set_restore_picking) = signal(false);
     let (restore_running, set_restore_running) = signal(false);
     let (restore_logs, set_restore_logs) = signal(Vec::<String>::new());
+    let (restore_status, set_restore_status) = signal(Option::<Result<String, String>>::None);
 
     // Command palette action handler
     let on_command = Callback::new(move |cmd: String| {
@@ -262,12 +263,14 @@ pub fn MainScreen() -> impl IntoView {
                                 set_show_restore.set(false);
                                 set_restore_file.set(None);
                                 set_restore_logs.set(Vec::new());
+                                set_restore_status.set(None);
                             };
 
                             let on_restore = move |_| {
                                 if let Some(file_path) = restore_file.get() {
                                     set_restore_running.set(true);
                                     set_restore_logs.set(Vec::new());
+                                    set_restore_status.set(None);
                                     spawn_local(async move {
                                         // Set up event listener for real-time logs
                                         let unlisten = tauri::listen_restore_logs(move |line| {
@@ -282,15 +285,16 @@ pub fn MainScreen() -> impl IntoView {
                                             let _ = unlisten_fn.call0(&wasm_bindgen::JsValue::NULL);
                                         }
 
-                                        // Log the final result
-                                        match result {
+                                        // Log the final result and set status
+                                        match &result {
                                             Ok(msg) => {
-                                                set_restore_logs.update(|logs| logs.push(msg));
+                                                set_restore_logs.update(|logs| logs.push(msg.clone()));
                                             }
                                             Err(msg) => {
                                                 set_restore_logs.update(|logs| logs.push(format!("ERROR: {}", msg)));
                                             }
                                         }
+                                        set_restore_status.set(Some(result));
                                         set_restore_running.set(false);
                                     });
                                 }
@@ -367,6 +371,30 @@ pub fn MainScreen() -> impl IntoView {
                                                 })
                                             } else {
                                                 None
+                                            }
+                                        }}
+
+                                        // Success/failure indicator
+                                        {move || {
+                                            let status = restore_status.get();
+                                            match status {
+                                                Some(Ok(_)) => view! {
+                                                    <div class="alert alert-success mt-4">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span>"Restore completed successfully."</span>
+                                                    </div>
+                                                }.into_any(),
+                                                Some(Err(ref msg)) => view! {
+                                                    <div class="alert alert-error mt-4">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span>{format!("Restore failed: {}", msg)}</span>
+                                                    </div>
+                                                }.into_any(),
+                                                None => view! { <div></div> }.into_any(),
                                             }
                                         }}
                                     </div>
