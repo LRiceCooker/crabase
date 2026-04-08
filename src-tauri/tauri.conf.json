@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
+  "productName": "crabase",
+  "version": "0.1.0",
+  "identifier": "com.crabase.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:8080",
+    "beforeDevCommand": "trunk serve --port 8080",
+    "beforeBuildCommand": "trunk build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "crabase",
+        "width": 1200,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

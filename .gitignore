@@ -1,0 +1,21 @@
+# Rust
+target/
+Cargo.lock
+
+# Node
+node_modules/
+
+# Trunk
+dist/
+
+# Tailwind output
+style/output.css
+
+# OS
+.DS_Store
+
+# Logs
+ralph.log
+
+# Tauri generated
+src-tauri/gen/
