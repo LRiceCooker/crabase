@@ -14,7 +14,7 @@
 
 ### Écran de connexion
 - [x] UI : champ connection string + bouton "Se connecter"
-- [ ] Intégration : appel à `connect_db`, gestion erreur, navigation vers écran principal
+- [x] Intégration : appel à `connect_db`, gestion erreur, navigation vers écran principal
 
 ### Écran principal
 - [ ] Layout : header (infos connexion éditables) + panneau droit (tables) + zone centrale vide
