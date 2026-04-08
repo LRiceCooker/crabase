@@ -13,7 +13,7 @@
 - [x] Créer la Tauri command `disconnect_db()` pour fermer la connexion
 
 ### Écran de connexion
-- [ ] UI : champ connection string + bouton "Se connecter"
+- [x] UI : champ connection string + bouton "Se connecter"
 - [ ] Intégration : appel à `connect_db`, gestion erreur, navigation vers écran principal
 
 ### Écran principal
