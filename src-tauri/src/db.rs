@@ -14,6 +14,7 @@ pub struct ConnectionInfo {
 pub struct DbState {
     pub pool: Mutex<Option<PgPool>>,
     pub connection_info: Mutex<Option<ConnectionInfo>>,
+    pub connection_string: Mutex<Option<String>>,
 }
 
 impl DbState {
@@ -21,6 +22,7 @@ impl DbState {
         Self {
             pool: Mutex::new(None),
             connection_info: Mutex::new(None),
+            connection_string: Mutex::new(None),
         }
     }
 
@@ -46,6 +48,12 @@ impl DbState {
             .map_err(|e| format!("Lock error: {}", e))?;
         *info_guard = Some(info);
 
+        let mut cs_guard = self
+            .connection_string
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        *cs_guard = Some(connection_string.to_string());
+
         Ok(())
     }
 
@@ -61,7 +69,23 @@ impl DbState {
             .map_err(|e| format!("Lock error: {}", e))?;
         *info_guard = None;
 
+        let mut cs_guard = self
+            .connection_string
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        *cs_guard = None;
+
         Ok(())
+    }
+
+    pub fn get_connection_string(&self) -> Result<String, String> {
+        let guard = self
+            .connection_string
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        guard
+            .clone()
+            .ok_or_else(|| "Not connected to any database".to_string())
     }
 
     pub fn get_connection_info(&self) -> Result<ConnectionInfo, String> {
