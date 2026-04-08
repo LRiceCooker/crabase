@@ -1,7 +1,9 @@
 use flate2::read::GzDecoder;
+use std::io::BufRead;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use tar::Archive;
+use tauri::Emitter;
 use tempfile::TempDir;
 
 /// Extracts a .tar.gz file to a temp directory and returns the path to the .pgsql file found inside.
@@ -98,6 +100,103 @@ pub fn restore_backup(file_path: &str, connection_string: &str) -> Result<String
     let (_tmp_dir, pgsql_path) = extract_pgsql(file_path)?;
     run_pg_restore(&pgsql_path, connection_string)
     // _tmp_dir is dropped here, cleaning up the temp directory
+}
+
+/// Runs pg_restore with real-time log streaming via Tauri events.
+pub fn run_pg_restore_streaming(
+    pgsql_path: &Path,
+    connection_string: &str,
+    app_handle: &tauri::AppHandle,
+) -> Result<String, String> {
+    let mut child = Command::new("pg_restore")
+        .arg("--no-owner")
+        .arg("--no-privileges")
+        .arg("-d")
+        .arg(connection_string)
+        .arg(pgsql_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                "pg_restore not found. Please install PostgreSQL client tools.".to_string()
+            } else {
+                format!("Failed to run pg_restore: {}", e)
+            }
+        })?;
+
+    // Read stderr in a separate thread (pg_restore outputs mostly to stderr)
+    let stderr = child.stderr.take().unwrap();
+    let app_clone = app_handle.clone();
+    let stderr_thread = std::thread::spawn(move || {
+        let reader = std::io::BufReader::new(stderr);
+        let mut lines = Vec::new();
+        for line in reader.lines().flatten() {
+            let _ = app_clone.emit("restore-log", &line);
+            lines.push(line);
+        }
+        lines
+    });
+
+    // Read stdout in current thread
+    let stdout = child.stdout.take().unwrap();
+    let reader = std::io::BufReader::new(stdout);
+    let mut stdout_lines = Vec::new();
+    for line in reader.lines().flatten() {
+        let _ = app_handle.emit("restore-log", &line);
+        stdout_lines.push(line);
+    }
+
+    let stderr_lines = stderr_thread.join().unwrap_or_default();
+    let status = child
+        .wait()
+        .map_err(|e| format!("Failed to wait for pg_restore: {}", e))?;
+
+    if status.success() {
+        let mut result = "Restore completed successfully.".to_string();
+        if !stderr_lines.is_empty() {
+            result.push_str(&format!("\nWarnings:\n{}", stderr_lines.join("\n")));
+        }
+        Ok(result)
+    } else {
+        let stderr_text = stderr_lines.join("\n");
+        let stdout_text = stdout_lines.join("\n");
+        Err(format!(
+            "pg_restore failed (exit code: {}):\n{}{}",
+            status
+                .code()
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "unknown".to_string()),
+            stderr_text,
+            if !stdout_text.is_empty() {
+                format!("\nstdout:\n{}", stdout_text)
+            } else {
+                String::new()
+            }
+        ))
+    }
+}
+
+/// Full restore pipeline with real-time log streaming.
+pub fn restore_backup_streaming(
+    file_path: &str,
+    connection_string: &str,
+    app_handle: &tauri::AppHandle,
+) -> Result<String, String> {
+    let _ = app_handle.emit("restore-log", "Extracting backup archive...");
+    let (_tmp_dir, pgsql_path) = extract_pgsql(file_path)?;
+    let _ = app_handle.emit(
+        "restore-log",
+        &format!(
+            "Found: {}",
+            pgsql_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+        ),
+    );
+    let _ = app_handle.emit("restore-log", "Starting pg_restore...");
+    run_pg_restore_streaming(&pgsql_path, connection_string, app_handle)
 }
 
 #[cfg(test)]

@@ -29,6 +29,8 @@ pub fn MainScreen() -> impl IntoView {
     let (show_restore, set_show_restore) = signal(false);
     let (restore_file, set_restore_file) = signal(Option::<String>::None);
     let (restore_picking, set_restore_picking) = signal(false);
+    let (restore_running, set_restore_running) = signal(false);
+    let (restore_logs, set_restore_logs) = signal(Vec::<String>::new());
 
     // Command palette action handler
     let on_command = Callback::new(move |cmd: String| {
@@ -259,6 +261,39 @@ pub fn MainScreen() -> impl IntoView {
                             let on_close = move |_| {
                                 set_show_restore.set(false);
                                 set_restore_file.set(None);
+                                set_restore_logs.set(Vec::new());
+                            };
+
+                            let on_restore = move |_| {
+                                if let Some(file_path) = restore_file.get() {
+                                    set_restore_running.set(true);
+                                    set_restore_logs.set(Vec::new());
+                                    spawn_local(async move {
+                                        // Set up event listener for real-time logs
+                                        let unlisten = tauri::listen_restore_logs(move |line| {
+                                            set_restore_logs.update(|logs| logs.push(line));
+                                        }).await;
+
+                                        // Run the restore
+                                        let result = tauri::restore_backup(&file_path).await;
+
+                                        // Clean up event listener
+                                        if let Ok(unlisten_fn) = &unlisten {
+                                            let _ = unlisten_fn.call0(&wasm_bindgen::JsValue::NULL);
+                                        }
+
+                                        // Log the final result
+                                        match result {
+                                            Ok(msg) => {
+                                                set_restore_logs.update(|logs| logs.push(msg));
+                                            }
+                                            Err(msg) => {
+                                                set_restore_logs.update(|logs| logs.push(format!("ERROR: {}", msg)));
+                                            }
+                                        }
+                                        set_restore_running.set(false);
+                                    });
+                                }
                             };
 
                             view! {
@@ -268,6 +303,7 @@ pub fn MainScreen() -> impl IntoView {
                                             <h2 class="card-title">"Restore Backup"</h2>
                                             <button
                                                 class="btn btn-ghost btn-sm"
+                                                disabled=move || restore_running.get()
                                                 on:click=on_close
                                             >
                                                 "✕"
@@ -283,7 +319,7 @@ pub fn MainScreen() -> impl IntoView {
                                             <div class="flex items-center gap-2">
                                                 <button
                                                     class="btn btn-outline btn-sm"
-                                                    disabled=move || restore_picking.get()
+                                                    disabled=move || restore_picking.get() || restore_running.get()
                                                     on:click=on_pick_file
                                                 >
                                                     {move || if restore_picking.get() {
@@ -302,11 +338,37 @@ pub fn MainScreen() -> impl IntoView {
                                         <div class="card-actions justify-end mt-4">
                                             <button
                                                 class="btn btn-primary"
-                                                disabled=move || restore_file.get().is_none()
+                                                disabled=move || restore_file.get().is_none() || restore_running.get()
+                                                on:click=on_restore
                                             >
-                                                "Lancer le restore"
+                                                {move || if restore_running.get() {
+                                                    "Restoring..."
+                                                } else {
+                                                    "Lancer le restore"
+                                                }}
                                             </button>
                                         </div>
+
+                                        // Real-time log display
+                                        {move || {
+                                            let logs = restore_logs.get();
+                                            if !logs.is_empty() {
+                                                Some(view! {
+                                                    <div class="mt-4">
+                                                        <label class="label">
+                                                            <span class="label-text font-semibold">"Logs"</span>
+                                                        </label>
+                                                        <div class="bg-base-300 rounded-lg p-3 max-h-60 overflow-y-auto font-mono text-xs">
+                                                            {logs.into_iter().map(|line| view! {
+                                                                <div class="whitespace-pre-wrap">{line}</div>
+                                                            }).collect::<Vec<_>>()}
+                                                        </div>
+                                                    </div>
+                                                })
+                                            } else {
+                                                None
+                                            }
+                                        }}
                                     </div>
                                 </div>
                             }.into_any()

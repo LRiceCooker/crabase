@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 
 #[wasm_bindgen]
 extern "C" {
@@ -8,6 +9,9 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = ["__TAURI__", "dialog"], js_name = "open", catch)]
     async fn dialog_open(options: JsValue) -> Result<JsValue, JsValue>;
+
+    #[wasm_bindgen(js_namespace = ["__TAURI__", "event"], catch)]
+    async fn listen(event: &str, handler: &JsValue) -> Result<JsValue, JsValue>;
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -104,4 +108,47 @@ pub async fn pick_backup_file() -> Result<Option<String>, String> {
 
     // The result is a file path string
     Ok(result.as_string())
+}
+
+pub async fn restore_backup(file_path: &str) -> Result<String, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> {
+        file_path: &'a str,
+    }
+
+    let args =
+        serde_wasm_bindgen::to_value(&Args { file_path }).map_err(|e| e.to_string())?;
+
+    let result = invoke("restore_backup", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Restore failed".to_string()))?;
+
+    result
+        .as_string()
+        .ok_or_else(|| "Invalid response from backend".to_string())
+}
+
+/// Listen to restore-log events. Returns a JS function to call to unlisten.
+pub async fn listen_restore_logs(
+    callback: impl Fn(String) + 'static,
+) -> Result<js_sys::Function, String> {
+    let closure = Closure::<dyn FnMut(JsValue)>::new(move |event: JsValue| {
+        if let Ok(payload) = js_sys::Reflect::get(&event, &JsValue::from_str("payload")) {
+            if let Some(line) = payload.as_string() {
+                callback(line);
+            }
+        }
+    });
+
+    let unlisten = listen("restore-log", closure.as_ref())
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Failed to listen for events".to_string())
+        })?;
+
+    closure.forget();
+
+    Ok(unlisten.unchecked_into::<js_sys::Function>())
 }

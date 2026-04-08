@@ -38,12 +38,13 @@ async fn list_tables(
 #[tauri::command]
 async fn restore_backup(
     file_path: String,
+    app_handle: tauri::AppHandle,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<String, String> {
     let connection_string = db_state.get_connection_string()?;
     // Run blocking I/O (tar extraction + pg_restore subprocess) off the async runtime
     tokio::task::spawn_blocking(move || {
-        restore::restore_backup(&file_path, &connection_string)
+        restore::restore_backup_streaming(&file_path, &connection_string, &app_handle)
     })
     .await
     .map_err(|e| format!("Task failed: {}", e))?
