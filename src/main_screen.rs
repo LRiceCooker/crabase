@@ -1,6 +1,9 @@
 use leptos::prelude::*;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
+use crate::command_palette::CommandPalette;
 use crate::tauri;
 
 #[component]
@@ -18,6 +21,26 @@ pub fn MainScreen() -> impl IntoView {
     let (edit_password, set_edit_password) = signal(String::new());
     let (reconnecting, set_reconnecting) = signal(false);
     let (header_error, set_header_error) = signal(Option::<String>::None);
+
+    // Command palette state
+    let (show_palette, set_show_palette) = signal(false);
+
+    // Global keyboard shortcut: Cmd+Shift+P (macOS) / Ctrl+Shift+P
+    {
+        let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
+            move |ev: web_sys::KeyboardEvent| {
+                if (ev.meta_key() || ev.ctrl_key()) && ev.shift_key() && ev.code() == "KeyP" {
+                    ev.prevent_default();
+                    set_show_palette.set(true);
+                }
+            },
+        );
+        web_sys::window()
+            .unwrap()
+            .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
 
     // Fetch connection info on mount
     spawn_local({
@@ -101,6 +124,9 @@ pub fn MainScreen() -> impl IntoView {
 
     view! {
         <div class="min-h-screen flex flex-col bg-base-200">
+            // Command palette overlay
+            <CommandPalette show=show_palette set_show=set_show_palette />
+
             // Header
             <header class="navbar bg-base-100 shadow-md px-4">
                 <div class="flex-1">

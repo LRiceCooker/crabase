@@ -1,4 +1,5 @@
 mod app;
+mod command_palette;
 mod main_screen;
 mod tauri;
 
