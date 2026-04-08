@@ -19,7 +19,7 @@
 ### Écran principal
 - [x] Layout : header (infos connexion éditables) + panneau droit (tables) + zone centrale vide
 - [x] Header : afficher les infos de connexion, permettre l'édition et la reconnexion
-- [ ] Panneau droit : afficher la liste des tables via `list_tables()`
+- [x] Panneau droit : afficher la liste des tables via `list_tables()`
 
 ### Command Palette
 - [ ] UI : overlay style VS Code (Cmd+Shift+P), input + liste de résultats
