@@ -1,10 +1,18 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["__TAURI__", "core"], catch)]
     async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConnectionInfo {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    pub dbname: String,
 }
 
 pub async fn connect_db(connection_string: &str) -> Result<String, String> {
@@ -24,4 +32,22 @@ pub async fn connect_db(connection_string: &str) -> Result<String, String> {
     result
         .as_string()
         .ok_or_else(|| "Invalid response from backend".to_string())
+}
+
+pub async fn get_connection_info() -> Result<ConnectionInfo, String> {
+    let result = invoke("get_connection_info", JsValue::UNDEFINED)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to get connection info".to_string()))?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse connection info: {}", e))
+}
+
+pub async fn list_tables() -> Result<Vec<String>, String> {
+    let result = invoke("list_tables", JsValue::UNDEFINED)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to list tables".to_string()))?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse tables list: {}", e))
 }

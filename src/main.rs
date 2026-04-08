@@ -1,4 +1,5 @@
 mod app;
+mod main_screen;
 mod tauri;
 
 use app::App;

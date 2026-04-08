@@ -17,7 +17,7 @@
 - [x] Intégration : appel à `connect_db`, gestion erreur, navigation vers écran principal
 
 ### Écran principal
-- [ ] Layout : header (infos connexion éditables) + panneau droit (tables) + zone centrale vide
+- [x] Layout : header (infos connexion éditables) + panneau droit (tables) + zone centrale vide
 - [ ] Header : afficher les infos de connexion, permettre l'édition et la reconnexion
 - [ ] Panneau droit : afficher la liste des tables via `list_tables()`
 

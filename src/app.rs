@@ -1,6 +1,8 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+use crate::main_screen::MainScreen;
+
 #[component]
 pub fn App() -> impl IntoView {
     let (connected, set_connected) = signal(false);
@@ -24,9 +26,7 @@ pub fn App() -> impl IntoView {
     move || {
         if connected.get() {
             view! {
-                <main class="min-h-screen bg-base-200 flex items-center justify-center">
-                    <p class="text-xl">"Connecté !"</p>
-                </main>
+                <MainScreen />
             }
             .into_any()
         } else {
