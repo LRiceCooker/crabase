@@ -58,6 +58,24 @@ impl DbState {
             .clone()
             .ok_or_else(|| "Not connected to any database".to_string())
     }
+
+    pub async fn list_tables(&self) -> Result<Vec<String>, String> {
+        let pool = {
+            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            pool_guard
+                .clone()
+                .ok_or_else(|| "Not connected to any database".to_string())?
+        };
+
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+        )
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| format!("Failed to list tables: {}", e))?;
+
+        Ok(rows.into_iter().map(|(name,)| name).collect())
+    }
 }
 
 pub fn parse_connection_string(connection_string: &str) -> Result<ConnectionInfo, String> {
@@ -140,5 +158,13 @@ mod tests {
         let state = DbState::new();
         let result = state.connect("").await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_tables_not_connected() {
+        let state = DbState::new();
+        let result = state.list_tables().await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
     }
 }

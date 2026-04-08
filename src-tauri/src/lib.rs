@@ -21,10 +21,17 @@ fn get_connection_info(
     db_state.get_connection_info()
 }
 
+#[tauri::command]
+async fn list_tables(
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<Vec<String>, String> {
+    db_state.list_tables().await
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![greet, connect_db, get_connection_info])
+        .invoke_handler(tauri::generate_handler![greet, connect_db, get_connection_info, list_tables])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
