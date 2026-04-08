@@ -6,7 +6,7 @@
 ## Backlog
 
 ### Infrastructure
-- [ ] Configurer sqlx avec le pool de connexion PostgreSQL
+- [x] Configurer sqlx avec le pool de connexion PostgreSQL
 - [ ] Créer la Tauri command `connect_db(connection_string)` qui valide et ouvre la connexion
 - [ ] Créer la Tauri command `get_connection_info()` qui retourne host, port, user, dbname
 - [ ] Créer la Tauri command `list_tables()` qui retourne les noms des tables (public schema)

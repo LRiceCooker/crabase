@@ -1,3 +1,5 @@
+mod db;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
@@ -5,6 +7,7 @@ fn greet(name: &str) -> String {
 
 pub fn run() {
     tauri::Builder::default()
+        .manage(db::DbState::new())
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
