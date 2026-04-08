@@ -43,6 +43,16 @@ pub async fn get_connection_info() -> Result<ConnectionInfo, String> {
         .map_err(|e| format!("Failed to parse connection info: {}", e))
 }
 
+pub async fn disconnect_db() -> Result<String, String> {
+    let result = invoke("disconnect_db", JsValue::UNDEFINED)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to disconnect".to_string()))?;
+
+    result
+        .as_string()
+        .ok_or_else(|| "Invalid response from backend".to_string())
+}
+
 pub async fn list_tables() -> Result<Vec<String>, String> {
     let result = invoke("list_tables", JsValue::UNDEFINED)
         .await

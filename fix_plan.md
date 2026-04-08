@@ -18,7 +18,7 @@
 
 ### Écran principal
 - [x] Layout : header (infos connexion éditables) + panneau droit (tables) + zone centrale vide
-- [ ] Header : afficher les infos de connexion, permettre l'édition et la reconnexion
+- [x] Header : afficher les infos de connexion, permettre l'édition et la reconnexion
 - [ ] Panneau droit : afficher la liste des tables via `list_tables()`
 
 ### Command Palette
