@@ -27,6 +27,8 @@ pub fn MainScreen() -> impl IntoView {
 
     // Restore panel state
     let (show_restore, set_show_restore) = signal(false);
+    let (restore_file, set_restore_file) = signal(Option::<String>::None);
+    let (restore_picking, set_restore_picking) = signal(false);
 
     // Command palette action handler
     let on_command = Callback::new(move |cmd: String| {
@@ -242,6 +244,23 @@ pub fn MainScreen() -> impl IntoView {
                 <main class="flex-1 p-4">
                     {move || {
                         if show_restore.get() {
+                            let on_pick_file = move |_| {
+                                set_restore_picking.set(true);
+                                spawn_local(async move {
+                                    match tauri::pick_backup_file().await {
+                                        Ok(Some(path)) => set_restore_file.set(Some(path)),
+                                        Ok(None) => {} // User cancelled
+                                        Err(_) => {}
+                                    }
+                                    set_restore_picking.set(false);
+                                });
+                            };
+
+                            let on_close = move |_| {
+                                set_show_restore.set(false);
+                                set_restore_file.set(None);
+                            };
+
                             view! {
                                 <div class="card bg-base-100 shadow-lg max-w-lg mx-auto mt-8">
                                     <div class="card-body">
@@ -249,13 +268,45 @@ pub fn MainScreen() -> impl IntoView {
                                             <h2 class="card-title">"Restore Backup"</h2>
                                             <button
                                                 class="btn btn-ghost btn-sm"
-                                                on:click=move |_| set_show_restore.set(false)
+                                                on:click=on_close
                                             >
                                                 "✕"
                                             </button>
                                         </div>
                                         <p class="text-base-content/60">"Restore a .tar.gz PostgreSQL backup to the connected database."</p>
-                                        <p class="text-base-content/40 text-sm italic">"File selector coming soon..."</p>
+
+                                        // File selector
+                                        <div class="form-control mt-2">
+                                            <label class="label">
+                                                <span class="label-text">"Backup file (.tar.gz)"</span>
+                                            </label>
+                                            <div class="flex items-center gap-2">
+                                                <button
+                                                    class="btn btn-outline btn-sm"
+                                                    disabled=move || restore_picking.get()
+                                                    on:click=on_pick_file
+                                                >
+                                                    {move || if restore_picking.get() {
+                                                        "Selecting..."
+                                                    } else {
+                                                        "Choose file..."
+                                                    }}
+                                                </button>
+                                                <span class="text-sm text-base-content/70 truncate max-w-xs">
+                                                    {move || restore_file.get().unwrap_or_else(|| "No file selected".to_string())}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        // Restore button
+                                        <div class="card-actions justify-end mt-4">
+                                            <button
+                                                class="btn btn-primary"
+                                                disabled=move || restore_file.get().is_none()
+                                            >
+                                                "Lancer le restore"
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             }.into_any()

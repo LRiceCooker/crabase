@@ -36,6 +36,7 @@ async fn list_tables(
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
         .invoke_handler(tauri::generate_handler![greet, connect_db, disconnect_db, get_connection_info, list_tables])
         .run(tauri::generate_context!())

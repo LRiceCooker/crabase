@@ -5,6 +5,9 @@ use wasm_bindgen::prelude::*;
 extern "C" {
     #[wasm_bindgen(js_namespace = ["__TAURI__", "core"], catch)]
     async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
+
+    #[wasm_bindgen(js_namespace = ["__TAURI__", "dialog"], js_name = "open", catch)]
+    async fn dialog_open(options: JsValue) -> Result<JsValue, JsValue>;
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -60,4 +63,45 @@ pub async fn list_tables() -> Result<Vec<String>, String> {
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to parse tables list: {}", e))
+}
+
+/// Opens a native file picker dialog filtered on .tar.gz files.
+/// Returns the selected file path, or None if cancelled.
+pub async fn pick_backup_file() -> Result<Option<String>, String> {
+    #[derive(Serialize)]
+    struct DialogFilter {
+        name: String,
+        extensions: Vec<String>,
+    }
+
+    #[derive(Serialize)]
+    struct OpenDialogOptions {
+        title: String,
+        filters: Vec<DialogFilter>,
+        multiple: bool,
+        directory: bool,
+    }
+
+    let options = OpenDialogOptions {
+        title: "Select a .tar.gz backup file".to_string(),
+        filters: vec![DialogFilter {
+            name: "PostgreSQL Backup".to_string(),
+            extensions: vec!["gz".to_string()],
+        }],
+        multiple: false,
+        directory: false,
+    };
+
+    let args = serde_wasm_bindgen::to_value(&options).map_err(|e| e.to_string())?;
+
+    let result = dialog_open(args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to open file dialog".to_string()))?;
+
+    if result.is_null() || result.is_undefined() {
+        return Ok(None);
+    }
+
+    // The result is a file path string
+    Ok(result.as_string())
 }
