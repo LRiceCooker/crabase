@@ -14,10 +14,17 @@ async fn connect_db(
     Ok("Connected successfully".to_string())
 }
 
+#[tauri::command]
+fn get_connection_info(
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<db::ConnectionInfo, String> {
+    db_state.get_connection_info()
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![greet, connect_db])
+        .invoke_handler(tauri::generate_handler![greet, connect_db, get_connection_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

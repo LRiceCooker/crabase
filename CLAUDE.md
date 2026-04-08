@@ -27,3 +27,4 @@
 - Leptos 0.8 CSR : `leptos::mount::mount_to_body(App)` fonctionne directement
 - Frontend = crate racine (target wasm32), Backend = `src-tauri/` (target native)
 - Trunk hook `pre_build` pour générer le CSS Tailwind avant le build WASM
+- `url` crate pour parser les connection strings PostgreSQL (host, port, user, dbname)
