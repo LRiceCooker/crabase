@@ -15,6 +15,12 @@ async fn connect_db(
 }
 
 #[tauri::command]
+fn disconnect_db(db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.disconnect()?;
+    Ok("Disconnected successfully".to_string())
+}
+
+#[tauri::command]
 fn get_connection_info(
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<db::ConnectionInfo, String> {
@@ -31,7 +37,7 @@ async fn list_tables(
 pub fn run() {
     tauri::Builder::default()
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![greet, connect_db, get_connection_info, list_tables])
+        .invoke_handler(tauri::generate_handler![greet, connect_db, disconnect_db, get_connection_info, list_tables])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

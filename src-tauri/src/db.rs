@@ -49,6 +49,21 @@ impl DbState {
         Ok(())
     }
 
+    pub fn disconnect(&self) -> Result<(), String> {
+        let mut pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+        if let Some(pool) = pool_guard.take() {
+            drop(pool);
+        }
+
+        let mut info_guard = self
+            .connection_info
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        *info_guard = None;
+
+        Ok(())
+    }
+
     pub fn get_connection_info(&self) -> Result<ConnectionInfo, String> {
         let guard = self
             .connection_info
@@ -141,6 +156,36 @@ mod tests {
     fn test_parse_connection_string_empty() {
         let result = parse_connection_string("");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_disconnect_when_not_connected() {
+        let state = DbState::new();
+        let result = state.disconnect();
+        assert!(result.is_ok());
+        // State should still be empty
+        assert!(state.pool.lock().unwrap().is_none());
+        assert!(state.connection_info.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn test_disconnect_clears_connection_info() {
+        let state = DbState::new();
+        // Manually set connection info
+        {
+            let mut info_guard = state.connection_info.lock().unwrap();
+            *info_guard = Some(ConnectionInfo {
+                host: "localhost".to_string(),
+                port: 5432,
+                user: "test".to_string(),
+                dbname: "testdb".to_string(),
+            });
+        }
+        assert!(state.get_connection_info().is_ok());
+
+        let result = state.disconnect();
+        assert!(result.is_ok());
+        assert!(state.get_connection_info().is_err());
     }
 
     #[tokio::test]

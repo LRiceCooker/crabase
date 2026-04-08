@@ -10,7 +10,7 @@
 - [x] Créer la Tauri command `connect_db(connection_string)` qui valide et ouvre la connexion
 - [x] Créer la Tauri command `get_connection_info()` qui retourne host, port, user, dbname
 - [x] Créer la Tauri command `list_tables()` qui retourne les noms des tables (public schema)
-- [ ] Créer la Tauri command `disconnect_db()` pour fermer la connexion
+- [x] Créer la Tauri command `disconnect_db()` pour fermer la connexion
 
 ### Écran de connexion
 - [ ] UI : champ connection string + bouton "Se connecter"
