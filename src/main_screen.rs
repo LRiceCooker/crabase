@@ -25,6 +25,17 @@ pub fn MainScreen() -> impl IntoView {
     // Command palette state
     let (show_palette, set_show_palette) = signal(false);
 
+    // Restore panel state
+    let (show_restore, set_show_restore) = signal(false);
+
+    // Command palette action handler
+    let on_command = Callback::new(move |cmd: String| {
+        match cmd.as_str() {
+            "Restore Backup" => set_show_restore.set(true),
+            _ => {}
+        }
+    });
+
     // Global keyboard shortcut: Cmd+Shift+P (macOS) / Ctrl+Shift+P
     {
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
@@ -125,7 +136,7 @@ pub fn MainScreen() -> impl IntoView {
     view! {
         <div class="min-h-screen flex flex-col bg-base-200">
             // Command palette overlay
-            <CommandPalette show=show_palette set_show=set_show_palette />
+            <CommandPalette show=show_palette set_show=set_show_palette on_command=on_command />
 
             // Header
             <header class="navbar bg-base-100 shadow-md px-4">
@@ -227,11 +238,35 @@ pub fn MainScreen() -> impl IntoView {
 
             // Body: central area + right panel
             <div class="flex flex-1 overflow-hidden">
-                // Central area (empty for now)
+                // Central area
                 <main class="flex-1 p-4">
-                    <div class="flex items-center justify-center h-full text-base-content/30">
-                        <p class="text-lg">"Select a table to get started"</p>
-                    </div>
+                    {move || {
+                        if show_restore.get() {
+                            view! {
+                                <div class="card bg-base-100 shadow-lg max-w-lg mx-auto mt-8">
+                                    <div class="card-body">
+                                        <div class="flex items-center justify-between">
+                                            <h2 class="card-title">"Restore Backup"</h2>
+                                            <button
+                                                class="btn btn-ghost btn-sm"
+                                                on:click=move |_| set_show_restore.set(false)
+                                            >
+                                                "✕"
+                                            </button>
+                                        </div>
+                                        <p class="text-base-content/60">"Restore a .tar.gz PostgreSQL backup to the connected database."</p>
+                                        <p class="text-base-content/40 text-sm italic">"File selector coming soon..."</p>
+                                    </div>
+                                </div>
+                            }.into_any()
+                        } else {
+                            view! {
+                                <div class="flex items-center justify-center h-full text-base-content/30">
+                                    <p class="text-lg">"Select a table to get started"</p>
+                                </div>
+                            }.into_any()
+                        }
+                    }}
                 </main>
 
                 // Right panel: tables list

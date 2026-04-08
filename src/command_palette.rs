@@ -49,6 +49,7 @@ fn fuzzy_score(pattern: &str, text: &str) -> Option<i32> {
 pub fn CommandPalette(
     show: ReadSignal<bool>,
     set_show: WriteSignal<bool>,
+    on_command: Callback<String>,
 ) -> impl IntoView {
     let (query, set_query) = signal(String::new());
     let input_ref = NodeRef::<leptos::html::Input>::new();
@@ -82,7 +83,10 @@ pub fn CommandPalette(
                 })
                 .collect();
             scored.sort_by(|a, b| b.1.cmp(&a.1));
-            let filtered: Vec<_> = scored.into_iter().map(|(cmd, _)| cmd).collect();
+            let filtered: Vec<_> = scored.into_iter().map(|(cmd, _)| *cmd).collect();
+
+            // Clone first result name for Enter key handler
+            let first_command = filtered.first().map(|(name, _)| name.to_string());
 
             Some(view! {
                 <div class="fixed inset-0 z-50 flex justify-center items-start pt-[15vh]">
@@ -101,19 +105,34 @@ pub fn CommandPalette(
                                 class="input input-bordered w-full"
                                 prop:value=move || query.get()
                                 on:input=move |ev| set_query.set(event_target_value(&ev))
-                                on:keydown=move |ev| {
-                                    let ev: &web_sys::KeyboardEvent = ev.unchecked_ref();
-                                    if ev.key() == "Escape" {
-                                        set_show.set(false);
+                                on:keydown={
+                                    let first_command = first_command.clone();
+                                    move |ev| {
+                                        let ev: &web_sys::KeyboardEvent = ev.unchecked_ref();
+                                        if ev.key() == "Escape" {
+                                            set_show.set(false);
+                                        } else if ev.key() == "Enter" {
+                                            if let Some(ref cmd) = first_command {
+                                                on_command.run(cmd.clone());
+                                                set_show.set(false);
+                                            }
+                                        }
                                     }
                                 }
                             />
                         </div>
                         <ul class="menu menu-sm p-2 max-h-64 overflow-y-auto">
                             {filtered.into_iter().map(|(name, desc)| {
+                                let cmd_name = name.to_string();
                                 view! {
                                     <li>
-                                        <a class="flex flex-col items-start py-2">
+                                        <a
+                                            class="flex flex-col items-start py-2"
+                                            on:click=move |_| {
+                                                on_command.run(cmd_name.clone());
+                                                set_show.set(false);
+                                            }
+                                        >
                                             <span class="font-medium">{name.to_string()}</span>
                                             <span class="text-xs text-base-content/50">{desc.to_string()}</span>
                                         </a>
