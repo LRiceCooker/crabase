@@ -37,6 +37,29 @@ pub fn MainLayout() -> impl IntoView {
     // Tab state
     let tab_state = TabState::new();
 
+    // Derived signal: name of the table in the active tab (if any)
+    let active_table = {
+        let ts = tab_state.clone();
+        Memo::new(move |_| {
+            let active = ts.active_id.get();
+            let tabs = ts.tabs.get();
+            active.and_then(|id| {
+                tabs.iter().find(|t| t.id == id).and_then(|t| match &t.kind {
+                    TabKind::TableView(name) => Some(name.clone()),
+                    _ => None,
+                })
+            })
+        })
+    };
+
+    // Callback for when a table is clicked in the sidebar
+    let on_table_select = {
+        let ts = tab_state.clone();
+        Callback::new(move |table_name: String| {
+            ts.open(TabKind::TableView(table_name));
+        })
+    };
+
     // Restore panel state
     let (show_restore, set_show_restore) = signal(false);
     let (restore_file, set_restore_file) = signal(Option::<String>::None);
@@ -317,7 +340,7 @@ pub fn MainLayout() -> impl IntoView {
             <div class="flex flex-1 overflow-hidden">
                 // Left sidebar — scrolls independently
                 <aside class="w-56 bg-gray-50 border-r border-gray-200 overflow-y-auto shrink-0">
-                    <TablesList tables=tables />
+                    <TablesList tables=tables active_table=active_table on_select=on_table_select />
                 </aside>
 
                 // Right panel: tab bar + content
