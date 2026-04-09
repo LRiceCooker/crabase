@@ -1,17 +1,23 @@
 mod db;
 mod restore;
+mod saved_connections;
 
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
+fn parse_connection_string(connection_string: String) -> Result<db::ConnectionInfo, String> {
+    db::parse_connection_string(&connection_string)
+}
+
+#[tauri::command]
+async fn list_schemas(connection_string: String) -> Result<Vec<String>, String> {
+    db::list_schemas(&connection_string).await
 }
 
 #[tauri::command]
 async fn connect_db(
-    connection_string: String,
+    info: db::ConnectionInfo,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<String, String> {
-    db_state.connect(&connection_string).await?;
+    db_state.connect(info).await?;
     Ok("Connected successfully".to_string())
 }
 
@@ -50,11 +56,32 @@ async fn restore_backup(
     .map_err(|e| format!("Task failed: {}", e))?
 }
 
+#[tauri::command]
+fn save_connection(
+    name: String,
+    info: db::ConnectionInfo,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    saved_connections::save_connection(&app_handle, name, info)
+}
+
+#[tauri::command]
+fn list_saved_connections(
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<saved_connections::SavedConnection>, String> {
+    saved_connections::list_saved_connections(&app_handle)
+}
+
+#[tauri::command]
+fn delete_saved_connection(name: String, app_handle: tauri::AppHandle) -> Result<(), String> {
+    saved_connections::delete_saved_connection(&app_handle, name)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![greet, connect_db, disconnect_db, get_connection_info, list_tables, restore_backup])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, restore_backup, save_connection, list_saved_connections, delete_saved_connection])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -64,7 +91,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_greet() {
-        assert_eq!(greet("crabase"), "Hello, crabase!");
+    fn test_parse_connection_string_command() {
+        let info = parse_connection_string("postgresql://user:pass@localhost:5432/mydb".to_string()).unwrap();
+        assert_eq!(info.host, "localhost");
+        assert_eq!(info.user, "user");
+        assert_eq!(info.dbname, "mydb");
     }
 }
