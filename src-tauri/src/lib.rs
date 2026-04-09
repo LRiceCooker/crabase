@@ -50,6 +50,16 @@ async fn get_column_info(
 }
 
 #[tauri::command]
+async fn get_table_data(
+    table_name: String,
+    page: u32,
+    page_size: u32,
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<db::TableData, String> {
+    db_state.get_table_data(&table_name, page, page_size).await
+}
+
+#[tauri::command]
 async fn restore_backup(
     file_path: String,
     app_handle: tauri::AppHandle,
@@ -89,7 +99,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, restore_backup, save_connection, list_saved_connections, delete_saved_connection])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_table_data, restore_backup, save_connection, list_saved_connections, delete_saved_connection])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

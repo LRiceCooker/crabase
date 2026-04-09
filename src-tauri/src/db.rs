@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
+use sqlx::{Column, Row, TypeInfo};
 use std::sync::Mutex;
 use url::Url;
 
@@ -187,6 +188,134 @@ impl DbState {
             })
             .collect())
     }
+
+    pub async fn get_table_data(
+        &self,
+        table_name: &str,
+        page: u32,
+        page_size: u32,
+    ) -> Result<TableData, String> {
+        let columns = self.get_column_info(table_name).await?;
+
+        let pool = {
+            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            pool_guard
+                .clone()
+                .ok_or_else(|| "Not connected to any database".to_string())?
+        };
+
+        let schema = {
+            let info_guard = self
+                .connection_info
+                .lock()
+                .map_err(|e| format!("Lock error: {}", e))?;
+            info_guard
+                .as_ref()
+                .map(|i| i.schema.clone())
+                .unwrap_or_else(|| "public".to_string())
+        };
+
+        // Use quoted identifiers to prevent SQL injection
+        let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
+        let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
+        let qualified_table = format!("{}.{}", quoted_schema, quoted_table);
+
+        // Get total count
+        let count_query = format!("SELECT COUNT(*) as cnt FROM {}", qualified_table);
+        let count_row: (i64,) = sqlx::query_as(&count_query)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| format!("Failed to get row count: {}", e))?;
+        let total_count = count_row.0 as u64;
+
+        // Get paginated rows
+        let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
+        let data_query = format!(
+            "SELECT * FROM {} LIMIT {} OFFSET {}",
+            qualified_table, page_size, offset
+        );
+
+        let pg_rows = sqlx::query(&data_query)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| format!("Failed to get table data: {}", e))?;
+
+        let rows: Vec<Vec<serde_json::Value>> = pg_rows
+            .iter()
+            .map(|row| {
+                (0..row.len())
+                    .map(|i| pg_value_to_json(row, i))
+                    .collect()
+            })
+            .collect();
+
+        Ok(TableData {
+            columns,
+            rows,
+            total_count,
+        })
+    }
+}
+
+/// Convert a PostgreSQL column value to a JSON value.
+fn pg_value_to_json(row: &sqlx::postgres::PgRow, idx: usize) -> serde_json::Value {
+    let col = row.column(idx);
+    let type_name = col.type_info().name();
+
+    // Try to decode based on type; fall back to string representation
+    match type_name {
+        "BOOL" => row
+            .try_get::<Option<bool>, _>(idx)
+            .ok()
+            .flatten()
+            .map(serde_json::Value::Bool)
+            .unwrap_or(serde_json::Value::Null),
+        "INT2" => row
+            .try_get::<Option<i16>, _>(idx)
+            .ok()
+            .flatten()
+            .map(|v| serde_json::Value::Number(v.into()))
+            .unwrap_or(serde_json::Value::Null),
+        "INT4" => row
+            .try_get::<Option<i32>, _>(idx)
+            .ok()
+            .flatten()
+            .map(|v| serde_json::Value::Number(v.into()))
+            .unwrap_or(serde_json::Value::Null),
+        "INT8" => row
+            .try_get::<Option<i64>, _>(idx)
+            .ok()
+            .flatten()
+            .map(|v| serde_json::Value::Number(v.into()))
+            .unwrap_or(serde_json::Value::Null),
+        "FLOAT4" => row
+            .try_get::<Option<f32>, _>(idx)
+            .ok()
+            .flatten()
+            .and_then(|v| serde_json::Number::from_f64(v as f64))
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        "FLOAT8" => row
+            .try_get::<Option<f64>, _>(idx)
+            .ok()
+            .flatten()
+            .and_then(|v| serde_json::Number::from_f64(v))
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        "JSON" | "JSONB" => row
+            .try_get::<Option<serde_json::Value>, _>(idx)
+            .ok()
+            .flatten()
+            .unwrap_or(serde_json::Value::Null),
+        _ => {
+            // For all other types (text, varchar, timestamp, uuid, etc.), try as String
+            row.try_get::<Option<String>, _>(idx)
+                .ok()
+                .flatten()
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null)
+        }
+    }
 }
 
 pub async fn list_schemas(connection_string: &str) -> Result<Vec<String>, String> {
@@ -233,6 +362,13 @@ pub struct ColumnInfo {
     pub data_type: String,
     pub is_nullable: bool,
     pub is_primary_key: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TableData {
+    pub columns: Vec<ColumnInfo>,
+    pub rows: Vec<Vec<serde_json::Value>>,
+    pub total_count: u64,
 }
 
 pub fn build_connection_string(info: &ConnectionInfo) -> String {
@@ -408,6 +544,14 @@ mod tests {
     async fn test_get_column_info_not_connected() {
         let state = DbState::new();
         let result = state.get_column_info("some_table").await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+
+    #[tokio::test]
+    async fn test_get_table_data_not_connected() {
+        let state = DbState::new();
+        let result = state.get_table_data("some_table", 1, 25).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Not connected to any database");
     }
