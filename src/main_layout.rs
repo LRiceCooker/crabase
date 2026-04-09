@@ -5,10 +5,11 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::command_palette::CommandPalette;
 use crate::icons::{
-    IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconUpload,
-    IconX, IconXCircle,
+    IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconPlus,
+    IconUpload, IconX, IconXCircle,
 };
 use crate::sidebar::tables_list::TablesList;
+use crate::tabs::tab_bar::{TabBar, TabKind, TabState};
 use crate::tauri;
 
 #[component]
@@ -32,6 +33,9 @@ pub fn MainLayout() -> impl IntoView {
 
     // Command palette state
     let (show_palette, set_show_palette) = signal(false);
+
+    // Tab state
+    let tab_state = TabState::new();
 
     // Restore panel state
     let (show_restore, set_show_restore) = signal(false);
@@ -155,6 +159,16 @@ pub fn MainLayout() -> impl IntoView {
                 <div class="flex items-center gap-2">
                     <IconDatabase class="w-4 h-4 text-indigo-500" />
                     <span class="text-base font-semibold text-gray-900">"crabase"</span>
+                    <button
+                        class="text-gray-400 hover:bg-gray-100 hover:text-gray-900 p-1 rounded-md transition-colors duration-100"
+                        title="New SQL Editor"
+                        on:click={
+                            let ts = tab_state.clone();
+                            move |_| { ts.open(TabKind::SqlEditor); }
+                        }
+                    >
+                        <IconPlus class="w-4 h-4" />
+                    </button>
                 </div>
                 <div class="flex items-center gap-2 text-[13px]">
                     {move || {
@@ -299,17 +313,22 @@ pub fn MainLayout() -> impl IntoView {
                 </div>
             })}
 
-            // Body: sidebar (left) + central area
+            // Body: sidebar (left) + tab bar + content area
             <div class="flex flex-1 overflow-hidden">
-                // Left sidebar
+                // Left sidebar — scrolls independently
                 <aside class="w-56 bg-gray-50 border-r border-gray-200 overflow-y-auto shrink-0">
                     <TablesList tables=tables />
                 </aside>
 
-                // Central area
-                <main class="flex-1 p-4 overflow-y-auto">
-                    {move || {
-                        if show_restore.get() {
+                // Right panel: tab bar + content
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    // Tab bar — h-10
+                    <TabBar state=tab_state.clone() />
+
+                    // Content area — scrolls independently
+                    <main class="flex-1 p-4 overflow-y-auto">
+                        {move || {
+                            if show_restore.get() {
                             let on_pick_file = move |_| {
                                 set_restore_picking.set(true);
                                 spawn_local(async move {
@@ -479,7 +498,8 @@ pub fn MainLayout() -> impl IntoView {
                             }.into_any()
                         }
                     }}
-                </main>
+                    </main>
+                </div>
             </div>
         </div>
     }
