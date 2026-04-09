@@ -5,10 +5,15 @@ module.exports = {
     "./index.html",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+      },
+    },
   },
   plugins: [require("daisyui")],
   daisyui: {
-    themes: ["dark", "light"],
+    themes: ["light"],
   },
 }
