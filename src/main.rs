@@ -1,5 +1,6 @@
 mod app;
 mod command_palette;
+pub mod icons;
 mod main_screen;
 mod tauri;
 

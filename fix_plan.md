@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 1 — Design System & Refactor
-- [ ] Import Lucide icons (lucide-leptos or SVG sprites)
 - [ ] Refactor frontend into component file structure per specs/project.md architecture
 - [ ] Apply light theme from specs/design.md to all existing components (connection screen, header, sidebar)
 - [ ] All UI text must be in English
@@ -54,6 +53,7 @@
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
+- [x] Import Lucide icons (lucide-leptos or SVG sprites)
 - [x] Initialize Tauri v2 + Leptos (CSR) + Tailwind + DaisyUI
 - [x] Configure sqlx with PostgreSQL connection pool
 - [x] Create Tauri commands: connect_db, get_connection_info, list_tables, disconnect_db
