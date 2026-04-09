@@ -57,9 +57,10 @@ pub fn CommandPalette(
     let (selected_idx, set_selected_idx) = signal(0usize);
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
-    let commands: Vec<(&'static str, &'static str)> = vec![
-        ("New SQL Editor", "Open a new SQL editor tab"),
-        ("Restore Backup", "Restore a .tar.gz PostgreSQL backup"),
+    // (name, description, shortcut)
+    let commands: Vec<(&'static str, &'static str, &'static str)> = vec![
+        ("New SQL Editor", "Open a new SQL editor tab", ""),
+        ("Restore Backup", "Restore a .tar.gz PostgreSQL backup", ""),
     ];
 
     // Focus input when palette opens, clear query when it closes
@@ -127,7 +128,7 @@ pub fn CommandPalette(
                                             "Escape" => set_show.set(false),
                                             "Enter" => {
                                                 let idx = selected_idx.get();
-                                                if let Some((name, _)) = filtered.get(idx) {
+                                                if let Some((name, _, _)) = filtered.get(idx) {
                                                     on_command.run(name.to_string());
                                                     set_show.set(false);
                                                 }
@@ -156,13 +157,13 @@ pub fn CommandPalette(
                         <div class="text-[11px] font-medium text-gray-400 uppercase px-4 py-2">"Commands"</div>
                         // Command list
                         <div class="pb-2 max-h-64 overflow-y-auto">
-                            {filtered.into_iter().enumerate().map(|(idx, (name, desc))| {
+                            {filtered.into_iter().enumerate().map(|(idx, (name, desc, shortcut))| {
                                 let cmd_name = name.to_string();
                                 let is_selected = selected_idx.get() == idx;
                                 let class = if is_selected {
-                                    "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer bg-indigo-50 text-indigo-600"
+                                    "px-4 py-2 flex items-center justify-between text-[13px] cursor-pointer bg-indigo-50 text-indigo-600"
                                 } else {
-                                    "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-100"
+                                    "px-4 py-2 flex items-center justify-between text-[13px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-100"
                                 };
                                 view! {
                                     <div
@@ -176,6 +177,13 @@ pub fn CommandPalette(
                                             <span class="font-medium text-gray-900">{name.to_string()}</span>
                                             <span class="text-[11px] text-gray-400">{desc.to_string()}</span>
                                         </div>
+                                        {if !shortcut.is_empty() {
+                                            Some(view! {
+                                                <span class="text-[11px] text-gray-400 font-mono">{shortcut.to_string()}</span>
+                                            })
+                                        } else {
+                                            None
+                                        }}
                                     </div>
                                 }
                             }).collect::<Vec<_>>()}
