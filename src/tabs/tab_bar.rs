@@ -1,0 +1,160 @@
+use leptos::prelude::*;
+
+use crate::icons::{IconTable, IconTerminal, IconX};
+
+// ── Tab types ───────────────────────────────────────────
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TabKind {
+    TableView(String), // table name
+    SqlEditor,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Tab {
+    pub id: usize,
+    pub kind: TabKind,
+    pub title: String,
+}
+
+// ── Tab state ───────────────────────────────────────────
+
+/// Shared tab state. Clone this and pass it to components that need tab access.
+#[derive(Clone)]
+pub struct TabState {
+    next_id: RwSignal<usize>,
+    pub tabs: RwSignal<Vec<Tab>>,
+    pub active_id: RwSignal<Option<usize>>,
+}
+
+impl TabState {
+    pub fn new() -> Self {
+        Self {
+            next_id: RwSignal::new(1),
+            tabs: RwSignal::new(Vec::new()),
+            active_id: RwSignal::new(None),
+        }
+    }
+
+    /// Open a new tab (or focus an existing one for the same table).
+    /// Returns the tab id.
+    pub fn open(&self, kind: TabKind) -> usize {
+        // For table views, reuse existing tab for the same table
+        if let TabKind::TableView(ref table_name) = kind {
+            let existing = self.tabs.get().iter().find(|t| {
+                matches!(&t.kind, TabKind::TableView(name) if name == table_name)
+            }).map(|t| t.id);
+
+            if let Some(id) = existing {
+                self.active_id.set(Some(id));
+                return id;
+            }
+        }
+
+        let id = self.next_id.get();
+        self.next_id.set(id + 1);
+
+        let title = match &kind {
+            TabKind::TableView(name) => name.clone(),
+            TabKind::SqlEditor => format!("SQL {}", id),
+        };
+
+        let tab = Tab { id, kind, title };
+        self.tabs.update(|tabs| tabs.push(tab));
+        self.active_id.set(Some(id));
+        id
+    }
+
+    /// Switch to a tab by id.
+    pub fn switch(&self, id: usize) {
+        if self.tabs.get().iter().any(|t| t.id == id) {
+            self.active_id.set(Some(id));
+        }
+    }
+
+    /// Close a tab by id. If the closed tab was active, activate an adjacent tab.
+    pub fn close(&self, id: usize) {
+        let tabs = self.tabs.get();
+        let idx = tabs.iter().position(|t| t.id == id);
+
+        if let Some(idx) = idx {
+            // If closing the active tab, pick a neighbor
+            if self.active_id.get() == Some(id) {
+                let new_active = if tabs.len() <= 1 {
+                    None
+                } else if idx + 1 < tabs.len() {
+                    Some(tabs[idx + 1].id)
+                } else {
+                    Some(tabs[idx - 1].id)
+                };
+                self.active_id.set(new_active);
+            }
+
+            self.tabs.update(|tabs| {
+                tabs.retain(|t| t.id != id);
+            });
+        }
+    }
+}
+
+// ── TabBar component ────────────────────────────────────
+
+#[component]
+pub fn TabBar(state: TabState) -> impl IntoView {
+    let tabs = state.tabs;
+    let active_id = state.active_id;
+    let state_switch = state.clone();
+    let state_close = state;
+
+    view! {
+        <div class="flex items-center h-10 border-b border-gray-200 bg-white px-2 gap-0.5 overflow-x-auto shrink-0">
+            {move || {
+                let current_tabs = tabs.get();
+                let current_active = active_id.get();
+
+                if current_tabs.is_empty() {
+                    return Vec::new();
+                }
+
+                current_tabs.into_iter().map(|tab| {
+                    let tab_id = tab.id;
+                    let is_active = current_active == Some(tab_id);
+
+                    let base_class = if is_active {
+                        "group flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-gray-900 bg-white border-b-2 border-indigo-500 cursor-pointer transition-colors duration-100 shrink-0"
+                    } else {
+                        "group flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-gray-500 rounded-t-md hover:text-gray-900 hover:bg-gray-50 cursor-pointer transition-colors duration-100 shrink-0"
+                    };
+
+                    let is_table = matches!(tab.kind, TabKind::TableView(_));
+
+                    let switch = state_switch.clone();
+                    let close = state_close.clone();
+
+                    view! {
+                        <div
+                            class=base_class
+                            on:click=move |_| switch.switch(tab_id)
+                        >
+                            {if is_table {
+                                view! { <IconTable class="w-3.5 h-3.5 text-gray-400 shrink-0" /> }.into_any()
+                            } else {
+                                view! { <IconTerminal class="w-3.5 h-3.5 text-gray-400 shrink-0" /> }.into_any()
+                            }}
+                            <span class="truncate max-w-[120px]">{tab.title}</span>
+                            <button
+                                class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 transition-opacity duration-100"
+                                on:click=move |ev| {
+                                    ev.stop_propagation();
+                                    close.close(tab_id);
+                                }
+                            >
+                                <IconX class="w-3 h-3 text-gray-400" />
+                            </button>
+                        </div>
+                    }
+                }).collect::<Vec<_>>()
+            }}
+        </div>
+    }
+}

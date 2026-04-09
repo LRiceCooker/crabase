@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 3 — Tab System
-- [ ] Create tab_bar.rs component with tab state management (open, close, switch)
 - [ ] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [ ] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [ ] Tab close button appears on hover, active tab has indigo bottom border
@@ -43,6 +42,7 @@
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
+- [x] Create tab_bar.rs component with tab state management (open, close, switch)
 - [x] UI: "Save connection" checkbox + name field on connection form
 - [x] UI: saved connections list on connection screen (click to fill, delete on hover)
 - [x] Backend: `save_connection`, `list_saved_connections`, `delete_saved_connection` commands (store as JSON file in app data dir)

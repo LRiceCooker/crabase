@@ -4,6 +4,7 @@ mod connection;
 pub mod icons;
 mod main_layout;
 mod sidebar;
+mod tabs;
 mod tauri;
 
 use app::App;
