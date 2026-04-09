@@ -144,9 +144,112 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     });
 
     let on_save = Callback::new(move |_: ()| {
-        // Will be implemented when save_changes backend is ready
-        // For now, just log to console
-        web_sys::console::log_1(&"Save changes not yet implemented".into());
+        let table = match loaded_table.get() {
+            Some(name) => name,
+            None => return,
+        };
+
+        // Build the change set from tracked changes
+        let modified = changes.modified_cells.get();
+        let added_set = changes.added_rows.get();
+        let deleted_set = changes.deleted_rows.get();
+        let current_rows = rows.get();
+        let cols = columns.get();
+
+        // Find primary key columns
+        let pk_cols: Vec<(usize, String)> = cols
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.is_primary_key)
+            .map(|(i, c)| (i, c.name.clone()))
+            .collect();
+
+        // Build updates: group modified cells by row, exclude added/deleted rows
+        let mut update_rows: std::collections::HashMap<usize, std::collections::HashMap<String, serde_json::Value>> =
+            std::collections::HashMap::new();
+        for ((row_idx, col_idx), _original) in &modified {
+            if added_set.contains(row_idx) || deleted_set.contains(row_idx) {
+                continue;
+            }
+            if let Some(row) = current_rows.get(*row_idx) {
+                if let Some(col) = cols.get(*col_idx) {
+                    if let Some(val) = row.get(*col_idx) {
+                        update_rows
+                            .entry(*row_idx)
+                            .or_default()
+                            .insert(col.name.clone(), val.clone());
+                    }
+                }
+            }
+        }
+
+        let updates: Vec<tauri::RowUpdate> = update_rows
+            .into_iter()
+            .filter_map(|(row_idx, change_map)| {
+                let row = current_rows.get(row_idx)?;
+                let mut pk_values = std::collections::HashMap::new();
+                for (pk_idx, pk_name) in &pk_cols {
+                    pk_values.insert(pk_name.clone(), row.get(*pk_idx)?.clone());
+                }
+                Some(tauri::RowUpdate {
+                    pk_values,
+                    changes: change_map,
+                })
+            })
+            .collect();
+
+        // Build inserts
+        let inserts: Vec<tauri::RowInsert> = added_set
+            .iter()
+            .filter_map(|row_idx| {
+                let row = current_rows.get(*row_idx)?;
+                let mut values = std::collections::HashMap::new();
+                for (i, col) in cols.iter().enumerate() {
+                    if let Some(val) = row.get(i) {
+                        if !val.is_null() {
+                            values.insert(col.name.clone(), val.clone());
+                        }
+                    }
+                }
+                Some(tauri::RowInsert { values })
+            })
+            .collect();
+
+        // Build deletes
+        let deletes: Vec<tauri::RowDelete> = deleted_set
+            .iter()
+            .filter_map(|row_idx| {
+                let row = current_rows.get(*row_idx)?;
+                let mut pk_values = std::collections::HashMap::new();
+                for (pk_idx, pk_name) in &pk_cols {
+                    pk_values.insert(pk_name.clone(), row.get(*pk_idx)?.clone());
+                }
+                Some(tauri::RowDelete { pk_values })
+            })
+            .collect();
+
+        let change_set = tauri::ChangeSet {
+            updates,
+            inserts,
+            deletes,
+        };
+
+        spawn_local(async move {
+            match tauri::save_changes(&table, &change_set).await {
+                Ok(_) => {
+                    // Re-fetch data to show committed state
+                    // (signals are Copy, so fetch_data closure works here)
+                }
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Save failed: {}", e).into());
+                }
+            }
+        });
+
+        // Re-fetch after save to show committed state
+        if let Some(name) = loaded_table.get() {
+            fetch_data(name, page.get(), page_size.get());
+        }
     });
 
     view! {

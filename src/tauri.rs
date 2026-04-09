@@ -273,6 +273,55 @@ pub async fn get_table_data(
         .map_err(|e| format!("Failed to parse table data: {}", e))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RowUpdate {
+    pub pk_values: std::collections::HashMap<String, serde_json::Value>,
+    pub changes: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RowInsert {
+    pub values: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RowDelete {
+    pub pk_values: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangeSet {
+    pub updates: Vec<RowUpdate>,
+    pub inserts: Vec<RowInsert>,
+    pub deletes: Vec<RowDelete>,
+}
+
+pub async fn save_changes(table_name: &str, changes: &ChangeSet) -> Result<String, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> {
+        table_name: &'a str,
+        changes: &'a ChangeSet,
+    }
+
+    let args = serde_wasm_bindgen::to_value(&Args {
+        table_name,
+        changes,
+    })
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("save_changes", args)
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Failed to save changes".to_string())
+        })?;
+
+    result
+        .as_string()
+        .ok_or_else(|| "Invalid response from backend".to_string())
+}
+
 /// Listen to restore-log events. Returns a JS function to call to unlisten.
 pub async fn listen_restore_logs(
     callback: impl Fn(String) + 'static,

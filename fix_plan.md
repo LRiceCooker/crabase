@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 5 — Inline Editing & Dirty State
-- [ ] Backend: `save_changes(table_name, changes)` command — applies inserts/updates/deletes in a single transaction
 - [ ] Add row button in toolbar (adds empty row, highlighted green)
 - [ ] Delete row button per row (marks for deletion, highlighted red)
 
@@ -36,6 +35,7 @@
 - [x] Row highlighting: added=emerald, modified=amber, deleted=red (per design.md)
 - [x] Modified cells: amber-100/50 background
 - [x] UI: dirty_bar.rs — floating bar at bottom with change count + Discard + Save buttons
+- [x] Backend: `save_changes(table_name, changes)` command — applies inserts/updates/deletes in a single transaction
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)
