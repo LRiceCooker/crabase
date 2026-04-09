@@ -5,6 +5,7 @@ use crate::icons::{IconLoader, IconRefreshCw, IconTable};
 use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::data_table::DataTable;
+use crate::table_view::dirty_bar::DirtyBar;
 use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
 use crate::tauri;
@@ -134,6 +135,20 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         set_json_edit.set(None);
     });
 
+    // Dirty bar callbacks
+    let on_discard = Callback::new(move |_: ()| {
+        // Re-fetch to restore original data
+        if let Some(name) = loaded_table.get() {
+            fetch_data(name, page.get(), page_size.get());
+        }
+    });
+
+    let on_save = Callback::new(move |_: ()| {
+        // Will be implemented when save_changes backend is ready
+        // For now, just log to console
+        web_sys::console::log_1(&"Save changes not yet implemented".into());
+    });
+
     view! {
         <div class="flex flex-col h-full">
             // Toolbar
@@ -198,6 +213,9 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 on_page_change=on_page_change
                 on_page_size_change=on_page_size_change
             />
+
+            // Dirty bar (floating)
+            <DirtyBar changes=changes on_discard=on_discard on_save=on_save />
 
             // JSON editor modal
             {move || {
