@@ -1,4 +1,5 @@
 pub mod cell_editor;
+pub mod change_tracker;
 pub mod data_table;
 pub mod json_editor;
 pub mod pagination;

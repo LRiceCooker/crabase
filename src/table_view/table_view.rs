@@ -3,6 +3,7 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::icons::{IconLoader, IconRefreshCw, IconTable};
 use crate::table_view::cell_editor::CellEdit;
+use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::data_table::DataTable;
 use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
@@ -20,11 +21,13 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let (total_count, set_total_count) = signal(0u64);
     let (has_data, set_has_data) = signal(false);
     let (json_edit, set_json_edit) = signal(Option::<JsonEditRequest>::None);
+    let changes = ChangeTracker::new();
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
         set_loading.set(true);
         set_error.set(None);
+        changes.discard();
 
         spawn_local(async move {
             match tauri::get_table_data(&name, pg, ps).await {
@@ -79,13 +82,22 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         }
     });
 
-    let on_refresh = move |_| {
+    let on_refresh = Callback::new(move |_: ()| {
         if let Some(name) = loaded_table.get() {
             fetch_data(name, page.get(), page_size.get());
         }
-    };
+    });
 
     let on_cell_edit = Callback::new(move |edit: CellEdit| {
+        // Get the original value before updating
+        let original = rows.get()
+            .get(edit.row)
+            .and_then(|r| r.get(edit.col))
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        changes.track_cell_edit(edit.row, edit.col, original, &edit.value);
+
         rows.update(|r| {
             if let Some(row) = r.get_mut(edit.row) {
                 if let Some(cell) = row.get_mut(edit.col) {
@@ -100,6 +112,14 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     });
 
     let on_json_save = Callback::new(move |(row, col, val): (usize, usize, serde_json::Value)| {
+        let original = rows.get()
+            .get(row)
+            .and_then(|r| r.get(col))
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        changes.track_cell_edit(row, col, original, &val);
+
         rows.update(|r| {
             if let Some(row_data) = r.get_mut(row) {
                 if let Some(cell) = row_data.get_mut(col) {
@@ -130,7 +150,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             <button
                                 class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md transition-colors duration-100"
                                 title="Refresh"
-                                on:click=on_refresh
+                                on:click=move |_| on_refresh.run(())
                             >
                                 <IconRefreshCw class="w-4 h-4" />
                             </button>
@@ -158,6 +178,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                         <DataTable
                             columns=columns.get()
                             rows=rows
+                            changes=changes.clone()
                             on_cell_edit=on_cell_edit
                             on_json_edit=on_json_edit
                         />

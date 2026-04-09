@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::table_view::cell_editor::{CellEdit, CellEditor};
+use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
 use crate::tauri::ColumnInfo;
 
@@ -26,6 +27,7 @@ fn is_json_type(data_type: &str) -> bool {
 pub fn DataTable(
     columns: Vec<ColumnInfo>,
     rows: RwSignal<Vec<Vec<serde_json::Value>>>,
+    changes: ChangeTracker,
     on_cell_edit: Callback<CellEdit>,
     on_json_edit: Callback<JsonEditRequest>,
 ) -> impl IntoView {
