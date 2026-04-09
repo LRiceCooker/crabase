@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
-use crate::icons::{IconLoader, IconRefreshCw, IconTable};
+use crate::icons::{IconLoader, IconPlus, IconRefreshCw, IconTable};
 use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::data_table::DataTable;
@@ -135,6 +135,17 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         set_json_edit.set(None);
     });
 
+    // Add row callback
+    let on_add_row = Callback::new(move |_: ()| {
+        let col_count = columns.get().len();
+        let new_row = vec![serde_json::Value::Null; col_count];
+        rows.update(|r| {
+            r.push(new_row);
+        });
+        let row_idx = rows.get().len() - 1;
+        changes.mark_row_added(row_idx);
+    });
+
     // Dirty bar callbacks
     let on_discard = Callback::new(move |_: ()| {
         // Re-fetch to restore original data
@@ -265,13 +276,22 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                                 <span class="text-[13px] font-semibold text-gray-900">{name}</span>
                                 <span class="text-[11px] text-gray-400">{format!("{} rows", count)}</span>
                             </div>
-                            <button
-                                class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md transition-colors duration-100"
-                                title="Refresh"
-                                on:click=move |_| on_refresh.run(())
-                            >
-                                <IconRefreshCw class="w-4 h-4" />
-                            </button>
+                            <div class="flex items-center gap-1">
+                                <button
+                                    class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md transition-colors duration-100 flex items-center gap-1 text-[13px]"
+                                    title="Add row"
+                                    on:click=move |_| on_add_row.run(())
+                                >
+                                    <IconPlus class="w-4 h-4" />
+                                </button>
+                                <button
+                                    class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md transition-colors duration-100"
+                                    title="Refresh"
+                                    on:click=move |_| on_refresh.run(())
+                                >
+                                    <IconRefreshCw class="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     }
                 })
