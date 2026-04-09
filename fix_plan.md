@@ -4,10 +4,6 @@
 
 ## Backlog
 
-### Phase 1 — Design System & Refactor
-- [ ] Apply light theme from specs/design.md to all existing components (connection screen, header, sidebar)
-- [ ] All UI text must be in English
-
 ### Phase 2 — Saved Connections
 - [ ] Backend: `save_connection`, `list_saved_connections`, `delete_saved_connection` commands (store as JSON file in app data dir)
 - [ ] UI: saved connections list on connection screen (click to fill, delete on hover)
@@ -52,6 +48,8 @@
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
+- [x] Apply light theme from specs/design.md to all existing components (connection screen, header, sidebar)
+- [x] All UI text must be in English
 - [x] Refactor frontend into component file structure per specs/project.md architecture
 - [x] Import Lucide icons (lucide-leptos or SVG sprites)
 - [x] Initialize Tauri v2 + Leptos (CSR) + Tailwind + DaisyUI

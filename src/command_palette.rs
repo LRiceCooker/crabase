@@ -1,6 +1,8 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
+use crate::icons::IconSearch;
+
 /// Fuzzy match: checks if all characters in `pattern` appear in order in `text`.
 /// Returns a score (higher = better match) or None if no match.
 /// Bonuses: consecutive matches, word-boundary matches, prefix matches.
@@ -89,20 +91,22 @@ pub fn CommandPalette(
             let first_command = filtered.first().map(|(name, _)| name.to_string());
 
             Some(view! {
-                <div class="fixed inset-0 z-50 flex justify-center items-start pt-[15vh]">
+                <div class="fixed inset-0 z-50 flex justify-center items-start">
                     // Backdrop
                     <div
-                        class="absolute inset-0 bg-black/50"
+                        class="absolute inset-0 backdrop-blur-sm bg-black/30"
                         on:click=move |_| set_show.set(false)
                     ></div>
-                    // Palette
-                    <div class="relative z-10 w-full max-w-lg bg-base-100 rounded-lg shadow-2xl overflow-hidden">
-                        <div class="p-3 border-b border-base-300">
+                    // Palette panel
+                    <div class="relative z-10 w-[560px] max-h-[400px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden mt-[20vh]">
+                        // Search input
+                        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                            <IconSearch class="w-4 h-4 text-gray-400 shrink-0" />
                             <input
                                 type="text"
                                 node_ref=input_ref
                                 placeholder="Type a command..."
-                                class="input input-bordered w-full"
+                                class="text-base w-full focus:outline-none text-gray-900 placeholder-gray-400"
                                 prop:value=move || query.get()
                                 on:input=move |ev| set_query.set(event_target_value(&ev))
                                 on:keydown={
@@ -121,25 +125,28 @@ pub fn CommandPalette(
                                 }
                             />
                         </div>
-                        <ul class="menu menu-sm p-2 max-h-64 overflow-y-auto">
+                        // Command group
+                        <div class="text-[11px] font-medium text-gray-400 uppercase px-4 py-2">"Commands"</div>
+                        // Command list
+                        <div class="pb-2 max-h-64 overflow-y-auto">
                             {filtered.into_iter().map(|(name, desc)| {
                                 let cmd_name = name.to_string();
                                 view! {
-                                    <li>
-                                        <a
-                                            class="flex flex-col items-start py-2"
-                                            on:click=move |_| {
-                                                on_command.run(cmd_name.clone());
-                                                set_show.set(false);
-                                            }
-                                        >
-                                            <span class="font-medium">{name.to_string()}</span>
-                                            <span class="text-xs text-base-content/50">{desc.to_string()}</span>
-                                        </a>
-                                    </li>
+                                    <div
+                                        class="px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-100"
+                                        on:click=move |_| {
+                                            on_command.run(cmd_name.clone());
+                                            set_show.set(false);
+                                        }
+                                    >
+                                        <div class="flex flex-col">
+                                            <span class="font-medium text-gray-900">{name.to_string()}</span>
+                                            <span class="text-[11px] text-gray-400">{desc.to_string()}</span>
+                                        </div>
+                                    </div>
                                 }
                             }).collect::<Vec<_>>()}
-                        </ul>
+                        </div>
                     </div>
                 </div>
             })

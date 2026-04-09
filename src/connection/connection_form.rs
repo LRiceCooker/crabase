@@ -1,6 +1,8 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
+use crate::icons::{IconArrowLeft, IconDatabase, IconAlertTriangle, IconLoader};
+
 #[component]
 pub fn ConnectionForm(
     form_host: RwSignal<String>,
@@ -17,78 +19,87 @@ pub fn ConnectionForm(
     on_connect: Callback<()>,
     on_back: Callback<()>,
 ) -> impl IntoView {
+    let input_class = "bg-white border border-gray-200 rounded-md px-3 py-1.5 text-[13px] w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors duration-100";
+    let select_class = "bg-white border border-gray-200 rounded-md px-3 py-1.5 text-[13px] w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors duration-100";
+    let label_class = "text-[13px] font-normal text-gray-700";
+
     view! {
-        <main class="min-h-screen bg-base-200 flex items-center justify-center p-4">
-            <div class="card bg-base-100 shadow-xl w-full max-w-lg">
-                <div class="card-body">
-                    <h1 class="text-2xl font-bold text-center">"crabase"</h1>
-                    <p class="text-base-content/70 text-center mb-4">"Connection details"</p>
+        <main class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-lg">
+                <div class="px-6 py-8">
+                    <div class="flex flex-col items-center gap-1 mb-6">
+                        <div class="flex items-center gap-2">
+                            <IconDatabase class="w-5 h-5 text-indigo-500" />
+                            <h1 class="text-base font-semibold text-gray-900">"crabase"</h1>
+                        </div>
+                        <p class="text-[13px] text-gray-500">"Connection details"</p>
+                    </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         // Host
-                        <div class="form-control col-span-2 sm:col-span-1">
-                            <label class="label"><span class="label-text">"Host"</span></label>
+                        <div class="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                            <label class=label_class>"Host"</label>
                             <input
                                 type="text"
-                                class="input input-bordered w-full"
+                                class=input_class
                                 prop:value=move || form_host.get()
                                 on:input=move |ev| form_host.set(event_target_value(&ev))
                             />
                         </div>
                         // Port
-                        <div class="form-control col-span-2 sm:col-span-1">
-                            <label class="label"><span class="label-text">"Port"</span></label>
+                        <div class="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                            <label class=label_class>"Port"</label>
                             <input
                                 type="text"
-                                class="input input-bordered w-full"
+                                class=input_class
                                 prop:value=move || form_port.get()
                                 on:input=move |ev| form_port.set(event_target_value(&ev))
                             />
                         </div>
                         // User
-                        <div class="form-control col-span-2 sm:col-span-1">
-                            <label class="label"><span class="label-text">"User"</span></label>
+                        <div class="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                            <label class=label_class>"User"</label>
                             <input
                                 type="text"
-                                class="input input-bordered w-full"
+                                class=input_class
                                 prop:value=move || form_user.get()
                                 on:input=move |ev| form_user.set(event_target_value(&ev))
                             />
                         </div>
                         // Password
-                        <div class="form-control col-span-2 sm:col-span-1">
-                            <label class="label"><span class="label-text">"Password"</span></label>
+                        <div class="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                            <label class=label_class>"Password"</label>
                             <input
                                 type="password"
-                                class="input input-bordered w-full"
+                                class=input_class
                                 prop:value=move || form_password.get()
                                 on:input=move |ev| form_password.set(event_target_value(&ev))
                             />
                         </div>
                         // Database
-                        <div class="form-control col-span-2 sm:col-span-1">
-                            <label class="label"><span class="label-text">"Database"</span></label>
+                        <div class="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                            <label class=label_class>"Database"</label>
                             <input
                                 type="text"
-                                class="input input-bordered w-full"
+                                class=input_class
                                 prop:value=move || form_dbname.get()
                                 on:input=move |ev| form_dbname.set(event_target_value(&ev))
                             />
                         </div>
                         // Schema
-                        <div class="form-control col-span-2 sm:col-span-1">
-                            <label class="label"><span class="label-text">"Schema"</span></label>
+                        <div class="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                            <label class=label_class>"Schema"</label>
                             {move || {
                                 let schemas = available_schemas.get();
                                 if schemas.is_empty() && loading_schemas.get() {
                                     view! {
-                                        <select class="select select-bordered w-full" disabled=true>
+                                        <select class=select_class disabled=true>
                                             <option>"Loading schemas..."</option>
                                         </select>
                                     }.into_any()
                                 } else if schemas.is_empty() {
                                     view! {
-                                        <select class="select select-bordered w-full">
+                                        <select class=select_class>
                                             <option selected=true>"public"</option>
                                         </select>
                                     }.into_any()
@@ -96,7 +107,7 @@ pub fn ConnectionForm(
                                     let current = form_schema.get();
                                     view! {
                                         <select
-                                            class="select select-bordered w-full"
+                                            class=select_class
                                             on:change=move |ev| form_schema.set(event_target_value(&ev))
                                         >
                                             {schemas.into_iter().map(|s| {
@@ -110,44 +121,49 @@ pub fn ConnectionForm(
                             }}
                         </div>
                         // SSL toggle
-                        <div class="form-control col-span-2">
-                            <label class="label cursor-pointer justify-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    class="toggle toggle-primary"
-                                    prop:checked=move || form_ssl.get()
-                                    on:change=move |ev| {
-                                        let checked = event_target_checked(&ev);
-                                        form_ssl.set(checked);
-                                    }
-                                />
-                                <span class="label-text">"SSL (require)"</span>
-                            </label>
+                        <div class="col-span-2 flex items-center gap-3 mt-1">
+                            <input
+                                type="checkbox"
+                                class="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/20"
+                                prop:checked=move || form_ssl.get()
+                                on:change=move |ev| {
+                                    let checked = event_target_checked(&ev);
+                                    form_ssl.set(checked);
+                                }
+                            />
+                            <label class="text-[13px] text-gray-700 cursor-pointer">"SSL (require)"</label>
                         </div>
                     </div>
 
                     {move || error_message.get().map(|msg| view! {
-                        <div class="alert alert-error mt-3">
-                            <span>{msg}</span>
+                        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                            <IconAlertTriangle class="w-4 h-4 text-red-500 shrink-0" />
+                            <span class="text-[13px] text-red-700">{msg}</span>
                         </div>
                     })}
 
-                    <div class="card-actions mt-4 flex gap-2">
+                    <div class="mt-4 flex gap-2">
                         <button
-                            class="btn btn-ghost flex-1"
+                            class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 text-[13px] font-medium px-3 py-1.5 rounded-md flex-1 transition-colors duration-100 flex items-center justify-center gap-1.5"
                             on:click=move |_| on_back.run(())
                         >
+                            <IconArrowLeft class="w-4 h-4" />
                             "Back"
                         </button>
                         <button
-                            class="btn btn-primary flex-1"
+                            class="bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] font-medium px-3 py-1.5 rounded-md flex-1 transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled=move || connecting.get()
                             on:click=move |_| on_connect.run(())
                         >
                             {move || if connecting.get() {
-                                "Connexion..."
+                                view! {
+                                    <span class="flex items-center justify-center gap-2">
+                                        <IconLoader class="w-4 h-4 animate-spin" />
+                                        "Connecting..."
+                                    </span>
+                                }.into_any()
                             } else {
-                                "Se connecter"
+                                view! { <span>"Connect"</span> }.into_any()
                             }}
                         </button>
                     </div>

@@ -4,6 +4,10 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::command_palette::CommandPalette;
+use crate::icons::{
+    IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconUpload,
+    IconX, IconXCircle,
+};
 use crate::sidebar::tables_list::TablesList;
 use crate::tauri;
 
@@ -139,88 +143,97 @@ pub fn MainLayout() -> impl IntoView {
         });
     };
 
+    let header_input_class = "bg-white border border-gray-200 rounded-md px-2 py-1 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors duration-100";
+
     view! {
-        <div class="h-screen flex flex-col bg-base-200 overflow-hidden">
+        <div class="h-screen flex flex-col bg-white overflow-hidden">
             // Command palette overlay
             <CommandPalette show=show_palette set_show=set_show_palette on_command=on_command />
 
-            // Header
-            <header class="navbar bg-base-100 shadow-md px-4">
-                <div class="flex-1">
-                    <span class="text-lg font-bold">"crabase"</span>
+            // Header — h-10 with border-b
+            <header class="h-10 flex items-center justify-between px-4 border-b border-gray-200 bg-white shrink-0">
+                <div class="flex items-center gap-2">
+                    <IconDatabase class="w-4 h-4 text-indigo-500" />
+                    <span class="text-base font-semibold text-gray-900">"crabase"</span>
                 </div>
-                <div class="flex-none gap-2 text-sm">
+                <div class="flex items-center gap-2 text-[13px]">
                     {move || {
                         if editing.get() {
                             // Edit mode: input fields
                             view! {
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1.5">
                                     <input
                                         type="text"
                                         placeholder="user"
-                                        class="input input-bordered input-xs w-24"
+                                        class=format!("{} w-20", header_input_class)
                                         prop:value=move || edit_user.get()
                                         on:input=move |ev| set_edit_user.set(event_target_value(&ev))
                                     />
-                                    <span class="text-base-content/50">"@"</span>
+                                    <span class="text-gray-400">"@"</span>
                                     <input
                                         type="text"
                                         placeholder="host"
-                                        class="input input-bordered input-xs w-32"
+                                        class=format!("{} w-28", header_input_class)
                                         prop:value=move || edit_host.get()
                                         on:input=move |ev| set_edit_host.set(event_target_value(&ev))
                                     />
-                                    <span class="text-base-content/50">":"</span>
+                                    <span class="text-gray-400">":"</span>
                                     <input
                                         type="text"
                                         placeholder="port"
-                                        class="input input-bordered input-xs w-16"
+                                        class=format!("{} w-14", header_input_class)
                                         prop:value=move || edit_port.get()
                                         on:input=move |ev| set_edit_port.set(event_target_value(&ev))
                                     />
-                                    <span class="text-base-content/50">"/"</span>
+                                    <span class="text-gray-400">"/"</span>
                                     <input
                                         type="text"
                                         placeholder="dbname"
-                                        class="input input-bordered input-xs w-24"
+                                        class=format!("{} w-20", header_input_class)
                                         prop:value=move || edit_dbname.get()
                                         on:input=move |ev| set_edit_dbname.set(event_target_value(&ev))
                                     />
                                     <input
                                         type="password"
                                         placeholder="password"
-                                        class="input input-bordered input-xs w-24"
+                                        class=format!("{} w-20", header_input_class)
                                         prop:value=move || edit_password.get()
                                         on:input=move |ev| set_edit_password.set(event_target_value(&ev))
                                     />
                                     <button
-                                        class="btn btn-primary btn-xs"
+                                        class="bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] font-medium px-2 py-1 rounded-md transition-colors duration-100 disabled:opacity-50"
                                         disabled=move || reconnecting.get()
                                         on:click=on_reconnect
                                     >
                                         {move || if reconnecting.get() {
-                                            "Connexion..."
+                                            "Reconnecting..."
                                         } else {
-                                            "Reconnecter"
+                                            "Reconnect"
                                         }}
                                     </button>
                                     <button
-                                        class="btn btn-ghost btn-xs"
+                                        class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md text-[13px] transition-colors duration-100"
                                         disabled=move || reconnecting.get()
                                         on:click=on_cancel
                                     >
-                                        "Annuler"
+                                        "Cancel"
                                     </button>
                                 </div>
                             }.into_any()
                         } else {
                             // Read-only mode: badges + schema select + edit button
                             view! {
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2">
                                     {move || connection_info.get().map(|info| view! {
-                                        <div class="badge badge-outline">{format!("{}@{}", info.user, info.host)}</div>
-                                        <div class="badge badge-outline">{format!(":{}", info.port)}</div>
-                                        <div class="badge badge-primary">{info.dbname.clone()}</div>
+                                        <span class="text-[11px] font-medium text-gray-500 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5">
+                                            {format!("{}@{}", info.user, info.host)}
+                                        </span>
+                                        <span class="text-[11px] font-medium text-gray-500 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5">
+                                            {format!(":{}", info.port)}
+                                        </span>
+                                        <span class="text-[11px] font-medium text-white bg-indigo-500 rounded px-1.5 py-0.5">
+                                            {info.dbname.clone()}
+                                        </span>
                                     })}
                                     // Schema select
                                     {move || {
@@ -228,14 +241,14 @@ pub fn MainLayout() -> impl IntoView {
                                         let current = connection_info.get().map(|i| i.schema.clone()).unwrap_or_default();
                                         if schemas.is_empty() {
                                             view! {
-                                                <select class="select select-bordered select-xs">
+                                                <select class="bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                                                     <option>{current}</option>
                                                 </select>
                                             }.into_any()
                                         } else {
                                             view! {
                                                 <select
-                                                    class="select select-bordered select-xs"
+                                                    class="bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                                                     on:change=move |ev| {
                                                         let new_schema = event_target_value(&ev);
                                                         // Reconnect with new schema
@@ -266,10 +279,10 @@ pub fn MainLayout() -> impl IntoView {
                                         }
                                     }}
                                     <button
-                                        class="btn btn-ghost btn-xs"
+                                        class="text-gray-400 hover:bg-gray-100 hover:text-gray-900 p-1 rounded-md transition-colors duration-100"
                                         on:click=on_edit
                                     >
-                                        "Modifier"
+                                        <IconEdit class="w-4 h-4" />
                                     </button>
                                 </div>
                             }.into_any()
@@ -280,13 +293,19 @@ pub fn MainLayout() -> impl IntoView {
 
             // Header error message
             {move || header_error.get().map(|msg| view! {
-                <div class="alert alert-error shadow-sm mx-4 mt-2">
-                    <span>{msg}</span>
+                <div class="flex items-center gap-2 mx-4 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                    <IconAlertTriangle class="w-4 h-4 text-red-500 shrink-0" />
+                    <span class="text-[13px] text-red-700">{msg}</span>
                 </div>
             })}
 
-            // Body: central area + right panel
+            // Body: sidebar (left) + central area
             <div class="flex flex-1 overflow-hidden">
+                // Left sidebar
+                <aside class="w-56 bg-gray-50 border-r border-gray-200 overflow-y-auto shrink-0">
+                    <TablesList tables=tables />
+                </aside>
+
                 // Central area
                 <main class="flex-1 p-4 overflow-y-auto">
                     {move || {
@@ -345,54 +364,68 @@ pub fn MainLayout() -> impl IntoView {
                             };
 
                             view! {
-                                <div class="card bg-base-100 shadow-lg max-w-lg mx-auto mt-8">
-                                    <div class="card-body">
-                                        <div class="flex items-center justify-between">
-                                            <h2 class="card-title">"Restore Backup"</h2>
-                                            <button
-                                                class="btn btn-ghost btn-sm"
-                                                disabled=move || restore_running.get()
-                                                on:click=on_close
-                                            >
-                                                "✕"
-                                            </button>
-                                        </div>
-                                        <p class="text-base-content/60">"Restore a .tar.gz PostgreSQL backup to the connected database."</p>
+                                <div class="bg-white rounded-lg border border-gray-200 shadow-lg max-w-lg mx-auto mt-8">
+                                    // Header
+                                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                        <h2 class="text-[13px] font-semibold text-gray-900">"Restore Backup"</h2>
+                                        <button
+                                            class="text-gray-400 hover:bg-gray-100 hover:text-gray-900 p-1 rounded-md transition-colors duration-100"
+                                            disabled=move || restore_running.get()
+                                            on:click=on_close
+                                        >
+                                            <IconX class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    // Body
+                                    <div class="px-4 py-4">
+                                        <p class="text-[13px] text-gray-500 mb-4">"Restore a .tar.gz PostgreSQL backup to the connected database."</p>
 
                                         // File selector
-                                        <div class="form-control mt-2">
-                                            <label class="label">
-                                                <span class="label-text">"Backup file (.tar.gz)"</span>
-                                            </label>
+                                        <div class="flex flex-col gap-1.5">
+                                            <label class="text-[13px] font-normal text-gray-700">"Backup file (.tar.gz)"</label>
                                             <div class="flex items-center gap-2">
                                                 <button
-                                                    class="btn btn-outline btn-sm"
+                                                    class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-[13px] px-3 py-1.5 rounded-md transition-colors duration-100 flex items-center gap-1.5 disabled:opacity-50"
                                                     disabled=move || restore_picking.get() || restore_running.get()
                                                     on:click=on_pick_file
                                                 >
+                                                    <IconUpload class="w-4 h-4 text-gray-400" />
                                                     {move || if restore_picking.get() {
                                                         "Selecting..."
                                                     } else {
                                                         "Choose file..."
                                                     }}
                                                 </button>
-                                                <span class="text-sm text-base-content/70 truncate max-w-xs">
-                                                    {move || restore_file.get().unwrap_or_else(|| "No file selected".to_string())}
+                                                <span class="text-[13px] text-gray-500 truncate max-w-xs flex items-center gap-1.5">
+                                                    {move || restore_file.get().map(|f| view! {
+                                                        <IconFile class="w-4 h-4 text-gray-400 shrink-0" />
+                                                        <span class="truncate">{f}</span>
+                                                    })}
+                                                    {move || if restore_file.get().is_none() {
+                                                        Some(view! { <span class="text-gray-400 italic">"No file selected"</span> })
+                                                    } else {
+                                                        None
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
 
                                         // Restore button
-                                        <div class="card-actions justify-end mt-4">
+                                        <div class="flex justify-end mt-4">
                                             <button
-                                                class="btn btn-primary"
+                                                class="bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] font-medium px-3 py-1.5 rounded-md transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 disabled=move || restore_file.get().is_none() || restore_running.get()
                                                 on:click=on_restore
                                             >
                                                 {move || if restore_running.get() {
-                                                    "Restoring..."
+                                                    view! {
+                                                        <span class="flex items-center gap-2">
+                                                            <IconLoader class="w-4 h-4 animate-spin" />
+                                                            "Restoring..."
+                                                        </span>
+                                                    }.into_any()
                                                 } else {
-                                                    "Lancer le restore"
+                                                    view! { <span>"Start restore"</span> }.into_any()
                                                 }}
                                             </button>
                                         </div>
@@ -403,10 +436,8 @@ pub fn MainLayout() -> impl IntoView {
                                             if !logs.is_empty() {
                                                 Some(view! {
                                                     <div class="mt-4">
-                                                        <label class="label">
-                                                            <span class="label-text font-semibold">"Logs"</span>
-                                                        </label>
-                                                        <div class="bg-base-300 rounded-lg p-3 max-h-60 overflow-y-auto font-mono text-xs">
+                                                        <label class="text-[13px] font-semibold text-gray-700 mb-1.5 block">"Logs"</label>
+                                                        <div class="bg-gray-900 text-gray-300 rounded-md p-3 max-h-60 overflow-y-auto font-mono text-xs">
                                                             {logs.into_iter().map(|line| view! {
                                                                 <div class="whitespace-pre-wrap">{line}</div>
                                                             }).collect::<Vec<_>>()}
@@ -423,19 +454,15 @@ pub fn MainLayout() -> impl IntoView {
                                             let status = restore_status.get();
                                             match status {
                                                 Some(Ok(_)) => view! {
-                                                    <div class="alert alert-success mt-4">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                        <span>"Restore completed successfully."</span>
+                                                    <div class="flex items-center gap-2 mt-4 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-md">
+                                                        <IconCheckCircle class="w-4 h-4 text-emerald-500 shrink-0" />
+                                                        <span class="text-[13px] text-emerald-700">"Restore completed successfully."</span>
                                                     </div>
                                                 }.into_any(),
                                                 Some(Err(ref msg)) => view! {
-                                                    <div class="alert alert-error mt-4">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                        <span>{format!("Restore failed: {}", msg)}</span>
+                                                    <div class="flex items-center gap-2 mt-4 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                                                        <IconXCircle class="w-4 h-4 text-red-500 shrink-0" />
+                                                        <span class="text-[13px] text-red-700">{format!("Restore failed: {}", msg)}</span>
                                                     </div>
                                                 }.into_any(),
                                                 None => view! { <div></div> }.into_any(),
@@ -446,18 +473,13 @@ pub fn MainLayout() -> impl IntoView {
                             }.into_any()
                         } else {
                             view! {
-                                <div class="flex items-center justify-center h-full text-base-content/30">
-                                    <p class="text-lg">"Select a table to get started"</p>
+                                <div class="flex items-center justify-center h-full text-gray-400">
+                                    <p class="text-[13px]">"Select a table to get started"</p>
                                 </div>
                             }.into_any()
                         }
                     }}
                 </main>
-
-                // Right panel: tables list
-                <aside class="w-64 bg-base-100 border-l border-base-300 overflow-y-auto">
-                    <TablesList tables=tables />
-                </aside>
             </div>
         </div>
     }
