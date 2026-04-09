@@ -9,6 +9,7 @@ use crate::icons::{
     IconUpload, IconX, IconXCircle,
 };
 use crate::sidebar::tables_list::TablesList;
+use crate::sql_editor::sql_tab::SqlTab;
 use crate::table_view::table_view::TableView;
 use crate::tabs::tab_bar::{TabBar, TabKind, TabState};
 use crate::tauri;
@@ -50,6 +51,18 @@ pub fn MainLayout() -> impl IntoView {
                     _ => None,
                 })
             })
+        })
+    };
+
+    // Derived signal: is the active tab an SQL editor?
+    let is_sql_tab = {
+        let ts = tab_state.clone();
+        Memo::new(move |_| {
+            let active = ts.active_id.get();
+            let tabs = ts.tabs.get();
+            active.map(|id| {
+                tabs.iter().any(|t| t.id == id && matches!(t.kind, TabKind::SqlEditor))
+            }).unwrap_or(false)
         })
     };
 
@@ -518,6 +531,12 @@ pub fn MainLayout() -> impl IntoView {
                             view! {
                                 <div class="h-full">
                                     <TableView table_name=active_table />
+                                </div>
+                            }.into_any()
+                        } else if is_sql_tab.get() {
+                            view! {
+                                <div class="h-full">
+                                    <SqlTab />
                                 </div>
                             }.into_any()
                         } else {

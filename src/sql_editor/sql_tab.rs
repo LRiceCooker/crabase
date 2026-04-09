@@ -1,0 +1,40 @@
+use leptos::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+
+use crate::sql_editor::sql_editor::SqlEditor;
+use crate::sql_editor::sql_results::SqlResults;
+use crate::sql_editor::sql_toolbar::SqlToolbar;
+use crate::tauri;
+
+/// Full SQL editor tab: toolbar + editor + results pane.
+#[component]
+pub fn SqlTab() -> impl IntoView {
+    let sql = RwSignal::new(String::new());
+    let (running, set_running) = signal(false);
+    let (result, set_result) = signal(Option::<Result<tauri::QueryResult, String>>::None);
+
+    let on_run = Callback::new(move |_: ()| {
+        let query = sql.get();
+        if query.trim().is_empty() {
+            return;
+        }
+        set_running.set(true);
+        set_result.set(None);
+
+        spawn_local(async move {
+            let res = tauri::execute_query(&query).await;
+            set_result.set(Some(res));
+            set_running.set(false);
+        });
+    });
+
+    view! {
+        <div class="flex flex-col h-full">
+            <SqlToolbar on_run=on_run running=running />
+            <div class="flex flex-col flex-1 overflow-hidden">
+                <SqlEditor sql=sql />
+                <SqlResults result=result />
+            </div>
+        </div>
+    }
+}
