@@ -57,6 +57,7 @@ pub fn CommandPalette(
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
     let commands: Vec<(&'static str, &'static str)> = vec![
+        ("New SQL Editor", "Open a new SQL editor tab"),
         ("Restore Backup", "Restore a .tar.gz PostgreSQL backup"),
     ];
 

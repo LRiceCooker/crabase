@@ -83,12 +83,16 @@ pub fn MainLayout() -> impl IntoView {
     let (restore_status, set_restore_status) = signal(Option::<Result<String, String>>::None);
 
     // Command palette action handler
-    let on_command = Callback::new(move |cmd: String| {
-        match cmd.as_str() {
-            "Restore Backup" => set_show_restore.set(true),
-            _ => {}
-        }
-    });
+    let on_command = {
+        let ts = tab_state.clone();
+        Callback::new(move |cmd: String| {
+            match cmd.as_str() {
+                "New SQL Editor" => { ts.open(TabKind::SqlEditor); },
+                "Restore Backup" => set_show_restore.set(true),
+                _ => {}
+            }
+        })
+    };
 
     // Global keyboard shortcut: Cmd+Shift+P (macOS) / Ctrl+Shift+P
     {
