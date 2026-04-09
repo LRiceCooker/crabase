@@ -7,7 +7,6 @@
 ### Phase 3 — Tab System
 
 ### Phase 4 — Table Data Viewer
-- [ ] UI: toolbar with table name, row count, refresh button
 
 ### Phase 5 — Inline Editing & Dirty State
 - [ ] UI: cell_editor.rs — click cell to edit, specialized editor per column type (text, number, boolean checkbox, enum select, date input)
@@ -40,6 +39,7 @@
 - [x] Backend: `get_table_data(table_name, page, page_size)` command — returns paginated rows + total count
 - [x] UI: data_table.rs component — sticky headers, monospace cells, truncated, NULL as gray italic
 - [x] UI: pagination.rs component — page X of Y, rows per page select, prev/next buttons
+- [x] UI: toolbar with table name, row count, refresh button
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)
