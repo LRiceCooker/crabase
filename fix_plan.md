@@ -5,10 +5,8 @@
 ## Backlog
 
 ### Phase 3 — Tab System
-- [ ] Tab close button appears on hover, active tab has indigo bottom border
 
 ### Phase 4 — Table Data Viewer
-- [ ] Backend: `get_column_info(table_name)` command — returns column names, types, nullable, primary key
 - [ ] Backend: `get_table_data(table_name, page, page_size)` command — returns paginated rows + total count
 - [ ] UI: data_table.rs component — sticky headers, monospace cells, truncated, NULL as gray italic
 - [ ] UI: pagination.rs component — page X of Y, rows per page select, prev/next buttons
@@ -40,6 +38,8 @@
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
+- [x] Tab close button appears on hover, active tab has indigo bottom border
+- [x] Backend: `get_column_info(table_name)` command — returns column names, types, nullable, primary key
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)
