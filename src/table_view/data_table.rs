@@ -104,8 +104,13 @@ pub fn DataTable(
                                             }.into_any()
                                         } else {
                                             let (text, is_null) = format_cell(&cell);
-                                            let class = if is_null {
+                                            let cell_modified = changes.is_cell_modified(row_idx, col_idx);
+                                            let class = if is_null && cell_modified {
+                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] text-gray-300 italic cursor-pointer bg-amber-100/50"
+                                            } else if is_null {
                                                 "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] text-gray-300 italic cursor-pointer"
+                                            } else if cell_modified {
+                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] cursor-pointer bg-amber-100/50"
                                             } else {
                                                 "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
                                             };

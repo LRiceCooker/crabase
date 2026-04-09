@@ -9,7 +9,6 @@
 ### Phase 4 — Table Data Viewer
 
 ### Phase 5 — Inline Editing & Dirty State
-- [ ] Modified cells: amber-100/50 background
 - [ ] UI: dirty_bar.rs — floating bar at bottom with change count + Discard + Save buttons
 - [ ] Backend: `save_changes(table_name, changes)` command — applies inserts/updates/deletes in a single transaction
 - [ ] Add row button in toolbar (adds empty row, highlighted green)
@@ -40,6 +39,7 @@
 - [x] UI: JSON/JSONB editor — modal with syntax-highlighted JSON editor on click
 - [x] Track change state: map of modified cells, added rows, deleted rows
 - [x] Row highlighting: added=emerald, modified=amber, deleted=red (per design.md)
+- [x] Modified cells: amber-100/50 background
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)
