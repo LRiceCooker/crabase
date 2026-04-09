@@ -7,7 +7,6 @@
 ### Phase 5 — Inline Editing & Dirty State
 
 ### Phase 6 — SQL Editor
-- [ ] Backend: `execute_query(sql)` command — returns columns+rows on success, error message on failure
 - [ ] UI: sql_results.rs — success: read-only data table with results, error: dark console with error message
 - [ ] "+" button in header to open new SQL editor tab
 - [ ] Command palette: add "New SQL Editor" command
@@ -36,6 +35,7 @@
 - [x] UI: sql_editor.rs — text area with SQL syntax highlighting, line numbers, monospace
 - [x] UI: sql_toolbar.rs — Run button (emerald, play icon)
 - [x] Cmd+/ to toggle comment on selected lines
+- [x] Backend: `execute_query(sql)` command — returns columns+rows on success, error message on failure
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)

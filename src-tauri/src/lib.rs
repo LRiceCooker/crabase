@@ -60,6 +60,14 @@ async fn get_table_data(
 }
 
 #[tauri::command]
+async fn execute_query(
+    sql: String,
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<db::QueryResult, String> {
+    db_state.execute_query(&sql).await
+}
+
+#[tauri::command]
 async fn save_changes(
     table_name: String,
     changes: db::ChangeSet,
@@ -108,7 +116,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_table_data, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_table_data, execute_query, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

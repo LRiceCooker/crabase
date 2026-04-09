@@ -370,6 +370,40 @@ impl DbState {
 
         Ok(format!("{} rows affected", total_affected))
     }
+
+    pub async fn execute_query(&self, sql: &str) -> Result<QueryResult, String> {
+        let pool = {
+            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            pool_guard
+                .clone()
+                .ok_or_else(|| "Not connected to any database".to_string())?
+        };
+
+        let pg_rows = sqlx::query(sql)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| format!("{}", e))?;
+
+        // Extract column names from the first row (or empty if no rows)
+        let columns: Vec<String> = if let Some(first) = pg_rows.first() {
+            (0..first.len())
+                .map(|i| first.column(i).name().to_string())
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        let rows: Vec<Vec<serde_json::Value>> = pg_rows
+            .iter()
+            .map(|row| {
+                (0..row.len())
+                    .map(|i| pg_value_to_json(row, i))
+                    .collect()
+            })
+            .collect();
+
+        Ok(QueryResult { columns, rows })
+    }
 }
 
 /// Build a WHERE clause from primary key values starting at parameter index `start_idx`.
@@ -566,6 +600,12 @@ pub struct ChangeSet {
     pub deletes: Vec<RowDelete>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryResult {
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<serde_json::Value>>,
+}
+
 pub fn build_connection_string(info: &ConnectionInfo) -> String {
     let password_part = if info.password.is_empty() {
         String::new()
@@ -747,6 +787,14 @@ mod tests {
     async fn test_get_table_data_not_connected() {
         let state = DbState::new();
         let result = state.get_table_data("some_table", 1, 25).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+
+    #[tokio::test]
+    async fn test_execute_query_not_connected() {
+        let state = DbState::new();
+        let result = state.execute_query("SELECT 1").await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Not connected to any database");
     }

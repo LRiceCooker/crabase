@@ -296,6 +296,32 @@ pub struct ChangeSet {
     pub deletes: Vec<RowDelete>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryResult {
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<serde_json::Value>>,
+}
+
+pub async fn execute_query(sql: &str) -> Result<QueryResult, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        sql: &'a str,
+    }
+
+    let args = serde_wasm_bindgen::to_value(&Args { sql })
+        .map_err(|e| e.to_string())?;
+
+    let result = invoke("execute_query", args)
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Query execution failed".to_string())
+        })?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse query result: {}", e))
+}
+
 pub async fn save_changes(table_name: &str, changes: &ChangeSet) -> Result<String, String> {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
