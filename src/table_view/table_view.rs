@@ -2,19 +2,22 @@ use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::icons::{IconLoader, IconRefreshCw, IconTable};
+use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::data_table::DataTable;
 use crate::table_view::pagination::Pagination;
 use crate::tauri;
 
 #[component]
 pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
-    let (data, set_data) = signal(Option::<tauri::TableData>::None);
+    let (columns, set_columns) = signal(Vec::<tauri::ColumnInfo>::new());
+    let rows = RwSignal::new(Vec::<Vec<serde_json::Value>>::new());
     let (loading, set_loading) = signal(false);
     let (error, set_error) = signal(Option::<String>::None);
     let (loaded_table, set_loaded_table) = signal(Option::<String>::None);
     let (page, set_page) = signal(1u32);
     let (page_size, set_page_size) = signal(50u32);
     let (total_count, set_total_count) = signal(0u64);
+    let (has_data, set_has_data) = signal(false);
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
@@ -25,11 +28,13 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             match tauri::get_table_data(&name, pg, ps).await {
                 Ok(td) => {
                     set_total_count.set(td.total_count);
-                    set_data.set(Some(td));
+                    set_columns.set(td.columns);
+                    rows.set(td.rows);
+                    set_has_data.set(true);
                 }
                 Err(e) => {
                     set_error.set(Some(e));
-                    set_data.set(None);
+                    set_has_data.set(false);
                 }
             }
             set_loading.set(false);
@@ -51,7 +56,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             set_page.set(1);
             fetch_data(name, 1, page_size.get());
         } else {
-            set_data.set(None);
+            set_has_data.set(false);
             set_total_count.set(0);
             set_loading.set(false);
         }
@@ -77,6 +82,16 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             fetch_data(name, page.get(), page_size.get());
         }
     };
+
+    let on_cell_edit = Callback::new(move |edit: CellEdit| {
+        rows.update(|r| {
+            if let Some(row) = r.get_mut(edit.row) {
+                if let Some(cell) = row.get_mut(edit.col) {
+                    *cell = edit.value;
+                }
+            }
+        });
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -117,9 +132,13 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             <p class="text-[13px] text-red-500">{err}</p>
                         </div>
                     }.into_any()
-                } else if let Some(td) = data.get() {
+                } else if has_data.get() {
                     view! {
-                        <DataTable columns=td.columns rows=td.rows />
+                        <DataTable
+                            columns=columns.get()
+                            rows=rows
+                            on_cell_edit=on_cell_edit
+                        />
                     }.into_any()
                 } else {
                     view! {

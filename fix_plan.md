@@ -9,7 +9,6 @@
 ### Phase 4 — Table Data Viewer
 
 ### Phase 5 — Inline Editing & Dirty State
-- [ ] UI: cell_editor.rs — click cell to edit, specialized editor per column type (text, number, boolean checkbox, enum select, date input)
 - [ ] UI: JSON/JSONB editor — modal with syntax-highlighted JSON editor on click
 - [ ] Track change state: map of modified cells, added rows, deleted rows
 - [ ] Row highlighting: added=emerald, modified=amber, deleted=red (per design.md)
@@ -40,6 +39,7 @@
 - [x] UI: data_table.rs component — sticky headers, monospace cells, truncated, NULL as gray italic
 - [x] UI: pagination.rs component — page X of Y, rows per page select, prev/next buttons
 - [x] UI: toolbar with table name, row count, refresh button
+- [x] UI: cell_editor.rs — click cell to edit, specialized editor per column type (text, number, boolean checkbox, enum select, date input)
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)

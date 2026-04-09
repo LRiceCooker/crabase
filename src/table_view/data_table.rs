@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 
+use crate::table_view::cell_editor::{CellEdit, CellEditor};
 use crate::tauri::ColumnInfo;
 
 /// Format a cell value for display.
@@ -18,8 +19,15 @@ fn format_cell(value: &serde_json::Value) -> (String, bool) {
 #[component]
 pub fn DataTable(
     columns: Vec<ColumnInfo>,
-    rows: Vec<Vec<serde_json::Value>>,
+    rows: RwSignal<Vec<Vec<serde_json::Value>>>,
+    on_cell_edit: Callback<CellEdit>,
 ) -> impl IntoView {
+    // Track which cell is being edited: (row_idx, col_idx)
+    let (editing_cell, set_editing_cell) = signal(Option::<(usize, usize)>::None);
+
+    // Clone columns for use in the view closures
+    let columns_for_types = columns.clone();
+
     view! {
         <div class="overflow-auto flex-1">
             <table class="w-full text-xs font-mono">
@@ -40,26 +48,66 @@ pub fn DataTable(
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.into_iter().map(|row| {
-                        view! {
-                            <tr class="hover:bg-gray-50">
-                                {row.into_iter().map(|cell| {
-                                    let (text, is_null) = format_cell(&cell);
-                                    let class = if is_null {
-                                        "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] text-gray-300 italic"
-                                    } else {
-                                        "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px]"
-                                    };
-                                    let title = text.clone();
-                                    view! {
-                                        <td class=class title=title>
-                                            {text}
-                                        </td>
-                                    }
-                                }).collect::<Vec<_>>()}
-                            </tr>
-                        }
-                    }).collect::<Vec<_>>()}
+                    {move || {
+                        let current_rows = rows.get();
+                        let active = editing_cell.get();
+                        let col_types = columns_for_types.clone();
+
+                        current_rows.into_iter().enumerate().map(|(row_idx, row)| {
+                            let col_types = col_types.clone();
+                            view! {
+                                <tr class="hover:bg-gray-50">
+                                    {row.into_iter().enumerate().map(|(col_idx, cell)| {
+                                        let is_editing = active == Some((row_idx, col_idx));
+                                        let data_type = col_types.get(col_idx).map(|c| c.data_type.clone()).unwrap_or_default();
+
+                                        if is_editing {
+                                            let dt = data_type.clone();
+                                            let cell_val = cell.clone();
+                                            view! {
+                                                <td class="px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 ring-2 ring-indigo-500/30 bg-white max-w-[300px]">
+                                                    <CellEditor
+                                                        data_type=dt
+                                                        value=cell_val
+                                                        on_commit=Callback::new(move |new_val: serde_json::Value| {
+                                                            set_editing_cell.set(None);
+                                                            on_cell_edit.run(CellEdit {
+                                                                row: row_idx,
+                                                                col: col_idx,
+                                                                value: new_val,
+                                                            });
+                                                        })
+                                                        on_cancel=Callback::new(move |_| {
+                                                            set_editing_cell.set(None);
+                                                        })
+                                                    />
+                                                </td>
+                                            }.into_any()
+                                        } else {
+                                            let (text, is_null) = format_cell(&cell);
+                                            let class = if is_null {
+                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] text-gray-300 italic cursor-pointer"
+                                            } else {
+                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
+                                            };
+                                            let title = text.clone();
+                                            view! {
+                                                <td
+                                                    class=class
+                                                    title=title
+                                                    on:click=move |_| {
+                                                        set_editing_cell.set(Some((row_idx, col_idx)));
+                                                    }
+                                                >
+                                                    {text}
+                                                </td>
+                                            }.into_any()
+                                        }
+                                    }).collect::<Vec<_>>()}
+                                </tr>
+                            }
+                        }).collect::<Vec<_>>()
+                    }}
                 </tbody>
             </table>
         </div>
