@@ -54,6 +54,7 @@ pub fn CommandPalette(
     on_command: Callback<String>,
 ) -> impl IntoView {
     let (query, set_query) = signal(String::new());
+    let (selected_idx, set_selected_idx) = signal(0usize);
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
     let commands: Vec<(&'static str, &'static str)> = vec![
@@ -69,7 +70,14 @@ pub fn CommandPalette(
             }
         } else {
             set_query.set(String::new());
+            set_selected_idx.set(0);
         }
+    });
+
+    // Reset selection when query changes
+    Effect::new(move |_| {
+        let _ = query.get();
+        set_selected_idx.set(0);
     });
 
     move || {
@@ -87,9 +95,10 @@ pub fn CommandPalette(
                 .collect();
             scored.sort_by(|a, b| b.1.cmp(&a.1));
             let filtered: Vec<_> = scored.into_iter().map(|(cmd, _)| *cmd).collect();
+            let count = filtered.len();
 
-            // Clone first result name for Enter key handler
-            let first_command = filtered.first().map(|(name, _)| name.to_string());
+            // Clone for Enter key handler
+            let filtered_for_enter = filtered.clone();
 
             Some(view! {
                 <div class="fixed inset-0 z-50 flex justify-center items-start">
@@ -111,16 +120,33 @@ pub fn CommandPalette(
                                 prop:value=move || query.get()
                                 on:input=move |ev| set_query.set(event_target_value(&ev))
                                 on:keydown={
-                                    let first_command = first_command.clone();
+                                    let filtered = filtered_for_enter.clone();
                                     move |ev| {
                                         let ev: &web_sys::KeyboardEvent = ev.unchecked_ref();
-                                        if ev.key() == "Escape" {
-                                            set_show.set(false);
-                                        } else if ev.key() == "Enter" {
-                                            if let Some(ref cmd) = first_command {
-                                                on_command.run(cmd.clone());
-                                                set_show.set(false);
+                                        match ev.key().as_str() {
+                                            "Escape" => set_show.set(false),
+                                            "Enter" => {
+                                                let idx = selected_idx.get();
+                                                if let Some((name, _)) = filtered.get(idx) {
+                                                    on_command.run(name.to_string());
+                                                    set_show.set(false);
+                                                }
                                             }
+                                            "ArrowDown" => {
+                                                ev.prevent_default();
+                                                let idx = selected_idx.get();
+                                                if idx + 1 < count {
+                                                    set_selected_idx.set(idx + 1);
+                                                }
+                                            }
+                                            "ArrowUp" => {
+                                                ev.prevent_default();
+                                                let idx = selected_idx.get();
+                                                if idx > 0 {
+                                                    set_selected_idx.set(idx - 1);
+                                                }
+                                            }
+                                            _ => {}
                                         }
                                     }
                                 }
@@ -130,11 +156,17 @@ pub fn CommandPalette(
                         <div class="text-[11px] font-medium text-gray-400 uppercase px-4 py-2">"Commands"</div>
                         // Command list
                         <div class="pb-2 max-h-64 overflow-y-auto">
-                            {filtered.into_iter().map(|(name, desc)| {
+                            {filtered.into_iter().enumerate().map(|(idx, (name, desc))| {
                                 let cmd_name = name.to_string();
+                                let is_selected = selected_idx.get() == idx;
+                                let class = if is_selected {
+                                    "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer bg-indigo-50 text-indigo-600"
+                                } else {
+                                    "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-100"
+                                };
                                 view! {
                                     <div
-                                        class="px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-100"
+                                        class=class
                                         on:click=move |_| {
                                             on_command.run(cmd_name.clone());
                                             set_show.set(false);

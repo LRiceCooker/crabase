@@ -9,7 +9,6 @@
 ### Phase 6 — SQL Editor
 
 ### Phase 7 — Table Finder & Command Palette Improvements
-- [ ] Command palette: arrow up/down keyboard navigation + Enter to select + Escape to close
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
@@ -36,6 +35,7 @@
 - [x] "+" button in header to open new SQL editor tab
 - [x] Command palette: add "New SQL Editor" command
 - [x] UI: table_finder.rs (Cmd+P) — fuzzy search tables, arrow keys + Enter to select, opens tab
+- [x] Command palette: arrow up/down keyboard navigation + Enter to select + Escape to close
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)
