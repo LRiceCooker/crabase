@@ -6,7 +6,7 @@ use crate::icons::IconSearch;
 /// Fuzzy match: checks if all characters in `pattern` appear in order in `text`.
 /// Returns a score (higher = better match) or None if no match.
 /// Bonuses: consecutive matches, word-boundary matches, prefix matches.
-fn fuzzy_score(pattern: &str, text: &str) -> Option<i32> {
+pub fn fuzzy_score(pattern: &str, text: &str) -> Option<i32> {
     if pattern.is_empty() {
         return Some(0);
     }

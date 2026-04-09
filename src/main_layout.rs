@@ -10,6 +10,7 @@ use crate::icons::{
 };
 use crate::sidebar::tables_list::TablesList;
 use crate::sql_editor::sql_tab::SqlTab;
+use crate::table_finder::TableFinder;
 use crate::table_view::table_view::TableView;
 use crate::tabs::tab_bar::{TabBar, TabKind, TabState};
 use crate::tauri;
@@ -35,6 +36,9 @@ pub fn MainLayout() -> impl IntoView {
 
     // Command palette state
     let (show_palette, set_show_palette) = signal(false);
+
+    // Table finder state (Cmd+P)
+    let (show_finder, set_show_finder) = signal(false);
 
     // Tab state
     let tab_state = TabState::new();
@@ -94,13 +98,16 @@ pub fn MainLayout() -> impl IntoView {
         })
     };
 
-    // Global keyboard shortcut: Cmd+Shift+P (macOS) / Ctrl+Shift+P
+    // Global keyboard shortcuts
     {
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |ev: web_sys::KeyboardEvent| {
                 if (ev.meta_key() || ev.ctrl_key()) && ev.shift_key() && ev.code() == "KeyP" {
                     ev.prevent_default();
                     set_show_palette.set(true);
+                } else if (ev.meta_key() || ev.ctrl_key()) && !ev.shift_key() && ev.code() == "KeyP" {
+                    ev.prevent_default();
+                    set_show_finder.set(true);
                 }
             },
         );
@@ -194,6 +201,9 @@ pub fn MainLayout() -> impl IntoView {
         <div class="h-screen flex flex-col bg-white overflow-hidden">
             // Command palette overlay
             <CommandPalette show=show_palette set_show=set_show_palette on_command=on_command />
+
+            // Table finder overlay (Cmd+P)
+            <TableFinder show=show_finder set_show=set_show_finder tables=tables on_select=on_table_select />
 
             // Header — h-10 with border-b
             <header class="h-10 flex items-center justify-between px-4 border-b border-gray-200 bg-white shrink-0">

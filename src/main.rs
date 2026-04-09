@@ -5,6 +5,7 @@ pub mod icons;
 mod main_layout;
 mod sidebar;
 mod sql_editor;
+mod table_finder;
 mod table_view;
 mod tabs;
 mod tauri;
