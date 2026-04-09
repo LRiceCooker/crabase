@@ -4,13 +4,15 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::command_palette::CommandPalette;
+use crate::sidebar::tables_list::TablesList;
 use crate::tauri;
 
 #[component]
-pub fn MainScreen() -> impl IntoView {
+pub fn MainLayout() -> impl IntoView {
     let (connection_info, set_connection_info) =
         signal(Option::<tauri::ConnectionInfo>::None);
     let (tables, set_tables) = signal(Vec::<String>::new());
+    let (available_schemas, set_available_schemas) = signal(Vec::<String>::new());
 
     // Header editing state
     let (editing, set_editing) = signal(false);
@@ -19,6 +21,8 @@ pub fn MainScreen() -> impl IntoView {
     let (edit_user, set_edit_user) = signal(String::new());
     let (edit_dbname, set_edit_dbname) = signal(String::new());
     let (edit_password, set_edit_password) = signal(String::new());
+    let (edit_schema, set_edit_schema) = signal(String::new());
+    let (edit_ssl, set_edit_ssl) = signal(false);
     let (reconnecting, set_reconnecting) = signal(false);
     let (header_error, set_header_error) = signal(Option::<String>::None);
 
@@ -58,20 +62,20 @@ pub fn MainScreen() -> impl IntoView {
         closure.forget();
     }
 
-    // Fetch connection info on mount
+    // Fetch connection info, schemas, and tables on mount
     spawn_local({
         let set_connection_info = set_connection_info.clone();
+        let set_tables = set_tables.clone();
+        let set_available_schemas = set_available_schemas.clone();
         async move {
             if let Ok(info) = tauri::get_connection_info().await {
+                // Fetch schemas using current connection string
+                let cs = tauri::build_connection_string_js(&info);
+                if let Ok(schemas) = tauri::list_schemas(&cs).await {
+                    set_available_schemas.set(schemas);
+                }
                 set_connection_info.set(Some(info));
             }
-        }
-    });
-
-    // Fetch tables on mount
-    spawn_local({
-        let set_tables = set_tables.clone();
-        async move {
             if let Ok(t) = tauri::list_tables().await {
                 set_tables.set(t);
             }
@@ -85,7 +89,9 @@ pub fn MainScreen() -> impl IntoView {
             set_edit_port.set(info.port.to_string());
             set_edit_user.set(info.user.clone());
             set_edit_dbname.set(info.dbname.clone());
-            set_edit_password.set(String::new());
+            set_edit_password.set(info.password.clone());
+            set_edit_schema.set(info.schema.clone());
+            set_edit_ssl.set(info.sslmode == "require");
             set_header_error.set(None);
             set_editing.set(true);
         }
@@ -99,29 +105,24 @@ pub fn MainScreen() -> impl IntoView {
 
     // Reconnect with edited fields
     let on_reconnect = move |_| {
-        let host = edit_host.get();
-        let port = edit_port.get();
-        let user = edit_user.get();
-        let dbname = edit_dbname.get();
-        let password = edit_password.get();
-
-        // Build connection string
-        let connection_string = if password.is_empty() {
-            format!("postgresql://{}@{}:{}/{}", user, host, port, dbname)
-        } else {
-            format!("postgresql://{}:{}@{}:{}/{}", user, password, host, port, dbname)
+        let info = tauri::ConnectionInfo {
+            host: edit_host.get(),
+            port: edit_port.get().parse().unwrap_or(5432),
+            user: edit_user.get(),
+            password: edit_password.get(),
+            dbname: edit_dbname.get(),
+            schema: edit_schema.get(),
+            sslmode: if edit_ssl.get() { "require".to_string() } else { "disable".to_string() },
         };
 
         set_reconnecting.set(true);
         set_header_error.set(None);
 
         spawn_local(async move {
-            // Disconnect first (ignore errors — may already be disconnected)
             let _ = tauri::disconnect_db().await;
 
-            match tauri::connect_db(&connection_string).await {
+            match tauri::connect_db(&info).await {
                 Ok(_) => {
-                    // Refresh connection info and tables
                     if let Ok(info) = tauri::get_connection_info().await {
                         set_connection_info.set(Some(info));
                     }
@@ -139,7 +140,7 @@ pub fn MainScreen() -> impl IntoView {
     };
 
     view! {
-        <div class="min-h-screen flex flex-col bg-base-200">
+        <div class="h-screen flex flex-col bg-base-200 overflow-hidden">
             // Command palette overlay
             <CommandPalette show=show_palette set_show=set_show_palette on_command=on_command />
 
@@ -213,7 +214,7 @@ pub fn MainScreen() -> impl IntoView {
                                 </div>
                             }.into_any()
                         } else {
-                            // Read-only mode: badges + edit button
+                            // Read-only mode: badges + schema select + edit button
                             view! {
                                 <div class="flex items-center gap-3">
                                     {move || connection_info.get().map(|info| view! {
@@ -221,6 +222,49 @@ pub fn MainScreen() -> impl IntoView {
                                         <div class="badge badge-outline">{format!(":{}", info.port)}</div>
                                         <div class="badge badge-primary">{info.dbname.clone()}</div>
                                     })}
+                                    // Schema select
+                                    {move || {
+                                        let schemas = available_schemas.get();
+                                        let current = connection_info.get().map(|i| i.schema.clone()).unwrap_or_default();
+                                        if schemas.is_empty() {
+                                            view! {
+                                                <select class="select select-bordered select-xs">
+                                                    <option>{current}</option>
+                                                </select>
+                                            }.into_any()
+                                        } else {
+                                            view! {
+                                                <select
+                                                    class="select select-bordered select-xs"
+                                                    on:change=move |ev| {
+                                                        let new_schema = event_target_value(&ev);
+                                                        // Reconnect with new schema
+                                                        if let Some(mut info) = connection_info.get() {
+                                                            info.schema = new_schema;
+                                                            let new_info = info.clone();
+                                                            spawn_local(async move {
+                                                                let _ = tauri::disconnect_db().await;
+                                                                if let Ok(_) = tauri::connect_db(&new_info).await {
+                                                                    if let Ok(updated) = tauri::get_connection_info().await {
+                                                                        set_connection_info.set(Some(updated));
+                                                                    }
+                                                                    if let Ok(t) = tauri::list_tables().await {
+                                                                        set_tables.set(t);
+                                                                    }
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                >
+                                                    {schemas.into_iter().map(|s| {
+                                                        let selected = s == current;
+                                                        let s2 = s.clone();
+                                                        view! { <option value={s} selected=selected>{s2}</option> }
+                                                    }).collect::<Vec<_>>()}
+                                                </select>
+                                            }.into_any()
+                                        }
+                                    }}
                                     <button
                                         class="btn btn-ghost btn-xs"
                                         on:click=on_edit
@@ -244,7 +288,7 @@ pub fn MainScreen() -> impl IntoView {
             // Body: central area + right panel
             <div class="flex flex-1 overflow-hidden">
                 // Central area
-                <main class="flex-1 p-4">
+                <main class="flex-1 p-4 overflow-y-auto">
                     {move || {
                         if show_restore.get() {
                             let on_pick_file = move |_| {
@@ -412,21 +456,7 @@ pub fn MainScreen() -> impl IntoView {
 
                 // Right panel: tables list
                 <aside class="w-64 bg-base-100 border-l border-base-300 overflow-y-auto">
-                    <div class="p-3">
-                        <h2 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-2">"Tables"</h2>
-                        <ul class="menu menu-sm">
-                            {move || tables.get().into_iter().map(|name| view! {
-                                <li><a>{name}</a></li>
-                            }).collect::<Vec<_>>()}
-                        </ul>
-                        {move || if tables.get().is_empty() {
-                            Some(view! {
-                                <p class="text-sm text-base-content/40 italic">"No tables found"</p>
-                            })
-                        } else {
-                            None
-                        }}
-                    </div>
+                    <TablesList tables=tables />
                 </aside>
             </div>
         </div>

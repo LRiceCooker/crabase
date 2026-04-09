@@ -1,7 +1,9 @@
 mod app;
 mod command_palette;
+mod connection;
 pub mod icons;
-mod main_screen;
+mod main_layout;
+mod sidebar;
 mod tauri;
 
 use app::App;
