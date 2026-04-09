@@ -64,8 +64,17 @@ pub fn DataTable(
 
                         current_rows.into_iter().enumerate().map(|(row_idx, row)| {
                             let col_types = col_types.clone();
+                            let row_class = if changes.is_row_deleted(row_idx) {
+                                "bg-red-50 border-l-2 border-l-red-500 line-through opacity-60"
+                            } else if changes.is_row_added(row_idx) {
+                                "bg-emerald-50 border-l-2 border-emerald-500"
+                            } else if changes.is_row_modified(row_idx) {
+                                "bg-amber-50 border-l-2 border-amber-500"
+                            } else {
+                                "hover:bg-gray-50"
+                            };
                             view! {
-                                <tr class="hover:bg-gray-50">
+                                <tr class=row_class>
                                     {row.into_iter().enumerate().map(|(col_idx, cell)| {
                                         let is_editing = active == Some((row_idx, col_idx));
                                         let data_type = col_types.get(col_idx).map(|c| c.data_type.clone()).unwrap_or_default();
