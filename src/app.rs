@@ -25,6 +25,8 @@ pub fn App() -> impl IntoView {
     let form_ssl = RwSignal::new(false);
     let (available_schemas, set_available_schemas) = signal(Vec::<String>::new());
     let (loading_schemas, set_loading_schemas) = signal(false);
+    let save_connection = RwSignal::new(false);
+    let save_name = RwSignal::new(String::new());
 
     // Step 1 -> Step 2: parse connection string, fetch schemas, show form
     let on_parse = Callback::new(move |_: ()| {
@@ -75,11 +77,18 @@ pub fn App() -> impl IntoView {
             schema: form_schema.get(),
             sslmode: if form_ssl.get() { "require".to_string() } else { "disable".to_string() },
         };
+        let should_save = save_connection.get();
+        let name = save_name.get();
         set_error_message.set(None);
         set_connecting.set(true);
         spawn_local(async move {
             match tauri::connect_db(&info).await {
-                Ok(_) => set_screen.set("connected".to_string()),
+                Ok(_) => {
+                    if should_save && !name.trim().is_empty() {
+                        let _ = tauri::save_connection(&name, &info).await;
+                    }
+                    set_screen.set("connected".to_string());
+                }
                 Err(e) => set_error_message.set(Some(e)),
             }
             set_connecting.set(false);
@@ -135,6 +144,8 @@ pub fn App() -> impl IntoView {
                         form_dbname=form_dbname
                         form_schema=form_schema
                         form_ssl=form_ssl
+                        save_connection=save_connection
+                        save_name=save_name
                         available_schemas=available_schemas
                         loading_schemas=loading_schemas
                         error_message=error_message

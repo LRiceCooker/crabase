@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 2 — Saved Connections
-- [ ] UI: "Save connection" checkbox + name field on connection form
-
 ### Phase 3 — Tab System
 - [ ] Create tab_bar.rs component with tab state management (open, close, switch)
 - [ ] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
@@ -46,6 +43,7 @@
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
+- [x] UI: "Save connection" checkbox + name field on connection form
 - [x] UI: saved connections list on connection screen (click to fill, delete on hover)
 - [x] Backend: `save_connection`, `list_saved_connections`, `delete_saved_connection` commands (store as JSON file in app data dir)
 - [x] Apply light theme from specs/design.md to all existing components (connection screen, header, sidebar)

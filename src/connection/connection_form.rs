@@ -12,6 +12,8 @@ pub fn ConnectionForm(
     form_dbname: RwSignal<String>,
     form_schema: RwSignal<String>,
     form_ssl: RwSignal<bool>,
+    save_connection: RwSignal<bool>,
+    save_name: RwSignal<String>,
     available_schemas: ReadSignal<Vec<String>>,
     loading_schemas: ReadSignal<bool>,
     error_message: ReadSignal<Option<String>>,
@@ -133,6 +135,32 @@ pub fn ConnectionForm(
                             />
                             <label class="text-[13px] text-gray-700 cursor-pointer">"SSL (require)"</label>
                         </div>
+                        // Save connection toggle
+                        <div class="col-span-2 flex items-center gap-3 mt-1">
+                            <input
+                                type="checkbox"
+                                class="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/20"
+                                prop:checked=move || save_connection.get()
+                                on:change=move |ev| {
+                                    let checked = event_target_checked(&ev);
+                                    save_connection.set(checked);
+                                }
+                            />
+                            <label class="text-[13px] text-gray-700 cursor-pointer">"Save connection"</label>
+                        </div>
+                        // Connection name (shown when save is checked)
+                        {move || save_connection.get().then(|| view! {
+                            <div class="col-span-2 flex flex-col gap-1.5">
+                                <label class=label_class>"Connection name"</label>
+                                <input
+                                    type="text"
+                                    class=input_class
+                                    placeholder="e.g. Production DB"
+                                    prop:value=move || save_name.get()
+                                    on:input=move |ev| save_name.set(event_target_value(&ev))
+                                />
+                            </div>
+                        })}
                     </div>
 
                     {move || error_message.get().map(|msg| view! {
