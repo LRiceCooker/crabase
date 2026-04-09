@@ -4,7 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::connection::connection_form::ConnectionForm;
 use crate::connection::connection_screen::ConnectionScreen;
 use crate::main_layout::MainLayout;
-use crate::tauri::{self, ConnectionInfo};
+use crate::tauri::{self, build_connection_string_js, ConnectionInfo, SavedConnection};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -86,6 +86,33 @@ pub fn App() -> impl IntoView {
         });
     });
 
+    // Select a saved connection: fill form fields and jump to form screen
+    let on_select_saved = Callback::new(move |saved: SavedConnection| {
+        let info = saved.info;
+        form_host.set(info.host.clone());
+        form_port.set(info.port.to_string());
+        form_user.set(info.user.clone());
+        form_password.set(info.password.clone());
+        form_dbname.set(info.dbname.clone());
+        form_schema.set(info.schema.clone());
+        form_ssl.set(info.sslmode == "require");
+        set_error_message.set(None);
+        set_screen.set("form".to_string());
+
+        // Fetch schemas in background
+        let cs = build_connection_string_js(&info);
+        set_connection_string.set(cs.clone());
+        set_loading_schemas.set(true);
+        spawn_local(async move {
+            if let Ok(schemas) = tauri::list_schemas(&cs).await {
+                if !schemas.is_empty() {
+                    set_available_schemas.set(schemas);
+                }
+            }
+            set_loading_schemas.set(false);
+        });
+    });
+
     // Back to step 1
     let on_back = Callback::new(move |_: ()| {
         set_error_message.set(None);
@@ -125,6 +152,7 @@ pub fn App() -> impl IntoView {
                         error_message=error_message
                         parsing=parsing
                         on_parse=on_parse
+                        on_select_saved=on_select_saved
                     />
                 }.into_any()
             }

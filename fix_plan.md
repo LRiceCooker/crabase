@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 2 — Saved Connections
-- [ ] UI: saved connections list on connection screen (click to fill, delete on hover)
 - [ ] UI: "Save connection" checkbox + name field on connection form
 
 ### Phase 3 — Tab System
@@ -47,6 +46,7 @@
 - [ ] Command palette: add keyboard shortcut hints right-aligned
 
 ## Completed
+- [x] UI: saved connections list on connection screen (click to fill, delete on hover)
 - [x] Backend: `save_connection`, `list_saved_connections`, `delete_saved_connection` commands (store as JSON file in app data dir)
 - [x] Apply light theme from specs/design.md to all existing components (connection screen, header, sidebar)
 - [x] All UI text must be in English

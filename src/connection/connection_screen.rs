@@ -1,6 +1,8 @@
 use leptos::prelude::*;
 
+use crate::connection::saved_connections::SavedConnections;
 use crate::icons::{IconDatabase, IconAlertTriangle, IconLoader};
+use crate::tauri::SavedConnection;
 
 #[component]
 pub fn ConnectionScreen(
@@ -9,6 +11,7 @@ pub fn ConnectionScreen(
     error_message: ReadSignal<Option<String>>,
     parsing: ReadSignal<bool>,
     on_parse: Callback<()>,
+    on_select_saved: Callback<SavedConnection>,
 ) -> impl IntoView {
     view! {
         <main class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -21,6 +24,8 @@ pub fn ConnectionScreen(
                         </div>
                         <p class="text-[13px] text-gray-500">"PostgreSQL Desktop Client"</p>
                     </div>
+
+                    <SavedConnections on_select=on_select_saved />
 
                     <div class="flex flex-col gap-1.5">
                         <label class="text-[13px] font-normal text-gray-700">"Connection string"</label>
