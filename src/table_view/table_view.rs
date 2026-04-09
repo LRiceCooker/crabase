@@ -4,6 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::icons::{IconLoader, IconRefreshCw, IconTable};
 use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::data_table::DataTable;
+use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
 use crate::tauri;
 
@@ -18,6 +19,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let (page_size, set_page_size) = signal(50u32);
     let (total_count, set_total_count) = signal(0u64);
     let (has_data, set_has_data) = signal(false);
+    let (json_edit, set_json_edit) = signal(Option::<JsonEditRequest>::None);
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
@@ -93,6 +95,25 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         });
     });
 
+    let on_json_edit = Callback::new(move |req: JsonEditRequest| {
+        set_json_edit.set(Some(req));
+    });
+
+    let on_json_save = Callback::new(move |(row, col, val): (usize, usize, serde_json::Value)| {
+        rows.update(|r| {
+            if let Some(row_data) = r.get_mut(row) {
+                if let Some(cell) = row_data.get_mut(col) {
+                    *cell = val;
+                }
+            }
+        });
+        set_json_edit.set(None);
+    });
+
+    let on_json_cancel = Callback::new(move |_| {
+        set_json_edit.set(None);
+    });
+
     view! {
         <div class="flex flex-col h-full">
             // Toolbar
@@ -138,6 +159,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             columns=columns.get()
                             rows=rows
                             on_cell_edit=on_cell_edit
+                            on_json_edit=on_json_edit
                         />
                     }.into_any()
                 } else {
@@ -155,6 +177,19 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 on_page_change=on_page_change
                 on_page_size_change=on_page_size_change
             />
+
+            // JSON editor modal
+            {move || {
+                json_edit.get().map(|req| {
+                    view! {
+                        <JsonEditorModal
+                            request=req
+                            on_save=on_json_save
+                            on_cancel=on_json_cancel
+                        />
+                    }
+                })
+            }}
         </div>
     }
 }

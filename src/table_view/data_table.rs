@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::table_view::cell_editor::{CellEdit, CellEditor};
+use crate::table_view::json_editor::JsonEditRequest;
 use crate::tauri::ColumnInfo;
 
 /// Format a cell value for display.
@@ -16,11 +17,17 @@ fn format_cell(value: &serde_json::Value) -> (String, bool) {
     }
 }
 
+fn is_json_type(data_type: &str) -> bool {
+    let dt = data_type.to_uppercase();
+    dt == "JSON" || dt == "JSONB"
+}
+
 #[component]
 pub fn DataTable(
     columns: Vec<ColumnInfo>,
     rows: RwSignal<Vec<Vec<serde_json::Value>>>,
     on_cell_edit: Callback<CellEdit>,
+    on_json_edit: Callback<JsonEditRequest>,
 ) -> impl IntoView {
     // Track which cell is being edited: (row_idx, col_idx)
     let (editing_cell, set_editing_cell) = signal(Option::<(usize, usize)>::None);
@@ -60,8 +67,9 @@ pub fn DataTable(
                                     {row.into_iter().enumerate().map(|(col_idx, cell)| {
                                         let is_editing = active == Some((row_idx, col_idx));
                                         let data_type = col_types.get(col_idx).map(|c| c.data_type.clone()).unwrap_or_default();
+                                        let is_json = is_json_type(&data_type);
 
-                                        if is_editing {
+                                        if is_editing && !is_json {
                                             let dt = data_type.clone();
                                             let cell_val = cell.clone();
                                             view! {
@@ -91,12 +99,21 @@ pub fn DataTable(
                                                 "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
                                             };
                                             let title = text.clone();
+                                            let cell_for_json = cell.clone();
                                             view! {
                                                 <td
                                                     class=class
                                                     title=title
                                                     on:click=move |_| {
-                                                        set_editing_cell.set(Some((row_idx, col_idx)));
+                                                        if is_json {
+                                                            on_json_edit.run(JsonEditRequest {
+                                                                row: row_idx,
+                                                                col: col_idx,
+                                                                value: cell_for_json.clone(),
+                                                            });
+                                                        } else {
+                                                            set_editing_cell.set(Some((row_idx, col_idx)));
+                                                        }
                                                     }
                                                 >
                                                     {text}
