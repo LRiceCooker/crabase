@@ -227,6 +227,52 @@ pub async fn delete_saved_connection(name: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ColumnInfo {
+    pub name: String,
+    pub data_type: String,
+    pub is_nullable: bool,
+    pub is_primary_key: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TableData {
+    pub columns: Vec<ColumnInfo>,
+    pub rows: Vec<Vec<serde_json::Value>>,
+    pub total_count: u64,
+}
+
+pub async fn get_table_data(
+    table_name: &str,
+    page: u32,
+    page_size: u32,
+) -> Result<TableData, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> {
+        table_name: &'a str,
+        page: u32,
+        page_size: u32,
+    }
+
+    let args = serde_wasm_bindgen::to_value(&Args {
+        table_name,
+        page,
+        page_size,
+    })
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("get_table_data", args)
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Failed to get table data".to_string())
+        })?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse table data: {}", e))
+}
+
 /// Listen to restore-log events. Returns a JS function to call to unlisten.
 pub async fn listen_restore_logs(
     callback: impl Fn(String) + 'static,

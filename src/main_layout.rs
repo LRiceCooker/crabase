@@ -9,6 +9,7 @@ use crate::icons::{
     IconUpload, IconX, IconXCircle,
 };
 use crate::sidebar::tables_list::TablesList;
+use crate::table_view::table_view::TableView;
 use crate::tabs::tab_bar::{TabBar, TabKind, TabState};
 use crate::tauri;
 
@@ -349,7 +350,7 @@ pub fn MainLayout() -> impl IntoView {
                     <TabBar state=tab_state.clone() />
 
                     // Content area — scrolls independently
-                    <main class="flex-1 p-4 overflow-y-auto">
+                    <main class="flex-1 overflow-y-auto">
                         {move || {
                             if show_restore.get() {
                             let on_pick_file = move |_| {
@@ -511,6 +512,12 @@ pub fn MainLayout() -> impl IntoView {
                                             }
                                         }}
                                     </div>
+                                </div>
+                            }.into_any()
+                        } else if active_table.get().is_some() {
+                            view! {
+                                <div class="h-full">
+                                    <TableView table_name=active_table />
                                 </div>
                             }.into_any()
                         } else {

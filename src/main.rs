@@ -4,6 +4,7 @@ mod connection;
 pub mod icons;
 mod main_layout;
 mod sidebar;
+mod table_view;
 mod tabs;
 mod tauri;
 
