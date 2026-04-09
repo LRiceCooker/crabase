@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 
+use crate::icons::IconTrash2;
 use crate::table_view::cell_editor::{CellEdit, CellEditor};
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
@@ -30,6 +31,7 @@ pub fn DataTable(
     changes: ChangeTracker,
     on_cell_edit: Callback<CellEdit>,
     on_json_edit: Callback<JsonEditRequest>,
+    on_delete_row: Callback<usize>,
 ) -> impl IntoView {
     // Track which cell is being edited: (row_idx, col_idx)
     let (editing_cell, set_editing_cell) = signal(Option::<(usize, usize)>::None);
@@ -54,6 +56,7 @@ pub fn DataTable(
                                 </th>
                             }
                         }).collect::<Vec<_>>()}
+                        <th class="px-2 py-2 text-left text-[11px] font-medium text-gray-500 border-r border-gray-100 select-none w-8"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -137,6 +140,21 @@ pub fn DataTable(
                                             }.into_any()
                                         }
                                     }).collect::<Vec<_>>()}
+                                    <td class="px-2 py-1.5 border-b border-gray-100 text-center w-8">
+                                        {if !changes.is_row_deleted(row_idx) {
+                                            Some(view! {
+                                                <button
+                                                    class="text-gray-300 hover:text-red-500 p-0.5 rounded transition-colors duration-100"
+                                                    title="Delete row"
+                                                    on:click=move |_| on_delete_row.run(row_idx)
+                                                >
+                                                    <IconTrash2 class="w-3.5 h-3.5" />
+                                                </button>
+                                            })
+                                        } else {
+                                            None
+                                        }}
+                                    </td>
                                 </tr>
                             }
                         }).collect::<Vec<_>>()

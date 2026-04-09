@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 5 — Inline Editing & Dirty State
-- [ ] Delete row button per row (marks for deletion, highlighted red)
 
 ### Phase 6 — SQL Editor
 - [ ] UI: sql_editor.rs — text area with SQL syntax highlighting, line numbers, monospace
@@ -36,6 +35,7 @@
 - [x] UI: dirty_bar.rs — floating bar at bottom with change count + Discard + Save buttons
 - [x] Backend: `save_changes(table_name, changes)` command — applies inserts/updates/deletes in a single transaction
 - [x] Add row button in toolbar (adds empty row, highlighted green)
+- [x] Delete row button per row (marks for deletion, highlighted red)
 - [x] Clicking a table in sidebar opens a new tab (or focuses existing tab for that table)
 - [x] Create main_layout.rs: sidebar + tab bar + content area (each zone scrolls independently, no full-page scroll)
 - [x] Create tab_bar.rs component with tab state management (open, close, switch)
