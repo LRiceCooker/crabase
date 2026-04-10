@@ -225,7 +225,27 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             <CommandPalette show=show_palette set_show=set_show_palette on_command=on_command />
 
             // Table finder overlay (Cmd+P)
-            <TableFinder show=show_finder set_show=set_show_finder tables=tables on_select=on_table_select />
+            <TableFinder
+                show=show_finder
+                set_show=set_show_finder
+                tables=tables
+                saved_queries=saved_query_names
+                on_select=on_table_select
+                on_query_select=Callback::new({
+                    let ts = tab_state.clone();
+                    move |name: String| {
+                        let existing = ts.tabs.get().iter().find(|t| {
+                            matches!(&t.kind, TabKind::SqlEditor) && t.title == name
+                        }).map(|t| t.id);
+                        if let Some(id) = existing {
+                            ts.switch(id);
+                        } else {
+                            let id = ts.open(TabKind::SqlEditor);
+                            ts.rename_tab(id, name);
+                        }
+                    }
+                })
+            />
 
             // Header — h-10 with border-b
             <header class="h-10 flex items-center justify-between px-4 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-neutral-950 shrink-0">

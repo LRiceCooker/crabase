@@ -4,11 +4,6 @@
 
 ## Backlog
 
-### Phase 12 — Table Finder Enhancement (Cmd+P)
-- [ ] Update table_finder.rs to fuzzy search across BOTH tables AND saved queries of current connection
-- [ ] Group results by type with subtle headers ("Tables", "Queries")
-- [ ] Selecting a query opens it in a new tab (same as sidebar click)
-
 ### Phase 13 — Comprehensive Postgres Type Support (Foundational Fix)
 This is a foundational fix: the current table view incorrectly displays many Postgres types as NULL because the backend doesn't serialize them and the frontend has no specialized editors. See "Postgres Type Support" section in specs/project.md for the full type → editor mapping table.
 - [ ] Backend: extend `pg_value_to_json` (or rewrite as a tagged serializer) to handle ALL common Postgres types per the mapping table. Output values as `{ "type": "<pg_type>", "value": ..., extras }` so the frontend knows the type.
@@ -81,6 +76,9 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Update table_finder.rs to fuzzy search across BOTH tables AND saved queries of current connection
+- [x] Group results by type with subtle headers ("Tables", "Queries")
+- [x] Selecting a query opens it in a new tab (same as sidebar click)
 - [x] Click on saved query in sidebar opens it in a new tab (or focuses existing tab)
 - [x] sidebar/saved_queries_list.rs: scrollable section above tables list, shows saved queries for current connection. Hidden if empty.
 - [x] Default name: `Untitled-1`, `Untitled-2`, etc. (incremented globally per app instance)

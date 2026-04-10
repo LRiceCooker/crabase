@@ -2,14 +2,28 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
 use crate::command_palette::fuzzy_score;
-use crate::icons::{IconSearch, IconTable};
+use crate::icons::{IconSearch, IconTable, IconTerminal};
+
+#[derive(Clone, Debug)]
+enum FinderItemKind {
+    Table,
+    Query,
+}
+
+#[derive(Clone, Debug)]
+struct FinderItem {
+    name: String,
+    kind: FinderItemKind,
+}
 
 #[component]
 pub fn TableFinder(
     show: ReadSignal<bool>,
     set_show: WriteSignal<bool>,
     tables: ReadSignal<Vec<String>>,
+    #[prop(optional)] saved_queries: Option<ReadSignal<Vec<String>>>,
     on_select: Callback<String>,
+    #[prop(optional)] on_query_select: Option<Callback<String>>,
 ) -> impl IntoView {
     let (query, set_query) = signal(String::new());
     let (selected_idx, set_selected_idx) = signal(0usize);
@@ -37,22 +51,42 @@ pub fn TableFinder(
         if show.get() {
             let q = query.get();
             let all_tables = tables.get();
-            let mut scored: Vec<_> = all_tables
+            let all_queries = saved_queries.map(|s| s.get()).unwrap_or_default();
+
+            // Score and filter tables
+            let mut table_items: Vec<(FinderItem, i32)> = all_tables
                 .iter()
                 .filter_map(|name| {
-                    if q.is_empty() {
-                        Some((name.clone(), 0))
-                    } else {
-                        fuzzy_score(&q, name).map(|s| (name.clone(), s))
-                    }
+                    let score = if q.is_empty() { Some(0) } else { fuzzy_score(&q, name) };
+                    score.map(|s| (FinderItem { name: name.clone(), kind: FinderItemKind::Table }, s))
                 })
                 .collect();
-            scored.sort_by(|a, b| b.1.cmp(&a.1));
-            let filtered: Vec<String> = scored.into_iter().map(|(name, _)| name).collect();
-            let count = filtered.len();
+            table_items.sort_by(|a, b| b.1.cmp(&a.1));
 
-            // Clone for Enter key handler
-            let filtered_for_enter = filtered.clone();
+            // Score and filter queries
+            let mut query_items: Vec<(FinderItem, i32)> = all_queries
+                .iter()
+                .filter_map(|name| {
+                    let score = if q.is_empty() { Some(0) } else { fuzzy_score(&q, name) };
+                    score.map(|s| (FinderItem { name: name.clone(), kind: FinderItemKind::Query }, s))
+                })
+                .collect();
+            query_items.sort_by(|a, b| b.1.cmp(&a.1));
+
+            // Build grouped results: queries first, then tables
+            let mut items: Vec<FinderItem> = Vec::new();
+            let has_queries = !query_items.is_empty();
+            let has_tables = !table_items.is_empty();
+
+            for (item, _) in query_items {
+                items.push(item);
+            }
+            for (item, _) in table_items {
+                items.push(item);
+            }
+
+            let count = items.len();
+            let items_for_enter = items.clone();
 
             Some(view! {
                 <div class="fixed inset-0 z-50 flex justify-center items-start">
@@ -69,20 +103,27 @@ pub fn TableFinder(
                             <input
                                 type="text"
                                 node_ref=input_ref
-                                placeholder="Search tables..."
+                                placeholder="Search tables and queries..."
                                 class="text-base w-full focus:outline-none bg-transparent text-gray-900 dark:text-neutral-50 placeholder-gray-400 dark:placeholder-zinc-500"
                                 prop:value=move || query.get()
                                 on:input=move |ev| set_query.set(event_target_value(&ev))
                                 on:keydown={
-                                    let filtered = filtered_for_enter.clone();
+                                    let items = items_for_enter.clone();
                                     move |ev| {
                                         let ev: &web_sys::KeyboardEvent = ev.unchecked_ref();
                                         match ev.key().as_str() {
                                             "Escape" => set_show.set(false),
                                             "Enter" => {
                                                 let idx = selected_idx.get();
-                                                if let Some(name) = filtered.get(idx) {
-                                                    on_select.run(name.clone());
+                                                if let Some(item) = items.get(idx) {
+                                                    match item.kind {
+                                                        FinderItemKind::Table => on_select.run(item.name.clone()),
+                                                        FinderItemKind::Query => {
+                                                            if let Some(cb) = on_query_select {
+                                                                cb.run(item.name.clone());
+                                                            }
+                                                        }
+                                                    }
                                                     set_show.set(false);
                                                 }
                                             }
@@ -106,29 +147,80 @@ pub fn TableFinder(
                                 }
                             />
                         </div>
-                        // Table list
+                        // Results list
                         <div class="pb-2 max-h-64 overflow-y-auto">
-                            {filtered.into_iter().enumerate().map(|(idx, name)| {
-                                let table_name = name.clone();
-                                let is_selected = selected_idx.get() == idx;
-                                let class = if is_selected {
-                                    "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer bg-indigo-50 dark:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400"
-                                } else {
-                                    "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-500/25 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-100"
-                                };
-                                view! {
-                                    <div
-                                        class=class
-                                        on:click=move |_| {
-                                            on_select.run(table_name.clone());
-                                            set_show.set(false);
-                                        }
-                                    >
-                                        <IconTable class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
-                                        <span class="font-medium text-gray-900 dark:text-neutral-50">{name}</span>
-                                    </div>
+                            {
+                                let mut global_idx = 0usize;
+                                let mut views = Vec::new();
+
+                                // Queries group header
+                                if has_queries {
+                                    views.push(view! {
+                                        <div class="px-4 pt-2 pb-1 text-[11px] font-medium text-gray-400 dark:text-zinc-500 uppercase tracking-wider">"Queries"</div>
+                                    }.into_any());
                                 }
-                            }).collect::<Vec<_>>()}
+
+                                for item in items.iter().filter(|i| matches!(i.kind, FinderItemKind::Query)) {
+                                    let idx = global_idx;
+                                    global_idx += 1;
+                                    let item_name = item.name.clone();
+                                    let click_name = item.name.clone();
+                                    let is_selected = selected_idx.get() == idx;
+                                    let class = if is_selected {
+                                        "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer bg-indigo-50 dark:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400"
+                                    } else {
+                                        "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-500/25 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-100"
+                                    };
+                                    views.push(view! {
+                                        <div
+                                            class=class
+                                            on:click=move |_| {
+                                                if let Some(cb) = on_query_select {
+                                                    cb.run(click_name.clone());
+                                                }
+                                                set_show.set(false);
+                                            }
+                                        >
+                                            <IconTerminal class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
+                                            <span class="font-medium text-gray-900 dark:text-neutral-50">{item_name}</span>
+                                        </div>
+                                    }.into_any());
+                                }
+
+                                // Tables group header
+                                if has_tables {
+                                    views.push(view! {
+                                        <div class="px-4 pt-2 pb-1 text-[11px] font-medium text-gray-400 dark:text-zinc-500 uppercase tracking-wider">"Tables"</div>
+                                    }.into_any());
+                                }
+
+                                for item in items.iter().filter(|i| matches!(i.kind, FinderItemKind::Table)) {
+                                    let idx = global_idx;
+                                    global_idx += 1;
+                                    let item_name = item.name.clone();
+                                    let click_name = item.name.clone();
+                                    let is_selected = selected_idx.get() == idx;
+                                    let class = if is_selected {
+                                        "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer bg-indigo-50 dark:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400"
+                                    } else {
+                                        "px-4 py-2 flex items-center gap-3 text-[13px] cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-500/25 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-100"
+                                    };
+                                    views.push(view! {
+                                        <div
+                                            class=class
+                                            on:click=move |_| {
+                                                on_select.run(click_name.clone());
+                                                set_show.set(false);
+                                            }
+                                        >
+                                            <IconTable class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
+                                            <span class="font-medium text-gray-900 dark:text-neutral-50">{item_name}</span>
+                                        </div>
+                                    }.into_any());
+                                }
+
+                                views
+                            }
                         </div>
                     </div>
                 </div>
