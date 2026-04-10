@@ -447,6 +447,12 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             on_row_context_menu=Callback::new(move |ev: RowContextMenuEvent| {
                                 set_ctx_menu.set(Some((ev.x, ev.y)));
                             })
+                            active_sort=active_sort
+                            on_sort_change=Callback::new(move |_| {
+                                if let Some(name) = loaded_table.get() {
+                                    fetch_data(name, page.get(), page_size.get());
+                                }
+                            })
                         />
                     }.into_any()
                 } else {

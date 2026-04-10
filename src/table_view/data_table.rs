@@ -7,7 +7,7 @@ use crate::table_view::cell_editors::array_editor_modal::ArrayEditRequest;
 use crate::table_view::cell_editors::xml_editor_modal::XmlEditRequest;
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
-use crate::tauri::ColumnInfo;
+use crate::tauri::{ColumnInfo, SortCol};
 
 /// Info about a right-click event on a row.
 pub struct RowContextMenuEvent {
@@ -122,6 +122,8 @@ pub fn DataTable(
     on_array_edit: Callback<ArrayEditRequest>,
     on_xml_edit: Callback<XmlEditRequest>,
     on_row_context_menu: Callback<RowContextMenuEvent>,
+    active_sort: RwSignal<Vec<SortCol>>,
+    on_sort_change: Callback<()>,
 ) -> impl IntoView {
     // Track which cell is being edited: (row_idx, col_idx)
     let (editing_cell, set_editing_cell) = signal(Option::<(usize, usize)>::None);
@@ -137,11 +139,47 @@ pub fn DataTable(
                         <th class="sticky left-0 z-20 bg-gray-50 dark:bg-[#0F0F11] px-2 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-zinc-400 border-r border-gray-100 dark:border-[#1F1F23] select-none w-10"></th>
                         {columns.iter().map(|col| {
                             let name = col.name.clone();
+                            let name_for_click = col.name.clone();
                             let data_type = col.data_type.clone();
                             view! {
-                                <th class="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-zinc-400 border-r border-gray-100 dark:border-[#1F1F23] select-none whitespace-nowrap">
+                                <th
+                                    class="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-zinc-400 border-r border-gray-100 dark:border-[#1F1F23] select-none whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors duration-100"
+                                    on:click={
+                                        let col_name = name_for_click.clone();
+                                        move |_| {
+                                            let current = active_sort.get();
+                                            // Find existing sort for this column
+                                            let existing = current.iter().position(|s| s.column == col_name);
+                                            let mut new_sort: Vec<SortCol> = current.into_iter().filter(|s| s.column != col_name).collect();
+                                            match existing.map(|i| active_sort.get()[i].direction.as_str().to_string()) {
+                                                None => {
+                                                    // No sort → asc
+                                                    new_sort.insert(0, SortCol { column: col_name.clone(), direction: "asc".to_string() });
+                                                }
+                                                Some(ref d) if d == "asc" => {
+                                                    // asc → desc
+                                                    new_sort.insert(0, SortCol { column: col_name.clone(), direction: "desc".to_string() });
+                                                }
+                                                _ => {
+                                                    // desc → none (already removed)
+                                                }
+                                            }
+                                            active_sort.set(new_sort);
+                                            on_sort_change.run(());
+                                        }
+                                    }
+                                >
                                     <div class="flex flex-col gap-0.5">
-                                        <span>{name}</span>
+                                        <div class="flex items-center gap-1">
+                                            <span>{name.clone()}</span>
+                                            {move || {
+                                                let sort = active_sort.get();
+                                                sort.iter().find(|s| s.column == name).map(|s| {
+                                                    let arrow = if s.direction == "asc" { "\u{2191}" } else { "\u{2193}" };
+                                                    view! { <span class="text-indigo-500 dark:text-indigo-400 text-[10px]">{arrow}</span> }
+                                                })
+                                            }}
+                                        </div>
                                         <span class="text-[10px] font-normal text-gray-400 dark:text-zinc-500 normal-case tracking-normal">{data_type}</span>
                                     </div>
                                 </th>

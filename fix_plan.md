@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 16 — Filter & Sort Bar (Linear-style)
-- [ ] Click table header to cycle sort direction (asc → desc → none)
-
 ### Phase 17 — Find Bar Overlay (Cmd+F)
 - [ ] table_view/find_overlay.rs: floating bar at top of table view (browser-style)
 - [ ] Cmd+F triggers the find overlay when a table tab is active
@@ -21,6 +18,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Click table header to cycle sort direction (asc → desc → none)
 - [x] Default sort behavior: created_at desc if exists, else PK asc, else first column with smart fallback
 - [x] Sort: column + direction, can chain multiple sort columns
 - [x] "+" button to add a new filter
