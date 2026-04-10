@@ -5,8 +5,6 @@
 ## Backlog
 
 ### Phase 9 — Settings View
-- [ ] Create settings/settings_view.rs that opens like the Restore Backup panel (special view in content area)
-- [ ] Add "Settings" command in the command palette (Cmd+Shift+P)
 - [ ] settings/theme_setting.rs: Light / Dark / System toggle that persists to settings.json and applies immediately
 - [ ] shortcuts.rs: keyboard shortcuts registry (default bindings + dispatcher)
 - [ ] settings/shortcut_input.rs: clickable shortcut input that listens for key combinations to bind
@@ -141,3 +139,5 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [x] Backend: `load_settings` and `save_settings` commands (read/write `app_data_dir/settings.json`)
 - [x] Frontend: theme.rs provider that reads settings, applies `dark` class to `<html>`, exposes a toggle
 - [x] Add "Disconnect" button in header that closes connection and returns to connection screen
+- [x] Create settings/settings_view.rs that opens like the Restore Backup panel (special view in content area)
+- [x] Add "Settings" command in the command palette (Cmd+Shift+P)

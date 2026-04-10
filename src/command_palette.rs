@@ -61,6 +61,7 @@ pub fn CommandPalette(
     let commands: Vec<(&'static str, &'static str, &'static str)> = vec![
         ("New SQL Editor", "Open a new SQL editor tab", ""),
         ("Restore Backup", "Restore a .tar.gz PostgreSQL backup", ""),
+        ("Settings", "Open application settings", ""),
     ];
 
     // Focus input when palette opens, clear query when it closes

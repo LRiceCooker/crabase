@@ -8,6 +8,7 @@ use crate::icons::{
     IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconLogOut,
     IconPlus, IconUpload, IconX, IconXCircle,
 };
+use crate::settings::settings_view::SettingsView;
 use crate::sidebar::tables_list::TablesList;
 use crate::sql_editor::sql_tab::SqlTab;
 use crate::table_finder::TableFinder;
@@ -78,6 +79,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
         })
     };
 
+    // Settings panel state
+    let (show_settings, set_show_settings) = signal(false);
+
     // Restore panel state
     let (show_restore, set_show_restore) = signal(false);
     let (restore_file, set_restore_file) = signal(Option::<String>::None);
@@ -93,6 +97,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             match cmd.as_str() {
                 "New SQL Editor" => { ts.open(TabKind::SqlEditor); },
                 "Restore Backup" => set_show_restore.set(true),
+                "Settings" => set_show_settings.set(true),
                 _ => {}
             }
         })
@@ -554,6 +559,10 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                         }}
                                     </div>
                                 </div>
+                            }.into_any()
+                        } else if show_settings.get() {
+                            view! {
+                                <SettingsView set_show=set_show_settings />
                             }.into_any()
                         } else if active_table.get().is_some() {
                             view! {

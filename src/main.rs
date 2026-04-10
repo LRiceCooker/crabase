@@ -3,6 +3,7 @@ mod command_palette;
 mod connection;
 pub mod icons;
 mod main_layout;
+mod settings;
 mod sidebar;
 mod sql_editor;
 mod table_finder;
