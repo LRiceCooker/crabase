@@ -5,8 +5,8 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::command_palette::CommandPalette;
 use crate::icons::{
-    IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconPlus,
-    IconUpload, IconX, IconXCircle,
+    IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconLogOut,
+    IconPlus, IconUpload, IconX, IconXCircle,
 };
 use crate::sidebar::tables_list::TablesList;
 use crate::sql_editor::sql_tab::SqlTab;
@@ -16,7 +16,7 @@ use crate::tabs::tab_bar::{TabBar, TabKind, TabState};
 use crate::tauri;
 
 #[component]
-pub fn MainLayout() -> impl IntoView {
+pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
     let (connection_info, set_connection_info) =
         signal(Option::<tauri::ConnectionInfo>::None);
     let (tables, set_tables) = signal(Vec::<String>::new());
@@ -345,9 +345,23 @@ pub fn MainLayout() -> impl IntoView {
                                     }}
                                     <button
                                         class="text-gray-400 dark:text-zinc-500 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-neutral-50 p-1 rounded-md transition-colors duration-100"
+                                        title="Edit connection"
                                         on:click=on_edit
                                     >
                                         <IconEdit class="w-4 h-4" />
+                                    </button>
+                                    <div class="w-px h-4 bg-gray-200 dark:bg-zinc-800"></div>
+                                    <button
+                                        class="text-gray-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-md transition-colors duration-100"
+                                        title="Disconnect"
+                                        on:click=move |_| {
+                                            spawn_local(async move {
+                                                let _ = tauri::disconnect_db().await;
+                                                on_disconnect.run(());
+                                            });
+                                        }
+                                    >
+                                        <IconLogOut class="w-4 h-4" />
                                     </button>
                                 </div>
                             }.into_any()

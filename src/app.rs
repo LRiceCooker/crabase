@@ -136,7 +136,10 @@ pub fn App() -> impl IntoView {
         let current_screen = screen.get();
         match current_screen.as_str() {
             "connected" => {
-                view! { <MainLayout /> }.into_any()
+                let on_disconnect = Callback::new(move |_: ()| {
+                    set_screen.set("input".to_string());
+                });
+                view! { <MainLayout on_disconnect=on_disconnect /> }.into_any()
             }
             "form" => {
                 view! {

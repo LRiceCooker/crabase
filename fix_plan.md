@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 8 — Theme System & Settings Foundation
-- [ ] Add "Disconnect" button in header that closes connection and returns to connection screen
-
 ### Phase 9 — Settings View
 - [ ] Create settings/settings_view.rs that opens like the Restore Backup panel (special view in content area)
 - [ ] Add "Settings" command in the command palette (Cmd+Shift+P)
@@ -143,3 +140,4 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [x] Apply dark theme palette from specs/design.md to ALL existing components (use `dark:` variants)
 - [x] Backend: `load_settings` and `save_settings` commands (read/write `app_data_dir/settings.json`)
 - [x] Frontend: theme.rs provider that reads settings, applies `dark` class to `<html>`, exposes a toggle
+- [x] Add "Disconnect" button in header that closes connection and returns to connection screen
