@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 11 — Saved Queries
-- [ ] Save query name conflict returns an error to display to the user
 - [ ] sql_editor/sql_toolbar.rs: add Save button (left of Run) with dirty state tracking and disabled state
 - [ ] Cmd+S contextual: save SQL query in SQL editor tabs, save table changes in dirty table tabs
 - [ ] Dirty indicator (filled vs hollow dot) near the file name in tab title and toolbar
@@ -91,6 +90,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Save query name conflict returns an error to display to the user
 - [x] Backend commands: `save_query`, `update_query`, `rename_query`, `delete_query`, `list_queries`, `load_query`
 - [x] Backend: saved_queries.rs module with CRUD scoped per connection hash (host:port:dbname:user)
 - [x] JSON cell editor modal: use CodeMirror with @codemirror/lang-json for syntax-highlighted editing
