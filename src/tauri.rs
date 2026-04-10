@@ -310,6 +310,59 @@ pub async fn get_table_data(
         .map_err(|e| format!("Failed to parse table data: {}", e))
 }
 
+/// A single filter condition for table data queries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Filter {
+    pub column: String,
+    pub operator: String,
+    pub value: String,
+    pub combinator: String,
+}
+
+/// A sort column specification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SortCol {
+    pub column: String,
+    pub direction: String,
+}
+
+pub async fn get_table_data_filtered(
+    table_name: &str,
+    page: u32,
+    page_size: u32,
+    filters: Vec<Filter>,
+    sort: Vec<SortCol>,
+) -> Result<TableData, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> {
+        table_name: &'a str,
+        page: u32,
+        page_size: u32,
+        filters: &'a Vec<Filter>,
+        sort: &'a Vec<SortCol>,
+    }
+
+    let args = serde_wasm_bindgen::to_value(&Args {
+        table_name,
+        page,
+        page_size,
+        filters: &filters,
+        sort: &sort,
+    })
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("get_table_data_filtered", args)
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Failed to get table data".to_string())
+        })?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse table data: {}", e))
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RowUpdate {
     pub pk_values: std::collections::HashMap<String, serde_json::Value>,

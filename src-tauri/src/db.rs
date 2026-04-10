@@ -347,6 +347,83 @@ impl DbState {
         })
     }
 
+    pub async fn get_table_data_filtered(
+        &self,
+        table_name: &str,
+        page: u32,
+        page_size: u32,
+        filters: Vec<Filter>,
+        sort: Vec<SortCol>,
+    ) -> Result<TableData, String> {
+        let columns = self.get_column_info(table_name).await?;
+
+        let pool = {
+            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            pool_guard
+                .clone()
+                .ok_or_else(|| "Not connected to any database".to_string())?
+        };
+
+        let schema = {
+            let info_guard = self
+                .connection_info
+                .lock()
+                .map_err(|e| format!("Lock error: {}", e))?;
+            info_guard
+                .as_ref()
+                .map(|i| i.schema.clone())
+                .unwrap_or_else(|| "public".to_string())
+        };
+
+        let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
+        let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
+        let qualified_table = format!("{}.{}", quoted_schema, quoted_table);
+
+        // Build WHERE clause from filters
+        let where_clause = build_filter_where_clause(&filters);
+
+        // Build ORDER BY clause from sort columns
+        let order_clause = build_order_clause(&sort);
+
+        // Get filtered count
+        let count_query = format!(
+            "SELECT COUNT(*) as cnt FROM {}{}",
+            qualified_table, where_clause
+        );
+        let count_row: (i64,) = sqlx::query_as(&count_query)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| format!("Failed to get row count: {}", e))?;
+        let total_count = count_row.0 as u64;
+
+        // Get paginated filtered rows
+        let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
+        let data_query = format!(
+            "SELECT * FROM {}{}{} LIMIT {} OFFSET {}",
+            qualified_table, where_clause, order_clause, page_size, offset
+        );
+
+        let pg_rows = sqlx::query(&data_query)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| format!("Failed to get table data: {}", e))?;
+
+        let rows: Vec<Vec<serde_json::Value>> = pg_rows
+            .iter()
+            .map(|row| {
+                (0..row.len())
+                    .map(|i| pg_value_to_json(row, i))
+                    .collect()
+            })
+            .collect();
+
+        Ok(TableData {
+            columns,
+            rows,
+            total_count,
+        })
+    }
+
     pub async fn save_changes(
         &self,
         table_name: &str,
@@ -549,6 +626,83 @@ fn bind_json_value<'q>(
     }
 }
 
+/// Build a WHERE clause from user-defined filters. Values are embedded as literals
+/// with proper quoting to prevent SQL injection via column names.
+fn build_filter_where_clause(filters: &[Filter]) -> String {
+    if filters.is_empty() {
+        return String::new();
+    }
+    let mut parts = Vec::new();
+    for (i, f) in filters.iter().enumerate() {
+        let quoted_col = format!("\"{}\"", f.column.replace('"', "\"\""));
+        let escaped_val = f.value.replace('\'', "''");
+        let condition = match f.operator.as_str() {
+            "=" => format!("{} = '{}'", quoted_col, escaped_val),
+            "!=" => format!("{} != '{}'", quoted_col, escaped_val),
+            "<" => format!("{} < '{}'", quoted_col, escaped_val),
+            ">" => format!("{} > '{}'", quoted_col, escaped_val),
+            "<=" => format!("{} <= '{}'", quoted_col, escaped_val),
+            ">=" => format!("{} >= '{}'", quoted_col, escaped_val),
+            "LIKE" => format!("{} LIKE '{}'", quoted_col, escaped_val),
+            "NOT LIKE" => format!("{} NOT LIKE '{}'", quoted_col, escaped_val),
+            "IN" => {
+                // value is comma-separated
+                let items: Vec<String> = f
+                    .value
+                    .split(',')
+                    .map(|s| format!("'{}'", s.trim().replace('\'', "''")))
+                    .collect();
+                format!("{} IN ({})", quoted_col, items.join(", "))
+            }
+            "NOT IN" => {
+                let items: Vec<String> = f
+                    .value
+                    .split(',')
+                    .map(|s| format!("'{}'", s.trim().replace('\'', "''")))
+                    .collect();
+                format!("{} NOT IN ({})", quoted_col, items.join(", "))
+            }
+            "IS NULL" => format!("{} IS NULL", quoted_col),
+            "IS NOT NULL" => format!("{} IS NOT NULL", quoted_col),
+            "contains" => format!("{} ILIKE '%{}%'", quoted_col, escaped_val),
+            "starts with" => format!("{} ILIKE '{}%'", quoted_col, escaped_val),
+            "ends with" => format!("{} ILIKE '%{}'", quoted_col, escaped_val),
+            _ => format!("{} = '{}'", quoted_col, escaped_val),
+        };
+        if i == 0 {
+            parts.push(condition);
+        } else {
+            let comb = match f.combinator.to_uppercase().as_str() {
+                "OR" => "OR",
+                "XOR" => "XOR",
+                _ => "AND",
+            };
+            parts.push(format!("{} {}", comb, condition));
+        }
+    }
+    format!(" WHERE {}", parts.join(" "))
+}
+
+/// Build an ORDER BY clause from sort column specifications.
+fn build_order_clause(sort: &[SortCol]) -> String {
+    if sort.is_empty() {
+        return String::new();
+    }
+    let parts: Vec<String> = sort
+        .iter()
+        .map(|s| {
+            let quoted_col = format!("\"{}\"", s.column.replace('"', "\"\""));
+            let dir = if s.direction.to_lowercase() == "desc" {
+                "DESC"
+            } else {
+                "ASC"
+            };
+            format!("{} {}", quoted_col, dir)
+        })
+        .collect();
+    format!(" ORDER BY {}", parts.join(", "))
+}
+
 /// Build a tagged value: `{ "type": "<pg_type>", "value": <val> }`.
 fn tagged(pg_type: &str, value: serde_json::Value) -> serde_json::Value {
     serde_json::json!({ "type": pg_type, "value": value })
@@ -735,6 +889,24 @@ pub struct TableData {
     pub columns: Vec<ColumnInfo>,
     pub rows: Vec<Vec<serde_json::Value>>,
     pub total_count: u64,
+}
+
+/// A single filter condition for table data queries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Filter {
+    pub column: String,
+    pub operator: String,
+    pub value: String,
+    /// Combinator with previous filter: "AND", "OR", or "XOR". Ignored for the first filter.
+    pub combinator: String,
+}
+
+/// A sort column specification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SortCol {
+    pub column: String,
+    /// "asc" or "desc"
+    pub direction: String,
 }
 
 /// A row update: identified by primary key values, with changed column values.

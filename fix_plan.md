@@ -5,9 +5,6 @@
 ## Backlog
 
 ### Phase 16 — Filter & Sort Bar (Linear-style)
-- [ ] Backend: `get_table_data_filtered(table_name, page, page_size, filters, sort)` extending get_table_data
-- [ ] Filter struct: column, operator (=, !=, <, >, <=, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL, contains, starts with, ends with), value, combinator (AND/OR/XOR for the previous filter)
-- [ ] SortCol struct: column, direction (asc/desc)
 - [ ] table_view/filter_bar.rs: inline bar below toolbar, always visible
 - [ ] table_view/filter_chip.rs: column select + operator select + value input + delete button + combinator selector
 - [ ] "+" button to add a new filter
@@ -29,6 +26,9 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] SortCol struct: column, direction (asc/desc)
+- [x] Filter struct: column, operator (=, !=, <, >, <=, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL, contains, starts with, ends with), value, combinator (AND/OR/XOR for the previous filter)
+- [x] Backend: `get_table_data_filtered(table_name, page, page_size, filters, sort)` extending get_table_data
 - [x] Option: **Copy as SQL INSERT** — copies row(s) to clipboard as SQL INSERT statements
 - [x] Option: **Copy as JSON** — copies row(s) to clipboard as JSON
 - [x] Option: **Duplicate** — duplicates row(s) as new rows (green highlight, persists on save)
