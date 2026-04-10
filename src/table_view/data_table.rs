@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use leptos::prelude::*;
 
 use crate::icons::IconTrash2;
@@ -105,6 +107,7 @@ pub fn DataTable(
     columns: Vec<ColumnInfo>,
     rows: RwSignal<Vec<Vec<serde_json::Value>>>,
     changes: ChangeTracker,
+    selected_rows: RwSignal<HashSet<usize>>,
     page: u32,
     page_size: u32,
     on_cell_edit: Callback<CellEdit>,
@@ -144,10 +147,12 @@ pub fn DataTable(
                     {move || {
                         let current_rows = rows.get();
                         let active = editing_cell.get();
+                        let selection = selected_rows.get();
                         let col_types = columns_for_types.clone();
 
                         current_rows.into_iter().enumerate().map(|(row_idx, row)| {
                             let col_types = col_types.clone();
+                            let is_selected = selection.contains(&row_idx);
                             let (row_class, index_bg, index_border_l) = if changes.is_row_deleted(row_idx) {
                                 (
                                     "bg-red-50 dark:bg-red-950/60 line-through opacity-60",
@@ -166,6 +171,12 @@ pub fn DataTable(
                                     "bg-amber-50 dark:bg-amber-950/60",
                                     " border-l-2 border-amber-500 dark:border-amber-400",
                                 )
+                            } else if is_selected {
+                                (
+                                    "bg-indigo-50 dark:bg-indigo-500/25",
+                                    "bg-indigo-50 dark:bg-indigo-500/25",
+                                    "",
+                                )
                             } else {
                                 (
                                     "hover:bg-gray-50 dark:hover:bg-white/[0.03]",
@@ -175,12 +186,19 @@ pub fn DataTable(
                             };
                             let global_idx = (page - 1) * page_size + (row_idx as u32) + 1;
                             let index_td_class = format!(
-                                "sticky left-0 z-[5] {} px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono{}",
+                                "sticky left-0 z-[5] {} px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono cursor-pointer{}",
                                 index_bg, index_border_l
                             );
                             view! {
                                 <tr class=row_class>
-                                    <td class=index_td_class>
+                                    <td
+                                        class=index_td_class
+                                        on:click=move |_| {
+                                            let mut new_set = HashSet::new();
+                                            new_set.insert(row_idx);
+                                            selected_rows.set(new_set);
+                                        }
+                                    >
                                         {global_idx}
                                     </td>
                                     {row.into_iter().enumerate().map(|(col_idx, cell)| {

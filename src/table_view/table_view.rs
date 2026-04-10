@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
@@ -28,12 +30,14 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let (array_edit, set_array_edit) = signal(Option::<ArrayEditRequest>::None);
     let (xml_edit, set_xml_edit) = signal(Option::<XmlEditRequest>::None);
     let changes = ChangeTracker::new();
+    let selected_rows = RwSignal::new(HashSet::<usize>::new());
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
         set_loading.set(true);
         set_error.set(None);
         changes.discard();
+        selected_rows.set(HashSet::new());
 
         spawn_local(async move {
             match tauri::get_table_data(&name, pg, ps).await {
@@ -399,6 +403,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             columns=columns.get()
                             rows=rows
                             changes=changes
+                            selected_rows=selected_rows
                             page=page.get()
                             page_size=page_size.get()
                             on_cell_edit=on_cell_edit
