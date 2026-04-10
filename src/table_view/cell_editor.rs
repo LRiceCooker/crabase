@@ -34,9 +34,18 @@ pub struct CellEdit {
 pub fn CellEditor(
     column: ColumnInfo,
     value: serde_json::Value,
+    #[prop(default = false)] is_new_row: bool,
     on_commit: Callback<serde_json::Value>,
     on_cancel: Callback<()>,
 ) -> impl IntoView {
+    // Primary key and auto-increment columns are read-only on existing rows
+    if (column.is_primary_key || column.is_auto_increment) && !is_new_row {
+        return view! {
+            <UnknownEditor value=value on_cancel=on_cancel />
+        }
+        .into_any();
+    }
+
     let is_nullable = column.is_nullable;
 
     // Enum editor handles nullable internally with a NULL option in the dropdown

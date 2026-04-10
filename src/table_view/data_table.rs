@@ -173,14 +173,18 @@ pub fn DataTable(
                                         });
                                         let modal = modal_type(&col_info);
                                         let data_type_display = col_info.data_type.clone();
+                                        // PK and auto-increment columns are read-only on existing rows
+                                        let is_new_row = changes.is_row_added(row_idx);
+                                        let is_readonly = (col_info.is_primary_key || col_info.is_auto_increment) && !is_new_row;
 
-                                        if is_editing && modal.is_none() {
+                                        if is_editing && modal.is_none() && !is_readonly {
                                             let cell_val = unwrap_tagged_owned(&cell);
                                             view! {
                                                 <td class="px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 ring-2 ring-indigo-500/30 dark:ring-indigo-500/60 bg-white dark:bg-zinc-900 max-w-[300px]">
                                                     <CellEditor
                                                         column=col_info
                                                         value=cell_val
+                                                        is_new_row=is_new_row
                                                         on_commit=Callback::new(move |new_val: serde_json::Value| {
                                                             set_editing_cell.set(None);
                                                             on_cell_edit.run(CellEdit {
@@ -198,22 +202,30 @@ pub fn DataTable(
                                         } else {
                                             let (text, is_null) = format_cell(&cell, &data_type_display);
                                             let cell_modified = changes.is_cell_modified(row_idx, col_idx);
+                                            let cursor = if is_readonly { "cursor-default" } else { "cursor-pointer" };
                                             let class = if is_null && cell_modified {
-                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic cursor-pointer bg-amber-100/50 dark:bg-amber-900/40"
+                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic {} bg-amber-100/50 dark:bg-amber-900/40", cursor)
                                             } else if is_null {
-                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic cursor-pointer"
+                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic {}", cursor)
                                             } else if cell_modified {
-                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] cursor-pointer bg-amber-100/50 dark:bg-amber-900/40"
+                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] {} bg-amber-100/50 dark:bg-amber-900/40", cursor)
                                             } else {
-                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
+                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] {}", cursor)
                                             };
-                                            let title = text.clone();
+                                            let title = if is_readonly {
+                                                format!("{} (read-only)", text)
+                                            } else {
+                                                text.clone()
+                                            };
                                             let cell_for_modal = unwrap_tagged_owned(&cell);
                                             view! {
                                                 <td
                                                     class=class
                                                     title=title
                                                     on:click=move |_| {
+                                                        if is_readonly {
+                                                            return;
+                                                        }
                                                         match modal {
                                                             Some("json") => {
                                                                 on_json_edit.run(JsonEditRequest {

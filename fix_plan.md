@@ -3,7 +3,6 @@
 ## In Progress
 
 ## Backlog
-- [ ] Frontend: read-only mode for primary keys and auto-increment columns when editing existing rows
 
 ### Phase 14 — Table View: Index Column & Selection
 - [ ] data_table.rs: add leftmost index column (no header label) showing global row index across pages (page 2 with 50 rows starts at 51)
@@ -47,6 +46,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Frontend: read-only mode for primary keys and auto-increment columns when editing existing rows
 - [x] Frontend: NULL handling in editors — show a clear "Set NULL" / "×" affordance for nullable columns
 - [x] Frontend: implement specialized editors per type (number, text, boolean, date, time, datetime, interval, uuid, enum, array modal, inet/cidr/macaddr, bit, range, bytea, xml modal, unknown)
 - [x] Frontend: cell display formatting matches the type (boolean as checkmark icon, JSON/array truncated, array as `[a, b, c, ...]`)
