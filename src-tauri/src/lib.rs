@@ -1,6 +1,7 @@
 mod db;
 mod restore;
 mod saved_connections;
+mod saved_queries;
 mod settings;
 
 #[tauri::command]
