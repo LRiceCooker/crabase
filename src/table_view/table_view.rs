@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::icons::{IconLoader, IconPlus, IconRefreshCw, IconTable};
+use crate::shortcuts::use_save_trigger;
 use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::data_table::DataTable;
@@ -267,6 +268,22 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             fetch_data(name, page.get(), page_size.get());
         }
     });
+
+    // Listen for global save trigger (Cmd+S)
+    {
+        let save_trigger = use_save_trigger();
+        let counter = save_trigger.counter();
+        Effect::new(move |prev: Option<u64>| {
+            let current = counter.get();
+            // Only trigger save if this isn't the initial run and there are changes
+            if let Some(prev_val) = prev {
+                if current != prev_val && changes.has_changes() {
+                    on_save.run(());
+                }
+            }
+            current
+        });
+    }
 
     view! {
         <div class="flex flex-col h-full">

@@ -11,6 +11,8 @@ pub enum ShortcutAction {
     TableFinder,
     /// Toggle SQL line comment (local to SQL editor)
     ToggleComment,
+    /// Save current context (dirty table changes or SQL query)
+    Save,
 }
 
 impl ShortcutAction {
@@ -20,13 +22,14 @@ impl ShortcutAction {
             Self::CommandPalette => "Command Palette",
             Self::TableFinder => "Table / Query Finder",
             Self::ToggleComment => "Toggle Comment",
+            Self::Save => "Save",
         }
     }
 
     /// Category for grouping in settings UI.
     pub fn category(self) -> &'static str {
         match self {
-            Self::CommandPalette | Self::TableFinder => "General",
+            Self::CommandPalette | Self::TableFinder | Self::Save => "General",
             Self::ToggleComment => "SQL Editor",
         }
     }
@@ -36,6 +39,7 @@ impl ShortcutAction {
         &[
             Self::CommandPalette,
             Self::TableFinder,
+            Self::Save,
             Self::ToggleComment,
         ]
     }
@@ -142,6 +146,10 @@ fn default_bindings() -> HashMap<ShortcutAction, KeyBinding> {
         ShortcutAction::ToggleComment,
         KeyBinding::new(true, false, false, "Slash"),
     );
+    m.insert(
+        ShortcutAction::Save,
+        KeyBinding::new(true, false, false, "KeyS"),
+    );
     m
 }
 
@@ -210,6 +218,37 @@ pub fn provide_shortcuts() {
 /// Retrieve the shortcuts context.
 pub fn use_shortcuts() -> ShortcutsCtx {
     expect_context::<ShortcutsCtx>()
+}
+
+/// A global save trigger. Bump the counter to request a save from the active view.
+#[derive(Clone, Copy)]
+pub struct SaveTrigger {
+    counter: RwSignal<u64>,
+}
+
+impl SaveTrigger {
+    /// Request a save (increments the counter, notifying listeners).
+    pub fn request(&self) {
+        self.counter.update(|c| *c += 1);
+    }
+
+    /// Get the reactive counter signal (watch for changes).
+    pub fn counter(&self) -> RwSignal<u64> {
+        self.counter
+    }
+}
+
+/// Initialize the save trigger. Call once at the app root.
+pub fn provide_save_trigger() {
+    let trigger = SaveTrigger {
+        counter: RwSignal::new(0),
+    };
+    provide_context(trigger);
+}
+
+/// Retrieve the save trigger context.
+pub fn use_save_trigger() -> SaveTrigger {
+    expect_context::<SaveTrigger>()
 }
 
 #[cfg(test)]

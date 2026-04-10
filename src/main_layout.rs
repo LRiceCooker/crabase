@@ -9,7 +9,7 @@ use crate::icons::{
     IconPlus, IconUpload, IconX, IconXCircle,
 };
 use crate::settings::settings_view::SettingsView;
-use crate::shortcuts::{self, ShortcutAction};
+use crate::shortcuts::{self, ShortcutAction, use_save_trigger};
 use crate::sidebar::tables_list::TablesList;
 use crate::sql_editor::sql_tab::SqlTab;
 use crate::table_finder::TableFinder;
@@ -107,6 +107,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
     // Global keyboard shortcuts (dispatched via ShortcutsCtx)
     {
         let sc = shortcuts::use_shortcuts();
+        let save_trigger = use_save_trigger();
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |ev: web_sys::KeyboardEvent| {
                 if sc.matches(ShortcutAction::CommandPalette, &ev) {
@@ -115,6 +116,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                 } else if sc.matches(ShortcutAction::TableFinder, &ev) {
                     ev.prevent_default();
                     set_show_finder.set(true);
+                } else if sc.matches(ShortcutAction::Save, &ev) {
+                    ev.prevent_default();
+                    save_trigger.request();
                 }
             },
         );

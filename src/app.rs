@@ -16,6 +16,9 @@ pub fn App() -> impl IntoView {
     // Initialize shortcuts system (provides ShortcutsCtx via Leptos context)
     shortcuts::provide_shortcuts();
 
+    // Initialize global save trigger (provides SaveTrigger via Leptos context)
+    shortcuts::provide_save_trigger();
+
     // 3 states: "input" -> "form" -> "connected"
     let (screen, set_screen) = signal(String::from("input"));
     let (connection_string, set_connection_string) = signal(String::new());

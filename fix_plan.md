@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 9 — Settings View
-- [ ] All existing shortcuts (Cmd+Shift+P, Cmd+P, Cmd+S, Cmd+/, Cmd+Z, Cmd+F, etc.) registered through shortcuts.rs and customizable
-
 ### Phase 10 — SQL Editor Rewrite (CodeMirror 6)
 - [ ] Add CodeMirror 6 dependencies via npm (@codemirror/state, @codemirror/view, @codemirror/lang-sql, @codemirror/lang-json, @codemirror/commands, @codemirror/autocomplete, @codemirror/search, @codemirror/theme-one-dark)
 - [ ] Create sql_editor/codemirror.rs: Leptos wrapper around CodeMirror 6 instance via JS interop (mount, unmount, get/set content, dirty tracking)
@@ -141,3 +138,4 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [x] shortcuts.rs: keyboard shortcuts registry (default bindings + dispatcher)
 - [x] settings/shortcut_input.rs: clickable shortcut input that listens for key combinations to bind
 - [x] settings/shortcuts_settings.rs: list of all configurable shortcuts grouped by category, with click-to-rebind, "Reset to defaults" button
+- [x] All existing shortcuts (Cmd+Shift+P, Cmd+P, Cmd+S, Cmd+/, Cmd+Z, Cmd+F, etc.) registered through shortcuts.rs and customizable
