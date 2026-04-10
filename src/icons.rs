@@ -260,3 +260,24 @@ pub fn IconLoader(#[prop(optional, default = "w-4 h-4 animate-spin")] class: &'s
         </LucideBase>
     }
 }
+
+#[component]
+pub fn IconFilter(#[prop(optional, default = "w-4 h-4")] class: &'static str) -> impl IntoView {
+    view! {
+        <LucideBase class=class>
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </LucideBase>
+    }
+}
+
+#[component]
+pub fn IconArrowUpDown(#[prop(optional, default = "w-4 h-4")] class: &'static str) -> impl IntoView {
+    view! {
+        <LucideBase class=class>
+            <path d="m21 16-4 4-4-4" />
+            <path d="M17 20V4" />
+            <path d="m3 8 4-4 4 4" />
+            <path d="M7 4v16" />
+        </LucideBase>
+    }
+}

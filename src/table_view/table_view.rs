@@ -11,6 +11,7 @@ use crate::table_view::cell_editors::xml_editor_modal::{XmlEditRequest, XmlEdito
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::context_menu::{ContextMenu, ContextMenuItem};
 use crate::table_view::data_table::{unwrap_tagged_owned, DataTable, RowContextMenuEvent};
+use crate::table_view::filter_bar::FilterBar;
 use crate::table_view::dirty_bar::DirtyBar;
 use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
@@ -35,6 +36,9 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let selection_anchor = RwSignal::new(Option::<usize>::None);
     // Context menu state: (x, y) position when open
     let (ctx_menu, set_ctx_menu) = signal(Option::<(i32, i32)>::None);
+    // Filter & sort state
+    let active_filters = RwSignal::new(Vec::<tauri::Filter>::new());
+    let active_sort = RwSignal::new(Vec::<tauri::SortCol>::new());
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
@@ -42,9 +46,16 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         set_error.set(None);
         changes.discard();
         selected_rows.set(HashSet::new());
+        let filters = active_filters.get();
+        let sort_cols = active_sort.get();
 
         spawn_local(async move {
-            match tauri::get_table_data(&name, pg, ps).await {
+            let result = if filters.is_empty() && sort_cols.is_empty() {
+                tauri::get_table_data(&name, pg, ps).await
+            } else {
+                tauri::get_table_data_filtered(&name, pg, ps, filters, sort_cols).await
+            };
+            match result {
                 Ok(td) => {
                     set_total_count.set(td.total_count);
                     set_columns.set(td.columns);
@@ -379,6 +390,26 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                                 </button>
                             </div>
                         </div>
+                    }
+                })
+            }}
+
+            // Filter & sort bar
+            {move || {
+                loaded_table.get().map(|_| {
+                    let columns_memo = Memo::new(move |_| columns.get());
+                    let on_filter_change = Callback::new(move |_| {
+                        if let Some(name) = loaded_table.get() {
+                            fetch_data(name, page.get(), page_size.get());
+                        }
+                    });
+                    view! {
+                        <FilterBar
+                            columns=columns_memo
+                            filters=active_filters
+                            sort=active_sort
+                            on_change=on_filter_change
+                        />
                     }
                 })
             }}

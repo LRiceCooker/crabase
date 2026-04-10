@@ -5,10 +5,6 @@
 ## Backlog
 
 ### Phase 16 — Filter & Sort Bar (Linear-style)
-- [ ] table_view/filter_bar.rs: inline bar below toolbar, always visible
-- [ ] table_view/filter_chip.rs: column select + operator select + value input + delete button + combinator selector
-- [ ] "+" button to add a new filter
-- [ ] Sort: column + direction, can chain multiple sort columns
 - [ ] Default sort behavior: created_at desc if exists, else PK asc, else first column with smart fallback
 - [ ] Click table header to cycle sort direction (asc → desc → none)
 
@@ -26,6 +22,10 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Sort: column + direction, can chain multiple sort columns
+- [x] "+" button to add a new filter
+- [x] table_view/filter_chip.rs: column select + operator select + value input + delete button + combinator selector
+- [x] table_view/filter_bar.rs: inline bar below toolbar, always visible
 - [x] SortCol struct: column, direction (asc/desc)
 - [x] Filter struct: column, operator (=, !=, <, >, <=, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL, contains, starts with, ends with), value, combinator (AND/OR/XOR for the previous filter)
 - [x] Backend: `get_table_data_filtered(table_name, page, page_size, filters, sort)` extending get_table_data
