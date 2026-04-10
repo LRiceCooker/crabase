@@ -25,6 +25,7 @@ pub struct Tab {
 #[derive(Clone)]
 pub struct TabState {
     next_id: RwSignal<usize>,
+    next_untitled: RwSignal<usize>,
     pub tabs: RwSignal<Vec<Tab>>,
     pub active_id: RwSignal<Option<usize>>,
     dirty_tabs: RwSignal<HashSet<usize>>,
@@ -34,6 +35,7 @@ impl TabState {
     pub fn new() -> Self {
         Self {
             next_id: RwSignal::new(1),
+            next_untitled: RwSignal::new(1),
             tabs: RwSignal::new(Vec::new()),
             active_id: RwSignal::new(None),
             dirty_tabs: RwSignal::new(HashSet::new()),
@@ -60,7 +62,11 @@ impl TabState {
 
         let title = match &kind {
             TabKind::TableView(name) => name.clone(),
-            TabKind::SqlEditor => format!("SQL {}", id),
+            TabKind::SqlEditor => {
+                let n = self.next_untitled.get();
+                self.next_untitled.set(n + 1);
+                format!("Untitled-{}", n)
+            }
         };
 
         let tab = Tab { id, kind, title };

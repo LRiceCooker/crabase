@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 11 — Saved Queries
-- [ ] Default name: `Untitled-1`, `Untitled-2`, etc. (incremented globally per app instance)
 - [ ] sidebar/saved_queries_list.rs: scrollable section above tables list, shows saved queries for current connection. Hidden if empty.
 - [ ] Click on saved query in sidebar opens it in a new tab (or focuses existing tab)
 
@@ -86,6 +85,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Default name: `Untitled-1`, `Untitled-2`, etc. (incremented globally per app instance)
 - [x] tab_title.rs: clicking the file name on a SQL editor tab transforms it into an inline rename input. Save on blur or Enter, revert on Escape, calls `rename_query`
 - [x] Dirty indicator (filled vs hollow dot) near the file name in tab title and toolbar
 - [x] Cmd+S contextual: save SQL query in SQL editor tabs, save table changes in dirty table tabs

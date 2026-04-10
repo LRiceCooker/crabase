@@ -595,9 +595,17 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                             let on_dirty = Callback::new(move |dirty: bool| {
                                 ts.set_dirty(tab_id, dirty);
                             });
+                            // Get the tab title for query_name
+                            let query_name = {
+                                let tabs = tab_state.tabs.get();
+                                tabs.iter()
+                                    .find(|t| t.id == tab_id)
+                                    .map(|t| t.title.clone())
+                                    .unwrap_or_default()
+                            };
                             view! {
                                 <div class="h-full">
-                                    <SqlTab on_dirty_change=on_dirty />
+                                    <SqlTab query_name=query_name on_dirty_change=on_dirty />
                                 </div>
                             }.into_any()
                         } else {
