@@ -491,7 +491,28 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                         ContextMenuItem {
                             label: "Duplicate",
                             danger: false,
-                            action: Callback::new(move |_| {}),
+                            action: Callback::new(move |_| {
+                                let sel = selected_rows.get();
+                                let current_rows = rows.get();
+                                // Sort selected indices to maintain order
+                                let mut indices: Vec<usize> = sel.into_iter().collect();
+                                indices.sort();
+                                let mut new_rows_data: Vec<Vec<serde_json::Value>> = Vec::new();
+                                for &idx in &indices {
+                                    if let Some(row_data) = current_rows.get(idx) {
+                                        new_rows_data.push(row_data.clone());
+                                    }
+                                }
+                                rows.update(|r| {
+                                    for new_row in &new_rows_data {
+                                        r.push(new_row.clone());
+                                    }
+                                });
+                                let base = current_rows.len();
+                                for i in 0..new_rows_data.len() {
+                                    changes.mark_row_added(base + i);
+                                }
+                            }),
                         },
                         ContextMenuItem {
                             label: "Copy as JSON",
