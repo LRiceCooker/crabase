@@ -33,6 +33,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Option: **Copy as JSON** — copies row(s) to clipboard as JSON
 - [x] Option: **Duplicate** — duplicates row(s) as new rows (green highlight, persists on save)
 - [x] Option: **Delete** — marks row(s) for deletion (red highlight, persists on save)
 - [x] Right-click on a row opens menu; right-click on a row that is part of a multi-selection keeps the selection and shows the same menu

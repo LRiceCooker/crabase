@@ -10,7 +10,7 @@ use crate::table_view::cell_editors::array_editor_modal::{ArrayEditRequest, Arra
 use crate::table_view::cell_editors::xml_editor_modal::{XmlEditRequest, XmlEditorModal};
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::context_menu::{ContextMenu, ContextMenuItem};
-use crate::table_view::data_table::{DataTable, RowContextMenuEvent};
+use crate::table_view::data_table::{unwrap_tagged_owned, DataTable, RowContextMenuEvent};
 use crate::table_view::dirty_bar::DirtyBar;
 use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
@@ -517,7 +517,36 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                         ContextMenuItem {
                             label: "Copy as JSON",
                             danger: false,
-                            action: Callback::new(move |_| {}),
+                            action: Callback::new(move |_| {
+                                let sel = selected_rows.get();
+                                let current_rows = rows.get();
+                                let cols = columns.get();
+                                let mut indices: Vec<usize> = sel.into_iter().collect();
+                                indices.sort();
+                                let json_rows: Vec<serde_json::Value> = indices
+                                    .iter()
+                                    .filter_map(|&idx| current_rows.get(idx))
+                                    .map(|row| {
+                                        let mut obj = serde_json::Map::new();
+                                        for (col_idx, cell) in row.iter().enumerate() {
+                                            let col_name = cols
+                                                .get(col_idx)
+                                                .map(|c| c.name.clone())
+                                                .unwrap_or_else(|| format!("col_{}", col_idx));
+                                            obj.insert(col_name, unwrap_tagged_owned(cell));
+                                        }
+                                        serde_json::Value::Object(obj)
+                                    })
+                                    .collect();
+                                let text = if json_rows.len() == 1 {
+                                    serde_json::to_string_pretty(&json_rows[0]).unwrap_or_default()
+                                } else {
+                                    serde_json::to_string_pretty(&json_rows).unwrap_or_default()
+                                };
+                                let window = web_sys::window().unwrap();
+                                let clipboard = window.navigator().clipboard();
+                                let _ = clipboard.write_text(&text);
+                            }),
                         },
                         ContextMenuItem {
                             label: "Copy as SQL INSERT",
