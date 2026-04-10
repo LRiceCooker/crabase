@@ -127,6 +127,11 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                 } else if sc.matches(ShortcutAction::Save, &ev) {
                     ev.prevent_default();
                     save_trigger.request();
+                } else if (ev.meta_key() || ev.ctrl_key()) && ev.shift_key() && ev.code() == "KeyN" {
+                    ev.prevent_default();
+                    wasm_bindgen_futures::spawn_local(async {
+                        let _ = crate::tauri::open_new_window().await;
+                    });
                 }
             },
         );
