@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use std::collections::HashSet;
 
 use crate::icons::{IconTable, IconTerminal, IconX};
 
@@ -25,6 +26,7 @@ pub struct TabState {
     next_id: RwSignal<usize>,
     pub tabs: RwSignal<Vec<Tab>>,
     pub active_id: RwSignal<Option<usize>>,
+    dirty_tabs: RwSignal<HashSet<usize>>,
 }
 
 impl TabState {
@@ -33,6 +35,7 @@ impl TabState {
             next_id: RwSignal::new(1),
             tabs: RwSignal::new(Vec::new()),
             active_id: RwSignal::new(None),
+            dirty_tabs: RwSignal::new(HashSet::new()),
         }
     }
 
@@ -72,6 +75,22 @@ impl TabState {
         }
     }
 
+    /// Mark a tab as dirty or clean.
+    pub fn set_dirty(&self, id: usize, dirty: bool) {
+        self.dirty_tabs.update(|set| {
+            if dirty {
+                set.insert(id);
+            } else {
+                set.remove(&id);
+            }
+        });
+    }
+
+    /// Check if a tab is dirty.
+    pub fn is_dirty(&self, id: usize) -> bool {
+        self.dirty_tabs.get().contains(&id)
+    }
+
     /// Close a tab by id. If the closed tab was active, activate an adjacent tab.
     pub fn close(&self, id: usize) {
         let tabs = self.tabs.get();
@@ -93,6 +112,9 @@ impl TabState {
             self.tabs.update(|tabs| {
                 tabs.retain(|t| t.id != id);
             });
+            self.dirty_tabs.update(|set| {
+                set.remove(&id);
+            });
         }
     }
 }
@@ -103,6 +125,7 @@ impl TabState {
 pub fn TabBar(state: TabState) -> impl IntoView {
     let tabs = state.tabs;
     let active_id = state.active_id;
+    let dirty_tabs = state.dirty_tabs;
     let state_switch = state.clone();
     let state_close = state;
 
@@ -142,6 +165,16 @@ pub fn TabBar(state: TabState) -> impl IntoView {
                                 view! { <IconTerminal class="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" /> }.into_any()
                             }}
                             <span class="truncate max-w-[120px]">{tab.title}</span>
+                            // Dirty indicator dot
+                            {move || {
+                                if dirty_tabs.get().contains(&tab_id) {
+                                    Some(view! {
+                                        <span class="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-zinc-500 shrink-0" />
+                                    })
+                                } else {
+                                    None
+                                }
+                            }}
                             <button
                                 class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition-opacity duration-100"
                                 on:click=move |ev| {

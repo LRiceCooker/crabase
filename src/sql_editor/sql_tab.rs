@@ -13,6 +13,9 @@ pub fn SqlTab(
     /// Query name for saving. Auto-assigned as "Untitled-N" by the tab system.
     #[prop(default = String::new())]
     query_name: String,
+    /// Callback to notify parent of dirty state changes.
+    #[prop(optional)]
+    on_dirty_change: Option<Callback<bool>>,
 ) -> impl IntoView {
     let (cm_handle, set_cm_handle) = signal(Option::<CodeMirrorHandle>::None);
     let (running, set_running) = signal(false);
@@ -23,7 +26,12 @@ pub fn SqlTab(
 
     // Track dirty state from editor changes
     let on_change = Callback::new(move |_: String| {
-        set_is_dirty.set(true);
+        if !is_dirty.get_untracked() {
+            set_is_dirty.set(true);
+            if let Some(cb) = on_dirty_change {
+                cb.run(true);
+            }
+        }
     });
 
     // Auto-focus the editor and load schema for autocomplete once mounted
@@ -67,9 +75,12 @@ pub fn SqlTab(
                 Ok(()) => {
                     set_is_dirty.set(false);
                     set_is_saved.set(true);
+                    if let Some(cb) = on_dirty_change {
+                        cb.run(false);
+                    }
                 }
                 Err(_e) => {
-                    // Error saving — silently ignore for now, will be shown via dirty indicator
+                    // Error saving — silently ignore for now
                 }
             }
         });

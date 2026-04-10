@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 11 — Saved Queries
-- [ ] Dirty indicator (filled vs hollow dot) near the file name in tab title and toolbar
 - [ ] tab_title.rs: clicking the file name on a SQL editor tab transforms it into an inline rename input. Save on blur or Enter, revert on Escape, calls `rename_query`
 - [ ] Default name: `Untitled-1`, `Untitled-2`, etc. (incremented globally per app instance)
 - [ ] sidebar/saved_queries_list.rs: scrollable section above tables list, shows saved queries for current connection. Hidden if empty.
@@ -88,6 +87,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Dirty indicator (filled vs hollow dot) near the file name in tab title and toolbar
 - [x] Cmd+S contextual: save SQL query in SQL editor tabs, save table changes in dirty table tabs
 - [x] sql_editor/sql_toolbar.rs: add Save button (left of Run) with dirty state tracking and disabled state
 - [x] Save query name conflict returns an error to display to the user

@@ -72,6 +72,12 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
         })
     };
 
+    // Derived signal: active tab ID (for passing to child components)
+    let active_tab_id = {
+        let ts = tab_state.clone();
+        Memo::new(move |_| ts.active_id.get().unwrap_or(0))
+    };
+
     // Callback for when a table is clicked in the sidebar
     let on_table_select = {
         let ts = tab_state.clone();
@@ -577,9 +583,14 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                 </div>
                             }.into_any()
                         } else if is_sql_tab.get() {
+                            let ts = tab_state.clone();
+                            let tab_id = active_tab_id.get();
+                            let on_dirty = Callback::new(move |dirty: bool| {
+                                ts.set_dirty(tab_id, dirty);
+                            });
                             view! {
                                 <div class="h-full">
-                                    <SqlTab />
+                                    <SqlTab on_dirty_change=on_dirty />
                                 </div>
                             }.into_any()
                         } else {
