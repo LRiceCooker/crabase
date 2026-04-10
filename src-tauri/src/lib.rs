@@ -1,6 +1,7 @@
 mod db;
 mod restore;
 mod saved_connections;
+mod settings;
 
 #[tauri::command]
 fn parse_connection_string(connection_string: String) -> Result<db::ConnectionInfo, String> {
@@ -112,11 +113,24 @@ fn delete_saved_connection(name: String, app_handle: tauri::AppHandle) -> Result
     saved_connections::delete_saved_connection(&app_handle, name)
 }
 
+#[tauri::command]
+fn load_settings(app_handle: tauri::AppHandle) -> Result<settings::Settings, String> {
+    settings::load_settings(&app_handle)
+}
+
+#[tauri::command]
+fn save_settings(
+    settings: settings::Settings,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    settings::save_settings(&app_handle, &settings)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_table_data, execute_query, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_table_data, execute_query, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
