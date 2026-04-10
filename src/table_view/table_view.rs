@@ -202,10 +202,6 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     });
 
     // Delete row callback
-    let on_delete_row = Callback::new(move |row_idx: usize| {
-        changes.mark_row_deleted(row_idx);
-    });
-
     // Add row callback
     let on_add_row = Callback::new(move |_: ()| {
         let col_count = columns.get().len();
@@ -412,7 +408,6 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             on_json_edit=on_json_edit
                             on_array_edit=on_array_edit
                             on_xml_edit=on_xml_edit
-                            on_delete_row=on_delete_row
                         />
                     }.into_any()
                 } else {
