@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 14 — Table View: Index Column & Selection
-- [ ] Cmd+click on index → toggle row in selection (multi-select)
 - [ ] Shift+click on index → range select (inclusive) between current and clicked row
 - [ ] Selected row visual: `bg-indigo-50 dark:bg-indigo-500/25`
 - [ ] Remove the inline delete button column from each row (deletion now via context menu)
@@ -43,6 +42,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Cmd+click on index → toggle row in selection (multi-select)
 - [x] Click on index → select single row
 - [x] Index column is sticky on horizontal scroll (CSS `sticky left-0`)
 - [x] data_table.rs: add leftmost index column (no header label) showing global row index across pages (page 2 with 50 rows starts at 51)

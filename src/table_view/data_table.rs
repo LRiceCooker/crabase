@@ -193,10 +193,22 @@ pub fn DataTable(
                                 <tr class=row_class>
                                     <td
                                         class=index_td_class
-                                        on:click=move |_| {
-                                            let mut new_set = HashSet::new();
-                                            new_set.insert(row_idx);
-                                            selected_rows.set(new_set);
+                                        on:click=move |ev: web_sys::MouseEvent| {
+                                            if ev.meta_key() || ev.ctrl_key() {
+                                                // Cmd+click (Mac) or Ctrl+click (Win/Linux): toggle row in selection
+                                                let mut set = selected_rows.get();
+                                                if set.contains(&row_idx) {
+                                                    set.remove(&row_idx);
+                                                } else {
+                                                    set.insert(row_idx);
+                                                }
+                                                selected_rows.set(set);
+                                            } else {
+                                                // Plain click: select single row
+                                                let mut new_set = HashSet::new();
+                                                new_set.insert(row_idx);
+                                                selected_rows.set(new_set);
+                                            }
                                         }
                                     >
                                         {global_idx}
