@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 14 — Table View: Index Column & Selection
-- [ ] Index column is sticky on horizontal scroll (CSS `sticky left-0`)
 - [ ] Click on index → select single row
 - [ ] Cmd+click on index → toggle row in selection (multi-select)
 - [ ] Shift+click on index → range select (inclusive) between current and clicked row
@@ -45,6 +44,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Index column is sticky on horizontal scroll (CSS `sticky left-0`)
 - [x] data_table.rs: add leftmost index column (no header label) showing global row index across pages (page 2 with 50 rows starts at 51)
 - [x] Frontend: read-only mode for primary keys and auto-increment columns when editing existing rows
 - [x] Frontend: NULL handling in editors — show a clear "Set NULL" / "×" affordance for nullable columns

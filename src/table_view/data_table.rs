@@ -148,19 +148,39 @@ pub fn DataTable(
 
                         current_rows.into_iter().enumerate().map(|(row_idx, row)| {
                             let col_types = col_types.clone();
-                            let row_class = if changes.is_row_deleted(row_idx) {
-                                "bg-red-50 dark:bg-red-950/60 border-l-2 border-l-red-500 dark:border-l-red-400 line-through opacity-60"
+                            let (row_class, index_bg, index_border_l) = if changes.is_row_deleted(row_idx) {
+                                (
+                                    "bg-red-50 dark:bg-red-950/60 line-through opacity-60",
+                                    "bg-red-50 dark:bg-red-950/60",
+                                    " border-l-2 border-l-red-500 dark:border-l-red-400",
+                                )
                             } else if changes.is_row_added(row_idx) {
-                                "bg-emerald-50 dark:bg-emerald-950/60 border-l-2 border-emerald-500 dark:border-emerald-400"
+                                (
+                                    "bg-emerald-50 dark:bg-emerald-950/60",
+                                    "bg-emerald-50 dark:bg-emerald-950/60",
+                                    " border-l-2 border-emerald-500 dark:border-emerald-400",
+                                )
                             } else if changes.is_row_modified(row_idx) {
-                                "bg-amber-50 dark:bg-amber-950/60 border-l-2 border-amber-500 dark:border-amber-400"
+                                (
+                                    "bg-amber-50 dark:bg-amber-950/60",
+                                    "bg-amber-50 dark:bg-amber-950/60",
+                                    " border-l-2 border-amber-500 dark:border-amber-400",
+                                )
                             } else {
-                                "hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                                (
+                                    "hover:bg-gray-50 dark:hover:bg-white/[0.03]",
+                                    "bg-gray-50 dark:bg-[#0F0F11]",
+                                    "",
+                                )
                             };
                             let global_idx = (page - 1) * page_size + (row_idx as u32) + 1;
+                            let index_td_class = format!(
+                                "sticky left-0 z-[5] {} px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono{}",
+                                index_bg, index_border_l
+                            );
                             view! {
                                 <tr class=row_class>
-                                    <td class="sticky left-0 z-[5] bg-gray-50 dark:bg-[#0F0F11] px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono">
+                                    <td class=index_td_class>
                                         {global_idx}
                                     </td>
                                     {row.into_iter().enumerate().map(|(col_idx, cell)| {
