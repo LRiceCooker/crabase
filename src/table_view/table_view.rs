@@ -551,7 +551,47 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                         ContextMenuItem {
                             label: "Copy as SQL INSERT",
                             danger: false,
-                            action: Callback::new(move |_| {}),
+                            action: Callback::new(move |_| {
+                                let sel = selected_rows.get();
+                                let current_rows = rows.get();
+                                let cols = columns.get();
+                                let tbl = table_name.get().unwrap_or_else(|| "table_name".to_string());
+                                let col_names: Vec<String> = cols.iter().map(|c| c.name.clone()).collect();
+                                let col_list = col_names.join(", ");
+                                let mut indices: Vec<usize> = sel.into_iter().collect();
+                                indices.sort();
+                                let stmts: Vec<String> = indices
+                                    .iter()
+                                    .filter_map(|&idx| current_rows.get(idx))
+                                    .map(|row| {
+                                        let vals: Vec<String> = row
+                                            .iter()
+                                            .map(|cell| {
+                                                let v = unwrap_tagged_owned(cell);
+                                                match v {
+                                                    serde_json::Value::Null => "NULL".to_string(),
+                                                    serde_json::Value::Bool(b) => {
+                                                        if b { "TRUE".to_string() } else { "FALSE".to_string() }
+                                                    }
+                                                    serde_json::Value::Number(n) => n.to_string(),
+                                                    serde_json::Value::String(s) => {
+                                                        format!("'{}'", s.replace('\'', "''"))
+                                                    }
+                                                    _ => {
+                                                        let s = serde_json::to_string(&v).unwrap_or_default();
+                                                        format!("'{}'", s.replace('\'', "''"))
+                                                    }
+                                                }
+                                            })
+                                            .collect();
+                                        format!("INSERT INTO {} ({}) VALUES ({});", tbl, col_list, vals.join(", "))
+                                    })
+                                    .collect();
+                                let text = stmts.join("\n");
+                                let window = web_sys::window().unwrap();
+                                let clipboard = window.navigator().clipboard();
+                                let _ = clipboard.write_text(&text);
+                            }),
                         },
                     ];
                     view! {

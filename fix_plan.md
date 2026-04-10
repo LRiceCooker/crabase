@@ -4,10 +4,6 @@
 
 ## Backlog
 
-### Phase 15 — Right-Click Context Menu
-- [ ] Option: **Copy as JSON** — copies row(s) to clipboard as JSON
-- [ ] Option: **Copy as SQL INSERT** — copies row(s) to clipboard as SQL INSERT statements
-
 ### Phase 16 — Filter & Sort Bar (Linear-style)
 - [ ] Backend: `get_table_data_filtered(table_name, page, page_size, filters, sort)` extending get_table_data
 - [ ] Filter struct: column, operator (=, !=, <, >, <=, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL, contains, starts with, ends with), value, combinator (AND/OR/XOR for the previous filter)
@@ -33,6 +29,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Option: **Copy as SQL INSERT** — copies row(s) to clipboard as SQL INSERT statements
 - [x] Option: **Copy as JSON** — copies row(s) to clipboard as JSON
 - [x] Option: **Duplicate** — duplicates row(s) as new rows (green highlight, persists on save)
 - [x] Option: **Delete** — marks row(s) for deletion (red highlight, persists on save)
