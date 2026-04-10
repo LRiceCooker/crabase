@@ -418,6 +418,87 @@ pub async fn save_settings(settings: &Settings) -> Result<(), String> {
     Ok(())
 }
 
+// --- Saved Queries ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SavedQuery {
+    pub name: String,
+    pub sql: String,
+}
+
+pub async fn save_query(name: &str, sql: &str) -> Result<(), String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        name: &'a str,
+        sql: &'a str,
+    }
+    let args = serde_wasm_bindgen::to_value(&Args { name, sql }).map_err(|e| e.to_string())?;
+    invoke("cmd_save_query", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to save query".to_string()))?;
+    Ok(())
+}
+
+pub async fn update_query(name: &str, sql: &str) -> Result<(), String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        name: &'a str,
+        sql: &'a str,
+    }
+    let args = serde_wasm_bindgen::to_value(&Args { name, sql }).map_err(|e| e.to_string())?;
+    invoke("cmd_update_query", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to update query".to_string()))?;
+    Ok(())
+}
+
+pub async fn rename_query(old_name: &str, new_name: &str) -> Result<(), String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> {
+        old_name: &'a str,
+        new_name: &'a str,
+    }
+    let args = serde_wasm_bindgen::to_value(&Args { old_name, new_name }).map_err(|e| e.to_string())?;
+    invoke("cmd_rename_query", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to rename query".to_string()))?;
+    Ok(())
+}
+
+pub async fn delete_query(name: &str) -> Result<(), String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        name: &'a str,
+    }
+    let args = serde_wasm_bindgen::to_value(&Args { name }).map_err(|e| e.to_string())?;
+    invoke("cmd_delete_query", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to delete query".to_string()))?;
+    Ok(())
+}
+
+pub async fn list_queries() -> Result<Vec<SavedQuery>, String> {
+    let result = invoke("cmd_list_queries", JsValue::UNDEFINED)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to list queries".to_string()))?;
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse queries: {}", e))
+}
+
+pub async fn load_query(name: &str) -> Result<SavedQuery, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        name: &'a str,
+    }
+    let args = serde_wasm_bindgen::to_value(&Args { name }).map_err(|e| e.to_string())?;
+    let result = invoke("cmd_load_query", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to load query".to_string()))?;
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse query: {}", e))
+}
+
 pub async fn listen_restore_logs(
     callback: impl Fn(String) + 'static,
 ) -> Result<js_sys::Function, String> {
