@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::icons::IconX;
+use crate::sql_editor::codemirror::{CodeMirrorEditor, CodeMirrorHandle};
 
 /// State for the JSON editor modal.
 #[derive(Clone, Debug)]
@@ -17,14 +18,25 @@ pub fn JsonEditorModal(
     on_cancel: Callback<()>,
 ) -> impl IntoView {
     let pretty = serde_json::to_string_pretty(&request.value).unwrap_or_default();
-    let (text, set_text) = signal(pretty);
     let (parse_error, set_parse_error) = signal(Option::<String>::None);
+    let (cm_handle, set_cm_handle) = signal(Option::<CodeMirrorHandle>::None);
 
     let row = request.row;
     let col = request.col;
 
+    // Validate JSON on every change
+    let on_change = Callback::new(move |content: String| {
+        match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(_) => set_parse_error.set(None),
+            Err(e) => set_parse_error.set(Some(format!("Invalid JSON: {}", e))),
+        }
+    });
+
     let on_save_click = move |_| {
-        let raw = text.get();
+        let Some(handle) = cm_handle.get_untracked() else {
+            return;
+        };
+        let raw = handle.get_content();
         match serde_json::from_str::<serde_json::Value>(&raw) {
             Ok(val) => {
                 set_parse_error.set(None);
@@ -64,20 +76,15 @@ pub fn JsonEditorModal(
 
                 // Body
                 <div class="px-4 py-4 flex-1 overflow-hidden flex flex-col gap-3">
-                    <textarea
-                        class="w-full flex-1 min-h-[200px] bg-gray-50 dark:bg-[#0D0D0F] border border-gray-200 dark:border-zinc-800 rounded-md px-3 py-2 text-[13px] font-mono text-gray-900 dark:text-zinc-200 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 focus:border-indigo-500"
-                        prop:value=move || text.get()
-                        on:input=move |ev| {
-                            let v = event_target_value(&ev);
-                            set_text.set(v.clone());
-                            // Clear error on edit
-                            match serde_json::from_str::<serde_json::Value>(&v) {
-                                Ok(_) => set_parse_error.set(None),
-                                Err(e) => set_parse_error.set(Some(format!("Invalid JSON: {}", e))),
-                            }
-                        }
-                        spellcheck="false"
-                    />
+                    <div class="flex-1 min-h-[200px] border border-gray-200 dark:border-zinc-800 rounded-md overflow-hidden">
+                        <CodeMirrorEditor
+                            initial_content=pretty
+                            language="json".to_string()
+                            placeholder="Enter JSON...".to_string()
+                            on_change=on_change
+                            handle=set_cm_handle
+                        />
+                    </div>
 
                     // Parse error
                     {move || parse_error.get().map(|err| view! {

@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 10 — SQL Editor Rewrite (CodeMirror 6)
-- [ ] JSON cell editor modal: use CodeMirror with @codemirror/lang-json for syntax-highlighted editing
-
 ### Phase 11 — Saved Queries
 - [ ] Backend: saved_queries.rs module with CRUD scoped per connection hash (host:port:dbname:user)
 - [ ] Backend commands: `save_query`, `update_query`, `rename_query`, `delete_query`, `list_queries`, `load_query`
@@ -96,6 +93,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] JSON cell editor modal: use CodeMirror with @codemirror/lang-json for syntax-highlighted editing
 - [x] SQL autocomplete: register a custom completion source with SQL keywords + tables of current schema + columns of those tables (fetched on editor mount)
 - [x] Backend: `get_columns_for_autocomplete(table_names)` command — returns table → columns map
 - [x] CodeMirror theme: switch between light theme and dark theme (one-dark) based on app theme
