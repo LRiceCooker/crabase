@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 14 — Table View: Index Column & Selection
-- [ ] Selected row visual: `bg-indigo-50 dark:bg-indigo-500/25`
 - [ ] Remove the inline delete button column from each row (deletion now via context menu)
 
 ### Phase 15 — Right-Click Context Menu
@@ -41,6 +40,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Selected row visual: `bg-indigo-50 dark:bg-indigo-500/25`
 - [x] Shift+click on index → range select (inclusive) between current and clicked row
 - [x] Cmd+click on index → toggle row in selection (multi-select)
 - [x] Click on index → select single row
