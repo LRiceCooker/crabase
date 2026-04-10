@@ -9,7 +9,8 @@ use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::cell_editors::array_editor_modal::{ArrayEditRequest, ArrayEditorModal};
 use crate::table_view::cell_editors::xml_editor_modal::{XmlEditRequest, XmlEditorModal};
 use crate::table_view::change_tracker::ChangeTracker;
-use crate::table_view::data_table::DataTable;
+use crate::table_view::context_menu::{ContextMenu, ContextMenuItem};
+use crate::table_view::data_table::{DataTable, RowContextMenuEvent};
 use crate::table_view::dirty_bar::DirtyBar;
 use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
@@ -32,6 +33,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let changes = ChangeTracker::new();
     let selected_rows = RwSignal::new(HashSet::<usize>::new());
     let selection_anchor = RwSignal::new(Option::<usize>::None);
+    // Context menu state: (x, y) position when open
+    let (ctx_menu, set_ctx_menu) = signal(Option::<(i32, i32)>::None);
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
@@ -408,6 +411,9 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             on_json_edit=on_json_edit
                             on_array_edit=on_array_edit
                             on_xml_edit=on_xml_edit
+                            on_row_context_menu=Callback::new(move |ev: RowContextMenuEvent| {
+                                set_ctx_menu.set(Some((ev.x, ev.y)));
+                            })
                         />
                     }.into_any()
                 } else {
@@ -463,6 +469,47 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             request=req
                             on_save=on_xml_save
                             on_cancel=on_xml_cancel
+                        />
+                    }
+                })
+            }}
+
+            // Context menu
+            {move || {
+                ctx_menu.get().map(|(x, y)| {
+                    let items = vec![
+                        ContextMenuItem {
+                            label: "Delete",
+                            danger: true,
+                            action: Callback::new(move |_| {
+                                let sel = selected_rows.get();
+                                for &row_idx in &sel {
+                                    changes.mark_row_deleted(row_idx);
+                                }
+                            }),
+                        },
+                        ContextMenuItem {
+                            label: "Duplicate",
+                            danger: false,
+                            action: Callback::new(move |_| {}),
+                        },
+                        ContextMenuItem {
+                            label: "Copy as JSON",
+                            danger: false,
+                            action: Callback::new(move |_| {}),
+                        },
+                        ContextMenuItem {
+                            label: "Copy as SQL INSERT",
+                            danger: false,
+                            action: Callback::new(move |_| {}),
+                        },
+                    ];
+                    view! {
+                        <ContextMenu
+                            x=x
+                            y=y
+                            items=items
+                            on_close=Callback::new(move |_| set_ctx_menu.set(None))
                         />
                     }
                 })

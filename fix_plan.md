@@ -37,6 +37,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Right-click on a row opens menu; right-click on a row that is part of a multi-selection keeps the selection and shows the same menu
 - [x] context_menu.rs: right-click context menu component with options
 - [x] Remove the inline delete button column from each row (deletion now via context menu)
 - [x] Selected row visual: `bg-indigo-50 dark:bg-indigo-500/25`

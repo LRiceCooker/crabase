@@ -9,6 +9,13 @@ use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
 use crate::tauri::ColumnInfo;
 
+/// Info about a right-click event on a row.
+pub struct RowContextMenuEvent {
+    pub row_idx: usize,
+    pub x: i32,
+    pub y: i32,
+}
+
 /// Extract the inner value from a tagged cell `{ "type": "...", "value": ... }`.
 /// Falls through to the raw value if not tagged.
 pub fn unwrap_tagged(value: &serde_json::Value) -> &serde_json::Value {
@@ -114,6 +121,7 @@ pub fn DataTable(
     on_json_edit: Callback<JsonEditRequest>,
     on_array_edit: Callback<ArrayEditRequest>,
     on_xml_edit: Callback<XmlEditRequest>,
+    on_row_context_menu: Callback<RowContextMenuEvent>,
 ) -> impl IntoView {
     // Track which cell is being edited: (row_idx, col_idx)
     let (editing_cell, set_editing_cell) = signal(Option::<(usize, usize)>::None);
@@ -188,7 +196,26 @@ pub fn DataTable(
                                 index_bg, index_border_l
                             );
                             view! {
-                                <tr class=row_class>
+                                <tr
+                                    class=row_class
+                                    on:contextmenu=move |ev: web_sys::MouseEvent| {
+                                        ev.prevent_default();
+                                        // If right-clicked row is already in selection, keep selection;
+                                        // otherwise select just this row.
+                                        let sel = selected_rows.get();
+                                        if !sel.contains(&row_idx) {
+                                            let mut new_set = HashSet::new();
+                                            new_set.insert(row_idx);
+                                            selected_rows.set(new_set);
+                                            selection_anchor.set(Some(row_idx));
+                                        }
+                                        on_row_context_menu.run(RowContextMenuEvent {
+                                            row_idx,
+                                            x: ev.client_x(),
+                                            y: ev.client_y(),
+                                        });
+                                    }
+                                >
                                     <td
                                         class=index_td_class
                                         on:click=move |ev: web_sys::MouseEvent| {
