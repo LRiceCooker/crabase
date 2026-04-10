@@ -13,6 +13,13 @@ pub fn SqlTab() -> impl IntoView {
     let (running, set_running) = signal(false);
     let (result, set_result) = signal(Option::<Result<tauri::QueryResult, String>>::None);
 
+    // Auto-focus the editor once mounted
+    Effect::new(move |_| {
+        if let Some(handle) = cm_handle.get() {
+            handle.focus();
+        }
+    });
+
     let on_run = Callback::new(move |_: ()| {
         let Some(handle) = cm_handle.get_untracked() else {
             return;
