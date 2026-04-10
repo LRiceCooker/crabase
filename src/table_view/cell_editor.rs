@@ -1,5 +1,21 @@
 use leptos::prelude::*;
 
+use crate::tauri::ColumnInfo;
+use crate::table_view::cell_editors::bit_editor::BitEditor;
+use crate::table_view::cell_editors::boolean_editor::BooleanEditor;
+use crate::table_view::cell_editors::bytea_editor::ByteaEditor;
+use crate::table_view::cell_editors::date_editor::DateEditor;
+use crate::table_view::cell_editors::datetime_editor::DatetimeEditor;
+use crate::table_view::cell_editors::enum_editor::EnumEditor;
+use crate::table_view::cell_editors::inet_editor::InetEditor;
+use crate::table_view::cell_editors::interval_editor::IntervalEditor;
+use crate::table_view::cell_editors::number_editor::NumberEditor;
+use crate::table_view::cell_editors::range_editor::RangeEditor;
+use crate::table_view::cell_editors::text_editor::TextEditor;
+use crate::table_view::cell_editors::time_editor::TimeEditor;
+use crate::table_view::cell_editors::unknown_editor::UnknownEditor;
+use crate::table_view::cell_editors::uuid_editor::UuidEditor;
+
 /// Represents a cell edit completion.
 #[derive(Clone, Debug)]
 pub struct CellEdit {
@@ -8,269 +24,148 @@ pub struct CellEdit {
     pub value: serde_json::Value,
 }
 
-/// Inline cell editor. Renders the appropriate input based on data_type.
-/// Calls on_commit with the new value on Enter/Tab/blur, or on_cancel on Escape.
+/// Inline cell editor. Dispatches to the appropriate specialized editor based on column metadata.
+/// Modal editors (JSON, XML, array) are handled separately by DataTable.
 #[component]
 pub fn CellEditor(
-    data_type: String,
+    column: ColumnInfo,
     value: serde_json::Value,
     on_commit: Callback<serde_json::Value>,
     on_cancel: Callback<()>,
 ) -> impl IntoView {
-    let dt = data_type.to_lowercase();
+    // Enum columns get a select dropdown regardless of data_type string
+    if column.is_enum {
+        return view! {
+            <EnumEditor
+                value=value
+                enum_values=column.enum_values.clone()
+                is_nullable=column.is_nullable
+                on_commit=on_commit
+                on_cancel=on_cancel
+            />
+        }
+        .into_any();
+    }
+
+    let dt = column.data_type.to_lowercase();
 
     match dt.as_str() {
         "boolean" | "bool" => {
-            let checked = value.as_bool().unwrap_or(false);
             view! {
-                <input
-                    type="checkbox"
-                    class="accent-indigo-500"
-                    prop:checked=checked
-                    on:change=move |ev| {
-                        let target = event_target::<web_sys::HtmlInputElement>(&ev);
-                        on_commit.run(serde_json::Value::Bool(target.checked()));
-                    }
-                    on:keydown=move |ev| {
-                        if ev.key() == "Escape" {
-                            on_cancel.run(());
-                        }
-                    }
-                />
+                <BooleanEditor value=value on_commit=on_commit on_cancel=on_cancel />
             }
             .into_any()
         }
-        "smallint" | "integer" | "bigint" | "int2" | "int4" | "int8"
-        | "serial" | "smallserial" | "bigserial" => {
-            let initial = match &value {
-                serde_json::Value::Number(n) => n.to_string(),
-                serde_json::Value::String(s) => s.clone(),
-                serde_json::Value::Null => String::new(),
-                _ => value.to_string(),
-            };
-            let (val, set_val) = signal(initial);
+        "smallint" | "integer" | "bigint" | "int2" | "int4" | "int8" | "serial"
+        | "smallserial" | "bigserial" => {
             view! {
-                <input
-                    type="number"
-                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
-                    prop:value=move || val.get()
-                    on:input=move |ev| set_val.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        match ev.key().as_str() {
-                            "Enter" | "Tab" => {
-                                ev.prevent_default();
-                                let v = val.get();
-                                if v.is_empty() {
-                                    on_commit.run(serde_json::Value::Null);
-                                } else if let Ok(n) = v.parse::<i64>() {
-                                    on_commit.run(serde_json::Value::Number(n.into()));
-                                }
-                            }
-                            "Escape" => on_cancel.run(()),
-                            _ => {}
-                        }
-                    }
-                    on:blur=move |_| {
-                        let v = val.get();
-                        if v.is_empty() {
-                            on_commit.run(serde_json::Value::Null);
-                        } else if let Ok(n) = v.parse::<i64>() {
-                            on_commit.run(serde_json::Value::Number(n.into()));
-                        }
-                    }
-                    node_ref=auto_focus_ref()
-                />
+                <NumberEditor value=value is_integer=true on_commit=on_commit on_cancel=on_cancel />
             }
             .into_any()
         }
-        "real" | "double" | "numeric" | "money"
-        | "float4" | "float8" | "decimal" | "double precision" => {
-            let initial = match &value {
-                serde_json::Value::Number(n) => n.to_string(),
-                serde_json::Value::String(s) => s.clone(),
-                serde_json::Value::Null => String::new(),
-                _ => value.to_string(),
+        "real" | "double" | "numeric" | "money" | "float4" | "float8" | "decimal"
+        | "double precision" => {
+            let step = if let (Some(_prec), Some(scale)) =
+                (column.numeric_precision, column.numeric_scale)
+            {
+                if scale > 0 {
+                    let step_val = 10f64.powi(-scale);
+                    format!("{}", step_val)
+                } else {
+                    "1".to_string()
+                }
+            } else {
+                "any".to_string()
             };
-            let (val, set_val) = signal(initial);
             view! {
-                <input
-                    type="number"
-                    step="any"
-                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
-                    prop:value=move || val.get()
-                    on:input=move |ev| set_val.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        match ev.key().as_str() {
-                            "Enter" | "Tab" => {
-                                ev.prevent_default();
-                                let v = val.get();
-                                if v.is_empty() {
-                                    on_commit.run(serde_json::Value::Null);
-                                } else if let Some(n) = v.parse::<f64>().ok().and_then(serde_json::Number::from_f64) {
-                                    on_commit.run(serde_json::Value::Number(n));
-                                }
-                            }
-                            "Escape" => on_cancel.run(()),
-                            _ => {}
-                        }
-                    }
-                    on:blur=move |_| {
-                        let v = val.get();
-                        if v.is_empty() {
-                            on_commit.run(serde_json::Value::Null);
-                        } else if let Some(n) = v.parse::<f64>().ok().and_then(serde_json::Number::from_f64) {
-                            on_commit.run(serde_json::Value::Number(n));
-                        }
-                    }
-                    node_ref=auto_focus_ref()
+                <NumberEditor
+                    value=value
+                    is_integer=false
+                    step=step
+                    on_commit=on_commit
+                    on_cancel=on_cancel
                 />
             }
             .into_any()
         }
         "date" => {
-            let initial = value.as_str().unwrap_or("").to_string();
-            let (val, set_val) = signal(initial);
             view! {
-                <input
-                    type="date"
-                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
-                    prop:value=move || val.get()
-                    on:input=move |ev| set_val.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        match ev.key().as_str() {
-                            "Enter" | "Tab" => {
-                                ev.prevent_default();
-                                let v = val.get();
-                                on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
-                            }
-                            "Escape" => on_cancel.run(()),
-                            _ => {}
-                        }
-                    }
-                    on:blur=move |_| {
-                        let v = val.get();
-                        on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
-                    }
-                    node_ref=auto_focus_ref()
-                />
+                <DateEditor value=value on_commit=on_commit on_cancel=on_cancel />
             }
             .into_any()
         }
         "time" => {
-            let initial = value.as_str().unwrap_or("").to_string();
-            let (val, set_val) = signal(initial);
             view! {
-                <input
-                    type="time"
-                    step="1"
-                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
-                    prop:value=move || val.get()
-                    on:input=move |ev| set_val.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        match ev.key().as_str() {
-                            "Enter" | "Tab" => {
-                                ev.prevent_default();
-                                let v = val.get();
-                                on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
-                            }
-                            "Escape" => on_cancel.run(()),
-                            _ => {}
-                        }
-                    }
-                    on:blur=move |_| {
-                        let v = val.get();
-                        on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
-                    }
-                    node_ref=auto_focus_ref()
-                />
+                <TimeEditor value=value on_commit=on_commit on_cancel=on_cancel />
             }
             .into_any()
         }
         "timestamp" | "timestamptz" => {
-            // Convert timestamp string to datetime-local format
-            let initial = value.as_str().unwrap_or("").to_string();
-            let (val, set_val) = signal(initial);
             view! {
-                <input
-                    type="datetime-local"
-                    step="1"
-                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
-                    prop:value=move || val.get()
-                    on:input=move |ev| set_val.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        match ev.key().as_str() {
-                            "Enter" | "Tab" => {
-                                ev.prevent_default();
-                                let v = val.get();
-                                on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
-                            }
-                            "Escape" => on_cancel.run(()),
-                            _ => {}
-                        }
-                    }
-                    on:blur=move |_| {
-                        let v = val.get();
-                        on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
-                    }
-                    node_ref=auto_focus_ref()
+                <DatetimeEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        "interval" => {
+            view! {
+                <IntervalEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        "uuid" => {
+            view! {
+                <UuidEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        "inet" | "cidr" | "macaddr" => {
+            let editor_type = dt.clone();
+            view! {
+                <InetEditor
+                    value=value
+                    editor_type=editor_type
+                    on_commit=on_commit
+                    on_cancel=on_cancel
                 />
             }
             .into_any()
         }
-        // Default: text input for text, varchar, uuid, interval, inet, cidr,
-        // macaddr, bit, xml, range, geometry, unknown, and all other types
-        _ => {
-            let initial = match &value {
-                serde_json::Value::String(s) => s.clone(),
-                serde_json::Value::Null => String::new(),
-                _ => value.to_string(),
-            };
-            let (val, set_val) = signal(initial);
+        "bit" => {
             view! {
-                <input
-                    type="text"
-                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
-                    prop:value=move || val.get()
-                    on:input=move |ev| set_val.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        match ev.key().as_str() {
-                            "Enter" | "Tab" => {
-                                ev.prevent_default();
-                                let v = val.get();
-                                if v.is_empty() {
-                                    on_commit.run(serde_json::Value::Null);
-                                } else {
-                                    on_commit.run(serde_json::Value::String(v));
-                                }
-                            }
-                            "Escape" => on_cancel.run(()),
-                            _ => {}
-                        }
-                    }
-                    on:blur=move |_| {
-                        let v = val.get();
-                        if v.is_empty() {
-                            on_commit.run(serde_json::Value::Null);
-                        } else {
-                            on_commit.run(serde_json::Value::String(v));
-                        }
-                    }
-                    node_ref=auto_focus_ref()
+                <BitEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        "range" => {
+            view! {
+                <RangeEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        "bytea" => {
+            view! {
+                <ByteaEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        "unknown" | "tsvector" | "tsquery" | "geometry" => {
+            view! {
+                <UnknownEditor value=value on_cancel=on_cancel />
+            }
+            .into_any()
+        }
+        // Default: text editor for text, varchar, char, and anything else
+        _ => {
+            let max_length = column.max_length.unwrap_or(0);
+            view! {
+                <TextEditor
+                    value=value
+                    max_length=max_length
+                    on_commit=on_commit
+                    on_cancel=on_cancel
                 />
             }
             .into_any()
         }
     }
-}
-
-/// Creates a NodeRef that auto-focuses the input element on mount.
-fn auto_focus_ref() -> NodeRef<leptos::html::Input> {
-    let node_ref = NodeRef::<leptos::html::Input>::new();
-    Effect::new(move |_| {
-        if let Some(el) = node_ref.get() {
-            let _ = el.focus();
-            let _ = el.select();
-        }
-    });
-    node_ref
 }

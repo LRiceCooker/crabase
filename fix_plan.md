@@ -4,30 +4,9 @@
 
 ## Backlog
 
-### Phase 13 — Comprehensive Postgres Type Support (Foundational Fix)
-This is a foundational fix: the current table view incorrectly displays many Postgres types as NULL because the backend doesn't serialize them and the frontend has no specialized editors. See "Postgres Type Support" section in specs/project.md for the full type → editor mapping table.
-- [ ] Frontend: implement specialized editors per type:
-  - [ ] number_editor.rs (smallint, integer, bigint, decimal, real, double precision, money) — number input with proper precision/scale/range
-  - [ ] text_editor.rs (char, varchar, text) — text input + textarea for long values
-  - [ ] boolean_editor.rs — checkbox
-  - [ ] date_editor.rs — native `<input type="date">`
-  - [ ] time_editor.rs — native `<input type="time">`
-  - [ ] datetime_editor.rs — native `<input type="datetime-local">` for timestamp/timestamptz
-  - [ ] interval_editor.rs — text input with Postgres interval syntax validation
-  - [ ] uuid_editor.rs — text input with UUID validation + generate button
-  - [ ] enum_editor.rs — `<select>` with allowed values from column metadata
-  - [ ] json_editor_modal.rs — modal with CodeMirror + lang-json (used for json and jsonb)
-  - [ ] array_editor_modal.rs — modal with list editor + per-item editor of the element type
-  - [ ] inet_editor.rs / cidr_editor.rs / macaddr_editor.rs — text input with format validation
-  - [ ] bit_editor.rs — text input restricted to 0/1
-  - [ ] range_editor.rs — two inputs (lower, upper) + bounds inclusivity toggles
-  - [ ] bytea_editor.rs — hex preview + file upload
-  - [ ] xml_editor_modal.rs — CodeMirror with lang-xml
-  - [ ] unknown_editor.rs — read-only text with tooltip explaining the type isn't fully supported
+### Phase 13 — Comprehensive Postgres Type Support (continued)
 - [ ] Frontend: NULL handling in editors — show a clear "Set NULL" / "×" affordance for nullable columns
 - [ ] Frontend: read-only mode for primary keys and auto-increment columns when editing existing rows
-- [ ] Frontend: cell display formatting matches the type (e.g., date as `YYYY-MM-DD`, boolean as checkmark icon, JSON truncated, array as `[a, b, c, ...]`)
-- [ ] All editors must support both light and dark themes per specs/design.md
 
 ### Phase 14 — Table View: Index Column & Selection
 - [ ] data_table.rs: add leftmost index column (no header label) showing global row index across pages (page 2 with 50 rows starts at 51)
@@ -71,6 +50,9 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Frontend: implement specialized editors per type (number, text, boolean, date, time, datetime, interval, uuid, enum, array modal, inet/cidr/macaddr, bit, range, bytea, xml modal, unknown)
+- [x] Frontend: cell display formatting matches the type (boolean as checkmark icon, JSON/array truncated, array as `[a, b, c, ...]`)
+- [x] All editors support both light and dark themes per specs/design.md
 - [x] Frontend: refactor cell_editor.rs to dispatch to the correct specialized editor based on the column type from the new tagged value
 - [x] Backend: extend `get_column_info` to return resolved type info: base_type, is_array, is_enum, enum_values (if applicable), is_nullable, is_primary_key, is_auto_increment, max_length, precision, scale.
 - [x] Backend: for enum columns (USER-DEFINED with typcategory='E'), query `pg_enum` joined with `pg_type` to fetch allowed values. Cache per (schema, enum_name).

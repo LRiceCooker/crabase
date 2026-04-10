@@ -2,6 +2,8 @@ use leptos::prelude::*;
 
 use crate::icons::IconTrash2;
 use crate::table_view::cell_editor::{CellEdit, CellEditor};
+use crate::table_view::cell_editors::array_editor_modal::ArrayEditRequest;
+use crate::table_view::cell_editors::xml_editor_modal::XmlEditRequest;
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
 use crate::tauri::ColumnInfo;
@@ -29,22 +31,73 @@ pub fn unwrap_tagged_owned(value: &serde_json::Value) -> serde_json::Value {
 }
 
 /// Format a cell value for display. Handles tagged values.
-fn format_cell(value: &serde_json::Value) -> (String, bool) {
+fn format_cell(value: &serde_json::Value, data_type: &str) -> (String, bool) {
     let inner = unwrap_tagged(value);
     match inner {
         serde_json::Value::Null => ("NULL".to_string(), true),
-        serde_json::Value::Bool(b) => (b.to_string(), false),
+        serde_json::Value::Bool(b) => {
+            if *b {
+                ("\u{2713}".to_string(), false) // checkmark
+            } else {
+                ("\u{2717}".to_string(), false) // cross mark
+            }
+        }
         serde_json::Value::Number(n) => (n.to_string(), false),
-        serde_json::Value::String(s) => (s.clone(), false),
-        serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
-            (serde_json::to_string(inner).unwrap_or_default(), false)
+        serde_json::Value::String(s) => {
+            let dt = data_type.to_lowercase();
+            match dt.as_str() {
+                "json" | "jsonb" => {
+                    // Truncate JSON string display
+                    let display = if s.len() > 50 {
+                        format!("{}...", &s[..50])
+                    } else {
+                        s.clone()
+                    };
+                    (display, false)
+                }
+                _ => (s.clone(), false),
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            // Array display: show first 3 items + "..."
+            let items: Vec<String> = arr
+                .iter()
+                .take(3)
+                .map(|v| match v {
+                    serde_json::Value::String(s) => s.clone(),
+                    serde_json::Value::Null => "NULL".to_string(),
+                    _ => v.to_string(),
+                })
+                .collect();
+            let mut display = format!("[{}]", items.join(", "));
+            if arr.len() > 3 {
+                display = format!("[{}, ...]", items.join(", "));
+            }
+            (display, false)
+        }
+        serde_json::Value::Object(_) => {
+            let s = serde_json::to_string(inner).unwrap_or_default();
+            let display = if s.len() > 50 {
+                format!("{}...", &s[..50])
+            } else {
+                s
+            };
+            (display, false)
         }
     }
 }
 
-fn is_json_type(data_type: &str) -> bool {
-    let dt = data_type.to_lowercase();
-    dt == "json" || dt == "jsonb"
+/// Check if a type should open a modal editor (JSON, XML, or Array).
+fn modal_type(col: &ColumnInfo) -> Option<&'static str> {
+    if col.is_array {
+        return Some("array");
+    }
+    let dt = col.data_type.to_lowercase();
+    match dt.as_str() {
+        "json" | "jsonb" => Some("json"),
+        "xml" => Some("xml"),
+        _ => None,
+    }
 }
 
 #[component]
@@ -54,6 +107,8 @@ pub fn DataTable(
     changes: ChangeTracker,
     on_cell_edit: Callback<CellEdit>,
     on_json_edit: Callback<JsonEditRequest>,
+    on_array_edit: Callback<ArrayEditRequest>,
+    on_xml_edit: Callback<XmlEditRequest>,
     on_delete_row: Callback<usize>,
 ) -> impl IntoView {
     // Track which cell is being edited: (row_idx, col_idx)
@@ -103,16 +158,28 @@ pub fn DataTable(
                                 <tr class=row_class>
                                     {row.into_iter().enumerate().map(|(col_idx, cell)| {
                                         let is_editing = active == Some((row_idx, col_idx));
-                                        let data_type = col_types.get(col_idx).map(|c| c.data_type.clone()).unwrap_or_default();
-                                        let is_json = is_json_type(&data_type);
+                                        let col_info = col_types.get(col_idx).cloned().unwrap_or_else(|| ColumnInfo {
+                                            name: String::new(),
+                                            data_type: String::new(),
+                                            is_nullable: true,
+                                            is_primary_key: false,
+                                            is_auto_increment: false,
+                                            is_array: false,
+                                            is_enum: false,
+                                            enum_values: vec![],
+                                            max_length: None,
+                                            numeric_precision: None,
+                                            numeric_scale: None,
+                                        });
+                                        let modal = modal_type(&col_info);
+                                        let data_type_display = col_info.data_type.clone();
 
-                                        if is_editing && !is_json {
-                                            let dt = data_type.clone();
+                                        if is_editing && modal.is_none() {
                                             let cell_val = unwrap_tagged_owned(&cell);
                                             view! {
                                                 <td class="px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 ring-2 ring-indigo-500/30 dark:ring-indigo-500/60 bg-white dark:bg-zinc-900 max-w-[300px]">
                                                     <CellEditor
-                                                        data_type=dt
+                                                        column=col_info
                                                         value=cell_val
                                                         on_commit=Callback::new(move |new_val: serde_json::Value| {
                                                             set_editing_cell.set(None);
@@ -129,7 +196,7 @@ pub fn DataTable(
                                                 </td>
                                             }.into_any()
                                         } else {
-                                            let (text, is_null) = format_cell(&cell);
+                                            let (text, is_null) = format_cell(&cell, &data_type_display);
                                             let cell_modified = changes.is_cell_modified(row_idx, col_idx);
                                             let class = if is_null && cell_modified {
                                                 "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic cursor-pointer bg-amber-100/50 dark:bg-amber-900/40"
@@ -141,20 +208,37 @@ pub fn DataTable(
                                                 "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
                                             };
                                             let title = text.clone();
-                                            let cell_for_json = unwrap_tagged_owned(&cell);
+                                            let cell_for_modal = unwrap_tagged_owned(&cell);
                                             view! {
                                                 <td
                                                     class=class
                                                     title=title
                                                     on:click=move |_| {
-                                                        if is_json {
-                                                            on_json_edit.run(JsonEditRequest {
-                                                                row: row_idx,
-                                                                col: col_idx,
-                                                                value: cell_for_json.clone(),
-                                                            });
-                                                        } else {
-                                                            set_editing_cell.set(Some((row_idx, col_idx)));
+                                                        match modal {
+                                                            Some("json") => {
+                                                                on_json_edit.run(JsonEditRequest {
+                                                                    row: row_idx,
+                                                                    col: col_idx,
+                                                                    value: cell_for_modal.clone(),
+                                                                });
+                                                            }
+                                                            Some("array") => {
+                                                                on_array_edit.run(ArrayEditRequest {
+                                                                    row: row_idx,
+                                                                    col: col_idx,
+                                                                    value: cell_for_modal.clone(),
+                                                                });
+                                                            }
+                                                            Some("xml") => {
+                                                                on_xml_edit.run(XmlEditRequest {
+                                                                    row: row_idx,
+                                                                    col: col_idx,
+                                                                    value: cell_for_modal.clone(),
+                                                                });
+                                                            }
+                                                            _ => {
+                                                                set_editing_cell.set(Some((row_idx, col_idx)));
+                                                            }
                                                         }
                                                     }
                                                 >

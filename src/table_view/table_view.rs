@@ -4,6 +4,8 @@ use wasm_bindgen_futures::spawn_local;
 use crate::icons::{IconLoader, IconPlus, IconRefreshCw, IconTable};
 use crate::shortcuts::use_save_trigger;
 use crate::table_view::cell_editor::CellEdit;
+use crate::table_view::cell_editors::array_editor_modal::{ArrayEditRequest, ArrayEditorModal};
+use crate::table_view::cell_editors::xml_editor_modal::{XmlEditRequest, XmlEditorModal};
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::data_table::DataTable;
 use crate::table_view::dirty_bar::DirtyBar;
@@ -23,6 +25,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let (total_count, set_total_count) = signal(0u64);
     let (has_data, set_has_data) = signal(false);
     let (json_edit, set_json_edit) = signal(Option::<JsonEditRequest>::None);
+    let (array_edit, set_array_edit) = signal(Option::<ArrayEditRequest>::None);
+    let (xml_edit, set_xml_edit) = signal(Option::<XmlEditRequest>::None);
     let changes = ChangeTracker::new();
 
     // Fetch data helper (called when table, page, or page_size change)
@@ -134,6 +138,62 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
 
     let on_json_cancel = Callback::new(move |_| {
         set_json_edit.set(None);
+    });
+
+    // Array editor callbacks
+    let on_array_edit = Callback::new(move |req: ArrayEditRequest| {
+        set_array_edit.set(Some(req));
+    });
+
+    let on_array_save = Callback::new(move |(row, col, val): (usize, usize, serde_json::Value)| {
+        let original = rows.get()
+            .get(row)
+            .and_then(|r| r.get(col))
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        changes.track_cell_edit(row, col, original, &val);
+
+        rows.update(|r| {
+            if let Some(row_data) = r.get_mut(row) {
+                if let Some(cell) = row_data.get_mut(col) {
+                    *cell = val;
+                }
+            }
+        });
+        set_array_edit.set(None);
+    });
+
+    let on_array_cancel = Callback::new(move |_| {
+        set_array_edit.set(None);
+    });
+
+    // XML editor callbacks
+    let on_xml_edit = Callback::new(move |req: XmlEditRequest| {
+        set_xml_edit.set(Some(req));
+    });
+
+    let on_xml_save = Callback::new(move |(row, col, val): (usize, usize, serde_json::Value)| {
+        let original = rows.get()
+            .get(row)
+            .and_then(|r| r.get(col))
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        changes.track_cell_edit(row, col, original, &val);
+
+        rows.update(|r| {
+            if let Some(row_data) = r.get_mut(row) {
+                if let Some(cell) = row_data.get_mut(col) {
+                    *cell = val;
+                }
+            }
+        });
+        set_xml_edit.set(None);
+    });
+
+    let on_xml_cancel = Callback::new(move |_| {
+        set_xml_edit.set(None);
     });
 
     // Delete row callback
@@ -341,6 +401,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             changes=changes
                             on_cell_edit=on_cell_edit
                             on_json_edit=on_json_edit
+                            on_array_edit=on_array_edit
+                            on_xml_edit=on_xml_edit
                             on_delete_row=on_delete_row
                         />
                     }.into_any()
@@ -371,6 +433,32 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             request=req
                             on_save=on_json_save
                             on_cancel=on_json_cancel
+                        />
+                    }
+                })
+            }}
+
+            // Array editor modal
+            {move || {
+                array_edit.get().map(|req| {
+                    view! {
+                        <ArrayEditorModal
+                            request=req
+                            on_save=on_array_save
+                            on_cancel=on_array_cancel
+                        />
+                    }
+                })
+            }}
+
+            // XML editor modal
+            {move || {
+                xml_edit.get().map(|req| {
+                    view! {
+                        <XmlEditorModal
+                            request=req
+                            on_save=on_xml_save
+                            on_cancel=on_xml_cancel
                         />
                     }
                 })
