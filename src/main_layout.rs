@@ -10,6 +10,7 @@ use crate::icons::{
 };
 use crate::settings::settings_view::SettingsView;
 use crate::shortcuts::{self, ShortcutAction, use_save_trigger};
+use crate::sidebar::saved_queries_list::SavedQueriesList;
 use crate::sidebar::tables_list::TablesList;
 use crate::sql_editor::sql_tab::SqlTab;
 use crate::table_finder::TableFinder;
@@ -23,6 +24,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
         signal(Option::<tauri::ConnectionInfo>::None);
     let (tables, set_tables) = signal(Vec::<String>::new());
     let (available_schemas, set_available_schemas) = signal(Vec::<String>::new());
+    let (saved_query_names, set_saved_query_names) = signal(Vec::<String>::new());
 
     // Header editing state
     let (editing, set_editing) = signal(false);
@@ -151,6 +153,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             }
             if let Ok(t) = tauri::list_tables().await {
                 set_tables.set(t);
+            }
+            if let Ok(queries) = tauri::list_queries().await {
+                set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect());
             }
         }
     });
@@ -399,6 +404,16 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             <div class="flex flex-1 overflow-hidden">
                 // Left sidebar — scrolls independently
                 <aside class="w-56 bg-gray-50 dark:bg-[#111113] border-r border-gray-200 dark:border-zinc-800 overflow-y-auto shrink-0">
+                    <SavedQueriesList
+                        queries=saved_query_names
+                        on_select=Callback::new({
+                            let ts = tab_state.clone();
+                            move |_name: String| {
+                                // Open a new SQL tab (query loading will be handled in future task)
+                                ts.open(TabKind::SqlEditor);
+                            }
+                        })
+                    />
                     <TablesList tables=tables active_table=active_table on_select=on_table_select />
                 </aside>
 
