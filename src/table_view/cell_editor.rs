@@ -15,6 +15,7 @@ use crate::table_view::cell_editors::text_editor::TextEditor;
 use crate::table_view::cell_editors::time_editor::TimeEditor;
 use crate::table_view::cell_editors::unknown_editor::UnknownEditor;
 use crate::table_view::cell_editors::uuid_editor::UuidEditor;
+use crate::table_view::cell_editors::NullButton;
 
 /// Represents a cell edit completion.
 #[derive(Clone, Debug)]
@@ -26,6 +27,9 @@ pub struct CellEdit {
 
 /// Inline cell editor. Dispatches to the appropriate specialized editor based on column metadata.
 /// Modal editors (JSON, XML, array) are handled separately by DataTable.
+///
+/// For nullable columns, a "×" (Set NULL) button is shown next to the editor.
+/// BooleanEditor and EnumEditor handle nullable internally via a select dropdown.
 #[component]
 pub fn CellEditor(
     column: ColumnInfo,
@@ -33,7 +37,9 @@ pub fn CellEditor(
     on_commit: Callback<serde_json::Value>,
     on_cancel: Callback<()>,
 ) -> impl IntoView {
-    // Enum columns get a select dropdown regardless of data_type string
+    let is_nullable = column.is_nullable;
+
+    // Enum editor handles nullable internally with a NULL option in the dropdown
     if column.is_enum {
         return view! {
             <EnumEditor
@@ -49,13 +55,27 @@ pub fn CellEditor(
 
     let dt = column.data_type.to_lowercase();
 
+    // Boolean and unknown editors handle nullable specially (or are read-only)
     match dt.as_str() {
         "boolean" | "bool" => {
-            view! {
-                <BooleanEditor value=value on_commit=on_commit on_cancel=on_cancel />
+            // BooleanEditor handles nullable internally with a tri-state select
+            return view! {
+                <BooleanEditor value=value is_nullable=is_nullable on_commit=on_commit on_cancel=on_cancel />
             }
-            .into_any()
+            .into_any();
         }
+        "unknown" | "tsvector" | "tsquery" | "geometry" => {
+            // Read-only editor, no NULL toggle needed
+            return view! {
+                <UnknownEditor value=value on_cancel=on_cancel />
+            }
+            .into_any();
+        }
+        _ => {}
+    }
+
+    // Build the editor view for all other types
+    let editor = match dt.as_str() {
         "smallint" | "integer" | "bigint" | "int2" | "int4" | "int8" | "serial"
         | "smallserial" | "bigserial" => {
             view! {
@@ -148,12 +168,6 @@ pub fn CellEditor(
             }
             .into_any()
         }
-        "unknown" | "tsvector" | "tsquery" | "geometry" => {
-            view! {
-                <UnknownEditor value=value on_cancel=on_cancel />
-            }
-            .into_any()
-        }
         // Default: text editor for text, varchar, char, and anything else
         _ => {
             let max_length = column.max_length.unwrap_or(0);
@@ -167,5 +181,18 @@ pub fn CellEditor(
             }
             .into_any()
         }
+    };
+
+    // Wrap with "×" NULL button for nullable columns
+    if is_nullable {
+        view! {
+            <div class="flex items-center gap-0.5 w-full">
+                {editor}
+                <NullButton on_commit=on_commit />
+            </div>
+        }
+        .into_any()
+    } else {
+        editor
     }
 }

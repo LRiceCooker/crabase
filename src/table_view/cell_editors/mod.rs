@@ -42,3 +42,22 @@ pub fn auto_focus_select_ref() -> NodeRef<leptos::html::Select> {
     });
     node_ref
 }
+
+/// Small "×" button that sets the cell value to NULL. Used for nullable columns.
+/// Uses mousedown + preventDefault to avoid triggering the input's blur handler.
+#[component]
+pub fn NullButton(on_commit: Callback<serde_json::Value>) -> impl IntoView {
+    view! {
+        <button
+            class="shrink-0 text-[10px] text-gray-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 px-1 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-100"
+            title="Set NULL"
+            tabindex=-1
+            on:mousedown=move |ev| {
+                ev.prevent_default();
+                on_commit.run(serde_json::Value::Null);
+            }
+        >
+            "×"
+        </button>
+    }
+}
