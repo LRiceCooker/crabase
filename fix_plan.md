@@ -4,20 +4,18 @@
 
 ## Backlog
 
-### Phase 17 — Find Bar Overlay (Cmd+F)
-- [ ] table_view/find_overlay.rs: floating bar at top of table view (browser-style)
-- [ ] Cmd+F triggers the find overlay when a table tab is active
-- [ ] Fuzzy search across all visible cell values
-- [ ] Highlights matching cells
-- [ ] Navigation with Enter (next) / Shift+Enter (prev), or N/Prev buttons
-- [ ] Escape closes the overlay
-
 ### Phase 18 — Multi-Window
 - [ ] Backend: `open_new_window` command using Tauri WebviewWindowBuilder
 - [ ] Cmd+Shift+N opens a new app window (independent instance, starts at connection screen)
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Escape closes the overlay
+- [x] Navigation with Enter (next) / Shift+Enter (prev), or N/Prev buttons
+- [x] Highlights matching cells
+- [x] Fuzzy search across all visible cell values
+- [x] Cmd+F triggers the find overlay when a table tab is active
+- [x] table_view/find_overlay.rs: floating bar at top of table view (browser-style)
 - [x] Click table header to cycle sort direction (asc → desc → none)
 - [x] Default sort behavior: created_at desc if exists, else PK asc, else first column with smart fallback
 - [x] Sort: column + direction, can chain multiple sort columns

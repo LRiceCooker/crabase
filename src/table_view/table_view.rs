@@ -12,6 +12,7 @@ use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::context_menu::{ContextMenu, ContextMenuItem};
 use crate::table_view::data_table::{unwrap_tagged_owned, DataTable, RowContextMenuEvent};
 use crate::table_view::filter_bar::FilterBar;
+use crate::table_view::find_overlay::FindOverlay;
 use crate::table_view::dirty_bar::DirtyBar;
 use crate::table_view::json_editor::{JsonEditRequest, JsonEditorModal};
 use crate::table_view::pagination::Pagination;
@@ -39,6 +40,41 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     // Filter & sort state
     let active_filters = RwSignal::new(Vec::<tauri::Filter>::new());
     let active_sort = RwSignal::new(Vec::<tauri::SortCol>::new());
+    // Find overlay state
+    let (find_visible, set_find_visible) = signal(false);
+    let find_query = RwSignal::new(String::new());
+    let find_current = RwSignal::new(0usize);
+    let find_matches = Memo::new(move |_| {
+        let query = find_query.get();
+        if query.is_empty() {
+            return Vec::new();
+        }
+        let query_lower = query.to_lowercase();
+        let current_rows = rows.get();
+        let cols = columns.get();
+        let mut matches = Vec::new();
+        for (row_idx, row) in current_rows.iter().enumerate() {
+            for (col_idx, cell) in row.iter().enumerate() {
+                let inner = crate::table_view::data_table::unwrap_tagged(cell);
+                let text = match inner {
+                    serde_json::Value::Null => "null".to_string(),
+                    serde_json::Value::Bool(b) => b.to_string(),
+                    serde_json::Value::Number(n) => n.to_string(),
+                    serde_json::Value::String(s) => s.clone(),
+                    _ => serde_json::to_string(inner).unwrap_or_default(),
+                };
+                if text.to_lowercase().contains(&query_lower) {
+                    matches.push((row_idx, col_idx));
+                }
+            }
+        }
+        matches
+    });
+    let highlighted_cells = Memo::new(move |_| {
+        let m = find_matches.get();
+        let set: std::collections::HashSet<(usize, usize)> = m.into_iter().collect();
+        set
+    });
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
@@ -363,7 +399,19 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     }
 
     view! {
-        <div class="flex flex-col h-full">
+        <div
+            class="flex flex-col h-full"
+            on:keydown=move |ev: web_sys::KeyboardEvent| {
+                // Cmd+F / Ctrl+F → open find overlay
+                if (ev.meta_key() || ev.ctrl_key()) && !ev.shift_key() && ev.code() == "KeyF" {
+                    if loaded_table.get().is_some() {
+                        ev.prevent_default();
+                        set_find_visible.set(true);
+                    }
+                }
+            }
+            tabindex="-1"
+        >
             // Toolbar
             {move || {
                 loaded_table.get().map(|name| {
@@ -432,28 +480,42 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                     }.into_any()
                 } else if has_data.get() {
                     view! {
-                        <DataTable
-                            columns=columns.get()
-                            rows=rows
-                            changes=changes
-                            selected_rows=selected_rows
-                            selection_anchor=selection_anchor
-                            page=page.get()
-                            page_size=page_size.get()
-                            on_cell_edit=on_cell_edit
-                            on_json_edit=on_json_edit
-                            on_array_edit=on_array_edit
-                            on_xml_edit=on_xml_edit
-                            on_row_context_menu=Callback::new(move |ev: RowContextMenuEvent| {
-                                set_ctx_menu.set(Some((ev.x, ev.y)));
-                            })
-                            active_sort=active_sort
-                            on_sort_change=Callback::new(move |_| {
-                                if let Some(name) = loaded_table.get() {
-                                    fetch_data(name, page.get(), page_size.get());
-                                }
-                            })
-                        />
+                        <div class="relative flex-1 flex flex-col overflow-hidden">
+                            <FindOverlay
+                                visible=find_visible
+                                search_query=find_query
+                                matches=find_matches
+                                current_match=find_current
+                                on_close=Callback::new(move |_| {
+                                    set_find_visible.set(false);
+                                    find_query.set(String::new());
+                                })
+                            />
+                            <DataTable
+                                columns=columns.get()
+                                rows=rows
+                                changes=changes
+                                selected_rows=selected_rows
+                                selection_anchor=selection_anchor
+                                page=page.get()
+                                page_size=page_size.get()
+                                on_cell_edit=on_cell_edit
+                                on_json_edit=on_json_edit
+                                on_array_edit=on_array_edit
+                                on_xml_edit=on_xml_edit
+                                on_row_context_menu=Callback::new(move |ev: RowContextMenuEvent| {
+                                    set_ctx_menu.set(Some((ev.x, ev.y)));
+                                })
+                                active_sort=active_sort
+                                on_sort_change=Callback::new(move |_| {
+                                    if let Some(name) = loaded_table.get() {
+                                        fetch_data(name, page.get(), page_size.get());
+                                    }
+                                })
+                                highlighted_cells=highlighted_cells
+                                find_current_match=(find_current, find_matches)
+                            />
+                        </div>
                     }.into_any()
                 } else {
                     view! {

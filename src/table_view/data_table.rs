@@ -124,6 +124,8 @@ pub fn DataTable(
     on_row_context_menu: Callback<RowContextMenuEvent>,
     active_sort: RwSignal<Vec<SortCol>>,
     on_sort_change: Callback<()>,
+    #[prop(optional)] highlighted_cells: Option<Memo<std::collections::HashSet<(usize, usize)>>>,
+    #[prop(optional)] find_current_match: Option<(RwSignal<usize>, Memo<Vec<(usize, usize)>>)>,
 ) -> impl IntoView {
     // Track which cell is being edited: (row_idx, col_idx)
     let (editing_cell, set_editing_cell) = signal(Option::<(usize, usize)>::None);
@@ -341,14 +343,34 @@ pub fn DataTable(
                                             let (text, is_null) = format_cell(&cell, &data_type_display);
                                             let cell_modified = changes.is_cell_modified(row_idx, col_idx);
                                             let cursor = if is_readonly { "cursor-default" } else { "cursor-pointer" };
-                                            let class = if is_null && cell_modified {
-                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic {} bg-amber-100/50 dark:bg-amber-900/40", cursor)
-                                            } else if is_null {
-                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic {}", cursor)
-                                            } else if cell_modified {
-                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] {} bg-amber-100/50 dark:bg-amber-900/40", cursor)
+                                            let is_find_match = highlighted_cells
+                                                .as_ref()
+                                                .map(|hc| hc.get().contains(&(row_idx, col_idx)))
+                                                .unwrap_or(false);
+                                            let is_current_find_match = find_current_match
+                                                .as_ref()
+                                                .map(|(idx, matches)| {
+                                                    let m = matches.get();
+                                                    let i = idx.get();
+                                                    m.get(i) == Some(&(row_idx, col_idx))
+                                                })
+                                                .unwrap_or(false);
+                                            let find_highlight = if is_current_find_match {
+                                                " ring-2 ring-indigo-500 dark:ring-indigo-400 bg-indigo-100 dark:bg-indigo-500/30"
+                                            } else if is_find_match {
+                                                " bg-yellow-100 dark:bg-yellow-500/20"
                                             } else {
-                                                format!("px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] {}", cursor)
+                                                ""
+                                            };
+                                            let base = "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px]";
+                                            let class = if is_null && cell_modified {
+                                                format!("{} text-gray-300 dark:text-zinc-600 italic {} bg-amber-100/50 dark:bg-amber-900/40{}", base, cursor, find_highlight)
+                                            } else if is_null {
+                                                format!("{} text-gray-300 dark:text-zinc-600 italic {}{}", base, cursor, find_highlight)
+                                            } else if cell_modified {
+                                                format!("{} {} bg-amber-100/50 dark:bg-amber-900/40{}", base, cursor, find_highlight)
+                                            } else {
+                                                format!("{} {}{}", base, cursor, find_highlight)
                                             };
                                             let title = if is_readonly {
                                                 format!("{} (read-only)", text)

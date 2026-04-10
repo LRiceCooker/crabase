@@ -4,6 +4,7 @@ pub mod change_tracker;
 pub mod context_menu;
 pub mod data_table;
 pub mod filter_bar;
+pub mod find_overlay;
 pub mod dirty_bar;
 pub mod json_editor;
 pub mod pagination;
