@@ -1,5 +1,6 @@
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
+
+use crate::shortcuts::{self, ShortcutAction};
 
 /// SQL text editor with line numbers and monospace font.
 /// Supports Cmd+/ to toggle SQL comments on selected lines.
@@ -14,9 +15,10 @@ pub fn SqlEditor(
 
     let textarea_ref = NodeRef::<leptos::html::Textarea>::new();
 
+    let sc = shortcuts::use_shortcuts();
     let on_keydown = move |ev: web_sys::KeyboardEvent| {
-        // Cmd+/ (macOS) or Ctrl+/ to toggle comment
-        if (ev.meta_key() || ev.ctrl_key()) && ev.key() == "/" {
+        // Toggle comment via shortcuts registry
+        if sc.matches(ShortcutAction::ToggleComment, &ev) {
             ev.prevent_default();
 
             if let Some(el) = textarea_ref.get() {

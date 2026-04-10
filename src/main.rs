@@ -4,6 +4,7 @@ mod connection;
 pub mod icons;
 mod main_layout;
 mod settings;
+pub mod shortcuts;
 mod sidebar;
 mod sql_editor;
 mod table_finder;
