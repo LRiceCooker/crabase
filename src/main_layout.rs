@@ -408,9 +408,19 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                         queries=saved_query_names
                         on_select=Callback::new({
                             let ts = tab_state.clone();
-                            move |_name: String| {
-                                // Open a new SQL tab (query loading will be handled in future task)
-                                ts.open(TabKind::SqlEditor);
+                            move |name: String| {
+                                // Check if a tab with this name already exists
+                                let existing = ts.tabs.get().iter().find(|t| {
+                                    matches!(&t.kind, TabKind::SqlEditor) && t.title == name
+                                }).map(|t| t.id);
+
+                                if let Some(id) = existing {
+                                    ts.switch(id);
+                                } else {
+                                    // Open a new SQL tab and rename it
+                                    let id = ts.open(TabKind::SqlEditor);
+                                    ts.rename_tab(id, name);
+                                }
                             }
                         })
                     />

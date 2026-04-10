@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 11 — Saved Queries
-- [ ] Click on saved query in sidebar opens it in a new tab (or focuses existing tab)
-
 ### Phase 12 — Table Finder Enhancement (Cmd+P)
 - [ ] Update table_finder.rs to fuzzy search across BOTH tables AND saved queries of current connection
 - [ ] Group results by type with subtle headers ("Tables", "Queries")
@@ -84,6 +81,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Click on saved query in sidebar opens it in a new tab (or focuses existing tab)
 - [x] sidebar/saved_queries_list.rs: scrollable section above tables list, shows saved queries for current connection. Hidden if empty.
 - [x] Default name: `Untitled-1`, `Untitled-2`, etc. (incremented globally per app instance)
 - [x] tab_title.rs: clicking the file name on a SQL editor tab transforms it into an inline rename input. Save on blur or Enter, revert on Escape, calls `rename_query`
