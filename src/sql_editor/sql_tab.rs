@@ -13,10 +13,23 @@ pub fn SqlTab() -> impl IntoView {
     let (running, set_running) = signal(false);
     let (result, set_result) = signal(Option::<Result<tauri::QueryResult, String>>::None);
 
-    // Auto-focus the editor once mounted
+    // Auto-focus the editor and load schema for autocomplete once mounted
     Effect::new(move |_| {
         if let Some(handle) = cm_handle.get() {
             handle.focus();
+            // Fetch table names and columns for autocomplete
+            spawn_local(async move {
+                let Ok(tables) = tauri::list_tables().await else {
+                    return;
+                };
+                if tables.is_empty() {
+                    return;
+                }
+                let Ok(schema) = tauri::get_columns_for_autocomplete(&tables).await else {
+                    return;
+                };
+                handle.set_schema(&schema);
+            });
         }
     });
 

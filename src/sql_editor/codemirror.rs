@@ -33,6 +33,9 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = ["__codemirror"], js_name = "setTheme")]
     fn cm_set_theme(id: u32, is_dark: bool);
+
+    #[wasm_bindgen(js_namespace = ["__codemirror"], js_name = "setSchema")]
+    fn cm_set_schema(id: u32, schema: &JsValue);
 }
 
 /// Handle to a mounted CodeMirror instance. Provides methods to interact with the editor.
@@ -81,6 +84,21 @@ impl CodeMirrorHandle {
     /// Reactive dirty signal (for UI binding).
     pub fn dirty_signal(&self) -> RwSignal<bool> {
         self.dirty
+    }
+
+    /// Set schema for SQL autocomplete (table → columns map).
+    pub fn set_schema(&self, schema: &std::collections::HashMap<String, Vec<String>>) {
+        if let Some(id) = self.id.get_untracked() {
+            let js_obj = js_sys::Object::new();
+            for (table, columns) in schema {
+                let js_cols = js_sys::Array::new();
+                for col in columns {
+                    js_cols.push(&JsValue::from_str(col));
+                }
+                js_sys::Reflect::set(&js_obj, &JsValue::from_str(table), &js_cols).unwrap();
+            }
+            cm_set_schema(id, &js_obj.into());
+        }
     }
 }
 

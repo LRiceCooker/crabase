@@ -1,7 +1,7 @@
 // CodeMirror 6 bridge for WASM interop
 // Exposes CodeMirror editor lifecycle on window.__codemirror
 
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor, highlightSpecialChars, placeholder as cmPlaceholder } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { sql, PostgreSQL } from "@codemirror/lang-sql";
@@ -85,12 +85,13 @@ const darkThemeExt = EditorView.theme({
   },
 }, { dark: true });
 
-function buildExtensions(opts) {
+function buildExtensions(opts, langCompartment) {
   const isDark = opts.isDark || false;
   const lang = opts.language || "sql"; // "sql" | "json"
   const readOnly = opts.readOnly || false;
   const onChangeCallback = opts.onChange || null;
   const placeholder = opts.placeholder || "";
+  const schema = opts.schema || null;
 
   const exts = [
     lineNumbers(),
@@ -119,11 +120,12 @@ function buildExtensions(opts) {
     EditorView.lineWrapping,
   ];
 
-  // Language
-  if (lang === "sql") {
-    exts.push(sql({ dialect: PostgreSQL }));
-  } else if (lang === "json") {
-    exts.push(json());
+  // Language (via compartment for dynamic reconfiguration)
+  const langExt = buildLangExtension(lang, schema);
+  if (langCompartment) {
+    exts.push(langCompartment.of(langExt));
+  } else {
+    exts.push(langExt);
   }
 
   // Theme
@@ -157,6 +159,19 @@ function buildExtensions(opts) {
   return exts;
 }
 
+function buildLangExtension(lang, schema) {
+  if (lang === "sql") {
+    const sqlOpts = { dialect: PostgreSQL };
+    if (schema) {
+      sqlOpts.schema = schema;
+    }
+    return sql(sqlOpts);
+  } else if (lang === "json") {
+    return json();
+  }
+  return [];
+}
+
 window.__codemirror = {
   /**
    * Create a CodeMirror editor inside the given DOM element.
@@ -168,6 +183,7 @@ window.__codemirror = {
     const id = nextId++;
     const content = opts.content || "";
     const onChangeCallbacks = [];
+    const langCompartment = new Compartment();
 
     const state = EditorState.create({
       doc: content,
@@ -178,7 +194,7 @@ window.__codemirror = {
             cb(newContent);
           }
         },
-      }),
+      }, langCompartment),
     });
 
     const view = new EditorView({
@@ -191,6 +207,7 @@ window.__codemirror = {
       parent,
       opts,
       onChangeCallbacks,
+      langCompartment,
       cleanContent: content, // for dirty tracking
     });
 
@@ -295,6 +312,7 @@ window.__codemirror = {
     const content = entry.view.state.doc.toString();
     const cursorPos = entry.view.state.selection.main.head;
     const onChangeCallbacks = entry.onChangeCallbacks;
+    const langCompartment = new Compartment();
 
     entry.view.destroy();
 
@@ -308,7 +326,7 @@ window.__codemirror = {
             cb(newContent);
           }
         },
-      }),
+      }, langCompartment),
       selection: { anchor: Math.min(cursorPos, content.length) },
     });
 
@@ -319,5 +337,23 @@ window.__codemirror = {
 
     entry.view = view;
     entry.opts = newOpts;
+    entry.langCompartment = langCompartment;
+  },
+
+  /**
+   * Set schema for SQL autocompletion (table names + columns).
+   * @param {number} id
+   * @param {Object} schema - e.g. { users: ["id", "name"], posts: ["id", "title"] }
+   */
+  setSchema(id, schema) {
+    const entry = editors.get(id);
+    if (!entry) return;
+
+    const lang = entry.opts.language || "sql";
+    entry.opts.schema = schema;
+    const langExt = buildLangExtension(lang, schema);
+    entry.view.dispatch({
+      effects: entry.langCompartment.reconfigure(langExt),
+    });
   },
 };
