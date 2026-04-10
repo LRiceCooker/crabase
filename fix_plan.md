@@ -4,10 +4,8 @@
 
 ## Backlog
 
-### Phase 18 — Multi-Window
-- [ ] Verify that both windows share the same config files (settings, saved connections, queries)
-
 ## Completed
+- [x] Verify that both windows share the same config files (settings, saved connections, queries)
 - [x] Cmd+Shift+N opens a new app window (independent instance, starts at connection screen)
 - [x] Backend: `open_new_window` command using Tauri WebviewWindowBuilder
 - [x] Escape closes the overlay
