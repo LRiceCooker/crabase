@@ -119,6 +119,29 @@ pub async fn list_tables() -> Result<Vec<String>, String> {
         .map_err(|e| format!("Failed to parse tables list: {}", e))
 }
 
+pub async fn get_columns_for_autocomplete(
+    table_names: &[String],
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> {
+        table_names: &'a [String],
+    }
+
+    let args = serde_wasm_bindgen::to_value(&Args { table_names })
+        .map_err(|e| e.to_string())?;
+
+    let result = invoke("get_columns_for_autocomplete", args)
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Failed to get columns for autocomplete".to_string())
+        })?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse autocomplete columns: {}", e))
+}
+
 /// Opens a native file picker dialog filtered on .tar.gz files.
 /// Returns the selected file path, or None if cancelled.
 pub async fn pick_backup_file() -> Result<Option<String>, String> {

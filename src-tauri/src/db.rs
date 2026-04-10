@@ -190,6 +190,21 @@ impl DbState {
             .collect())
     }
 
+    pub async fn get_columns_for_autocomplete(
+        &self,
+        table_names: &[String],
+    ) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+        let mut result = std::collections::HashMap::new();
+        for table_name in table_names {
+            let columns = self.get_column_info(table_name).await?;
+            result.insert(
+                table_name.clone(),
+                columns.into_iter().map(|c| c.name).collect(),
+            );
+        }
+        Ok(result)
+    }
+
     pub async fn get_table_data(
         &self,
         table_name: &str,

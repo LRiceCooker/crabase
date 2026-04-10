@@ -119,6 +119,14 @@ fn load_settings(app_handle: tauri::AppHandle) -> Result<settings::Settings, Str
 }
 
 #[tauri::command]
+async fn get_columns_for_autocomplete(
+    table_names: Vec<String>,
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    db_state.get_columns_for_autocomplete(&table_names).await
+}
+
+#[tauri::command]
 fn save_settings(
     settings: settings::Settings,
     app_handle: tauri::AppHandle,
@@ -130,7 +138,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_table_data, execute_query, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_columns_for_autocomplete, get_table_data, execute_query, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
