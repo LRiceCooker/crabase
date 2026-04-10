@@ -17,7 +17,7 @@ pub fn CellEditor(
     on_commit: Callback<serde_json::Value>,
     on_cancel: Callback<()>,
 ) -> impl IntoView {
-    let dt = data_type.to_uppercase();
+    let dt = data_type.to_lowercase();
 
     match dt.as_str() {
         "boolean" | "bool" => {
@@ -40,9 +40,8 @@ pub fn CellEditor(
             }
             .into_any()
         }
-        s if s.starts_with("INT") || s == "SERIAL" || s == "BIGSERIAL" || s == "SMALLINT"
-            || s == "BIGINT" || s == "INTEGER" || s.starts_with("SMALLSERIAL") =>
-        {
+        "smallint" | "integer" | "bigint" | "int2" | "int4" | "int8"
+        | "serial" | "smallserial" | "bigserial" => {
             let initial = match &value {
                 serde_json::Value::Number(n) => n.to_string(),
                 serde_json::Value::String(s) => s.clone(),
@@ -84,9 +83,8 @@ pub fn CellEditor(
             }
             .into_any()
         }
-        s if s.starts_with("FLOAT") || s == "REAL" || s == "DOUBLE PRECISION"
-            || s.starts_with("NUMERIC") || s == "DECIMAL" =>
-        {
+        "real" | "double" | "numeric" | "money"
+        | "float4" | "float8" | "decimal" | "double precision" => {
             let initial = match &value {
                 serde_json::Value::Number(n) => n.to_string(),
                 serde_json::Value::String(s) => s.clone(),
@@ -129,23 +127,12 @@ pub fn CellEditor(
             }
             .into_any()
         }
-        s if s.contains("TIMESTAMP") || s == "DATE" || s == "TIME" => {
-            let input_type = if s == "DATE" {
-                "date"
-            } else if s == "TIME" || s == "TIME WITHOUT TIME ZONE" || s == "TIME WITH TIME ZONE" {
-                "time"
-            } else {
-                "datetime-local"
-            };
-            let initial = match &value {
-                serde_json::Value::String(s) => s.clone(),
-                serde_json::Value::Null => String::new(),
-                _ => value.to_string(),
-            };
+        "date" => {
+            let initial = value.as_str().unwrap_or("").to_string();
             let (val, set_val) = signal(initial);
             view! {
                 <input
-                    type=input_type
+                    type="date"
                     class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
                     prop:value=move || val.get()
                     on:input=move |ev| set_val.set(event_target_value(&ev))
@@ -154,11 +141,7 @@ pub fn CellEditor(
                             "Enter" | "Tab" => {
                                 ev.prevent_default();
                                 let v = val.get();
-                                if v.is_empty() {
-                                    on_commit.run(serde_json::Value::Null);
-                                } else {
-                                    on_commit.run(serde_json::Value::String(v));
-                                }
+                                on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
                             }
                             "Escape" => on_cancel.run(()),
                             _ => {}
@@ -166,18 +149,76 @@ pub fn CellEditor(
                     }
                     on:blur=move |_| {
                         let v = val.get();
-                        if v.is_empty() {
-                            on_commit.run(serde_json::Value::Null);
-                        } else {
-                            on_commit.run(serde_json::Value::String(v));
-                        }
+                        on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
                     }
                     node_ref=auto_focus_ref()
                 />
             }
             .into_any()
         }
-        // Default: text input for varchar, text, and all other types
+        "time" => {
+            let initial = value.as_str().unwrap_or("").to_string();
+            let (val, set_val) = signal(initial);
+            view! {
+                <input
+                    type="time"
+                    step="1"
+                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
+                    prop:value=move || val.get()
+                    on:input=move |ev| set_val.set(event_target_value(&ev))
+                    on:keydown=move |ev| {
+                        match ev.key().as_str() {
+                            "Enter" | "Tab" => {
+                                ev.prevent_default();
+                                let v = val.get();
+                                on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
+                            }
+                            "Escape" => on_cancel.run(()),
+                            _ => {}
+                        }
+                    }
+                    on:blur=move |_| {
+                        let v = val.get();
+                        on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
+                    }
+                    node_ref=auto_focus_ref()
+                />
+            }
+            .into_any()
+        }
+        "timestamp" | "timestamptz" => {
+            // Convert timestamp string to datetime-local format
+            let initial = value.as_str().unwrap_or("").to_string();
+            let (val, set_val) = signal(initial);
+            view! {
+                <input
+                    type="datetime-local"
+                    step="1"
+                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
+                    prop:value=move || val.get()
+                    on:input=move |ev| set_val.set(event_target_value(&ev))
+                    on:keydown=move |ev| {
+                        match ev.key().as_str() {
+                            "Enter" | "Tab" => {
+                                ev.prevent_default();
+                                let v = val.get();
+                                on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
+                            }
+                            "Escape" => on_cancel.run(()),
+                            _ => {}
+                        }
+                    }
+                    on:blur=move |_| {
+                        let v = val.get();
+                        on_commit.run(if v.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(v) });
+                    }
+                    node_ref=auto_focus_ref()
+                />
+            }
+            .into_any()
+        }
+        // Default: text input for text, varchar, uuid, interval, inet, cidr,
+        // macaddr, bit, xml, range, geometry, unknown, and all other types
         _ => {
             let initial = match &value {
                 serde_json::Value::String(s) => s.clone(),

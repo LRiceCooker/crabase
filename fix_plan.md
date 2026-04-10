@@ -6,7 +6,6 @@
 
 ### Phase 13 — Comprehensive Postgres Type Support (Foundational Fix)
 This is a foundational fix: the current table view incorrectly displays many Postgres types as NULL because the backend doesn't serialize them and the frontend has no specialized editors. See "Postgres Type Support" section in specs/project.md for the full type → editor mapping table.
-- [ ] Frontend: refactor cell_editor.rs to dispatch to the correct specialized editor based on the column type from the new tagged value
 - [ ] Frontend: implement specialized editors per type:
   - [ ] number_editor.rs (smallint, integer, bigint, decimal, real, double precision, money) — number input with proper precision/scale/range
   - [ ] text_editor.rs (char, varchar, text) — text input + textarea for long values
@@ -72,6 +71,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Frontend: refactor cell_editor.rs to dispatch to the correct specialized editor based on the column type from the new tagged value
 - [x] Backend: extend `get_column_info` to return resolved type info: base_type, is_array, is_enum, enum_values (if applicable), is_nullable, is_primary_key, is_auto_increment, max_length, precision, scale.
 - [x] Backend: for enum columns (USER-DEFINED with typcategory='E'), query `pg_enum` joined with `pg_type` to fetch allowed values. Cache per (schema, enum_name).
 - [x] Backend: never return a non-NULL value as NULL because the type is unknown. Fall back to `{ "type": "unknown", "raw": "<text repr>" }`.

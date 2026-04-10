@@ -6,22 +6,45 @@ use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
 use crate::tauri::ColumnInfo;
 
-/// Format a cell value for display.
+/// Extract the inner value from a tagged cell `{ "type": "...", "value": ... }`.
+/// Falls through to the raw value if not tagged.
+pub fn unwrap_tagged(value: &serde_json::Value) -> &serde_json::Value {
+    if let serde_json::Value::Object(map) = value {
+        if map.contains_key("type") {
+            if let Some(inner) = map.get("value") {
+                return inner;
+            }
+            // Unknown type: { "type": "unknown", "raw": "..." }
+            if let Some(raw) = map.get("raw") {
+                return raw;
+            }
+        }
+    }
+    value
+}
+
+/// Extract the inner value as an owned clone.
+pub fn unwrap_tagged_owned(value: &serde_json::Value) -> serde_json::Value {
+    unwrap_tagged(value).clone()
+}
+
+/// Format a cell value for display. Handles tagged values.
 fn format_cell(value: &serde_json::Value) -> (String, bool) {
-    match value {
+    let inner = unwrap_tagged(value);
+    match inner {
         serde_json::Value::Null => ("NULL".to_string(), true),
         serde_json::Value::Bool(b) => (b.to_string(), false),
         serde_json::Value::Number(n) => (n.to_string(), false),
         serde_json::Value::String(s) => (s.clone(), false),
         serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
-            (serde_json::to_string(value).unwrap_or_default(), false)
+            (serde_json::to_string(inner).unwrap_or_default(), false)
         }
     }
 }
 
 fn is_json_type(data_type: &str) -> bool {
-    let dt = data_type.to_uppercase();
-    dt == "JSON" || dt == "JSONB"
+    let dt = data_type.to_lowercase();
+    dt == "json" || dt == "jsonb"
 }
 
 #[component]
@@ -85,7 +108,7 @@ pub fn DataTable(
 
                                         if is_editing && !is_json {
                                             let dt = data_type.clone();
-                                            let cell_val = cell.clone();
+                                            let cell_val = unwrap_tagged_owned(&cell);
                                             view! {
                                                 <td class="px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 ring-2 ring-indigo-500/30 dark:ring-indigo-500/60 bg-white dark:bg-zinc-900 max-w-[300px]">
                                                     <CellEditor
@@ -118,7 +141,7 @@ pub fn DataTable(
                                                 "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
                                             };
                                             let title = text.clone();
-                                            let cell_for_json = cell.clone();
+                                            let cell_for_json = unwrap_tagged_owned(&cell);
                                             view! {
                                                 <td
                                                     class=class
