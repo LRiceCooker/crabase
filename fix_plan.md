@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 16 — Filter & Sort Bar (Linear-style)
-- [ ] Default sort behavior: created_at desc if exists, else PK asc, else first column with smart fallback
 - [ ] Click table header to cycle sort direction (asc → desc → none)
 
 ### Phase 17 — Find Bar Overlay (Cmd+F)
@@ -22,6 +21,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Default sort behavior: created_at desc if exists, else PK asc, else first column with smart fallback
 - [x] Sort: column + direction, can chain multiple sort columns
 - [x] "+" button to add a new filter
 - [x] table_view/filter_chip.rs: column select + operator select + value input + delete button + combinator selector

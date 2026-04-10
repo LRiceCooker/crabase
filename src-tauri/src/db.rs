@@ -319,11 +319,12 @@ impl DbState {
             .map_err(|e| format!("Failed to get row count: {}", e))?;
         let total_count = count_row.0 as u64;
 
-        // Get paginated rows
+        // Get paginated rows with smart default ordering
+        let order_clause = default_order_clause(&columns);
         let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
         let data_query = format!(
-            "SELECT * FROM {} LIMIT {} OFFSET {}",
-            qualified_table, page_size, offset
+            "SELECT * FROM {}{} LIMIT {} OFFSET {}",
+            qualified_table, order_clause, page_size, offset
         );
 
         let pg_rows = sqlx::query(&data_query)
@@ -382,8 +383,12 @@ impl DbState {
         // Build WHERE clause from filters
         let where_clause = build_filter_where_clause(&filters);
 
-        // Build ORDER BY clause from sort columns
-        let order_clause = build_order_clause(&sort);
+        // Build ORDER BY clause from sort columns (or apply smart default)
+        let order_clause = if sort.is_empty() {
+            default_order_clause(&columns)
+        } else {
+            build_order_clause(&sort)
+        };
 
         // Get filtered count
         let count_query = format!(
@@ -701,6 +706,27 @@ fn build_order_clause(sort: &[SortCol]) -> String {
         })
         .collect();
     format!(" ORDER BY {}", parts.join(", "))
+}
+
+/// Compute a default ORDER BY clause based on column metadata.
+/// Priority: created_at DESC > PK ASC > first column ASC.
+fn default_order_clause(columns: &[ColumnInfo]) -> String {
+    // 1. Check for created_at column
+    if let Some(col) = columns.iter().find(|c| c.name == "created_at") {
+        let quoted = format!("\"{}\"", col.name.replace('"', "\"\""));
+        return format!(" ORDER BY {} DESC", quoted);
+    }
+    // 2. Check for primary key column
+    if let Some(col) = columns.iter().find(|c| c.is_primary_key) {
+        let quoted = format!("\"{}\"", col.name.replace('"', "\"\""));
+        return format!(" ORDER BY {} ASC", quoted);
+    }
+    // 3. Fall back to first column
+    if let Some(col) = columns.first() {
+        let quoted = format!("\"{}\"", col.name.replace('"', "\"\""));
+        return format!(" ORDER BY {} ASC", quoted);
+    }
+    String::new()
 }
 
 /// Build a tagged value: `{ "type": "<pg_type>", "value": <val> }`.

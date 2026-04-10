@@ -84,6 +84,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
 
         if let Some(name) = name {
             set_page.set(1);
+            active_filters.set(Vec::new());
+            active_sort.set(Vec::new());
             fetch_data(name, 1, page_size.get());
         } else {
             set_has_data.set(false);
