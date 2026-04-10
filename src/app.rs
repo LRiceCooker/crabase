@@ -5,9 +5,13 @@ use crate::connection::connection_form::ConnectionForm;
 use crate::connection::connection_screen::ConnectionScreen;
 use crate::main_layout::MainLayout;
 use crate::tauri::{self, build_connection_string_js, ConnectionInfo, SavedConnection};
+use crate::theme;
 
 #[component]
 pub fn App() -> impl IntoView {
+    // Initialize theme system (provides ThemeCtx via Leptos context)
+    theme::provide_theme();
+
     // 3 states: "input" -> "form" -> "connected"
     let (screen, set_screen) = signal(String::from("input"));
     let (connection_string, set_connection_string) = signal(String::new());

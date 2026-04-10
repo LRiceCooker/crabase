@@ -9,6 +9,7 @@ mod table_finder;
 mod table_view;
 mod tabs;
 mod tauri;
+pub mod theme;
 
 use app::App;
 
