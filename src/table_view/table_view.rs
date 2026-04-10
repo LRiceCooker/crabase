@@ -275,22 +275,22 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 loaded_table.get().map(|name| {
                     let count = total_count.get();
                     view! {
-                        <div class="h-10 flex items-center justify-between px-3 border-b border-gray-200 bg-white shrink-0">
+                        <div class="h-10 flex items-center justify-between px-3 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-neutral-950 shrink-0">
                             <div class="flex items-center gap-2">
-                                <IconTable class="w-4 h-4 text-gray-400" />
-                                <span class="text-[13px] font-semibold text-gray-900">{name}</span>
-                                <span class="text-[11px] text-gray-400">{format!("{} rows", count)}</span>
+                                <IconTable class="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+                                <span class="text-[13px] font-semibold text-gray-900 dark:text-neutral-50">{name}</span>
+                                <span class="text-[11px] text-gray-400 dark:text-zinc-500">{format!("{} rows", count)}</span>
                             </div>
                             <div class="flex items-center gap-1">
                                 <button
-                                    class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md transition-colors duration-100 flex items-center gap-1 text-[13px]"
+                                    class="text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-neutral-50 px-2 py-1 rounded-md transition-colors duration-100 flex items-center gap-1 text-[13px]"
                                     title="Add row"
                                     on:click=move |_| on_add_row.run(())
                                 >
                                     <IconPlus class="w-4 h-4" />
                                 </button>
                                 <button
-                                    class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 px-2 py-1 rounded-md transition-colors duration-100"
+                                    class="text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-neutral-50 px-2 py-1 rounded-md transition-colors duration-100"
                                     title="Refresh"
                                     on:click=move |_| on_refresh.run(())
                                 >
@@ -306,14 +306,14 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             {move || {
                 if loading.get() {
                     view! {
-                        <div class="flex items-center justify-center flex-1 text-gray-400">
+                        <div class="flex items-center justify-center flex-1 text-gray-400 dark:text-zinc-500">
                             <IconLoader class="w-5 h-5 animate-spin" />
                         </div>
                     }.into_any()
                 } else if let Some(err) = error.get() {
                     view! {
                         <div class="flex items-center justify-center flex-1">
-                            <p class="text-[13px] text-red-500">{err}</p>
+                            <p class="text-[13px] text-red-500 dark:text-red-400">{err}</p>
                         </div>
                     }.into_any()
                 } else if has_data.get() {
@@ -329,7 +329,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                     }.into_any()
                 } else {
                     view! {
-                        <div class="flex items-center justify-center flex-1 text-gray-400">
+                        <div class="flex items-center justify-center flex-1 text-gray-400 dark:text-zinc-500">
                             <p class="text-[13px]">"Select a table to get started"</p>
                         </div>
                     }.into_any()

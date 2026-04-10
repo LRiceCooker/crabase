@@ -49,21 +49,21 @@ pub fn SavedConnections(
             view! {
                 <button
                     type="button"
-                    class="group border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between w-full text-left transition-colors duration-100"
+                    class="group border border-gray-200 dark:border-zinc-800 rounded-lg px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.03] cursor-pointer flex items-center justify-between w-full text-left transition-colors duration-100"
                     on:click={
                         let conn_for_click = conn_for_click.clone();
                         move |_| on_select.run(conn_for_click.clone())
                     }
                 >
                     <div class="flex flex-col gap-0.5 min-w-0">
-                        <span class="text-[13px] font-medium text-gray-900 truncate">{display_name}</span>
-                        <span class="text-[11px] text-gray-400 truncate">
+                        <span class="text-[13px] font-medium text-gray-900 dark:text-neutral-50 truncate">{display_name}</span>
+                        <span class="text-[11px] text-gray-400 dark:text-zinc-500 truncate">
                             {format!("{}:{} / {}", host, port, dbname)}
                         </span>
                     </div>
                     <button
                         type="button"
-                        class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-all duration-100 shrink-0 ml-2"
+                        class="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/60 transition-all duration-100 shrink-0 ml-2"
                         on:click={
                             let name_for_delete = name_for_delete.clone();
                             move |ev: web_sys::MouseEvent| {
@@ -80,7 +80,7 @@ pub fn SavedConnections(
 
         view! {
             <div class="flex flex-col gap-2 mb-4">
-                <span class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">"Saved Connections"</span>
+                <span class="text-[11px] font-medium text-gray-400 dark:text-zinc-500 uppercase tracking-wider">"Saved Connections"</span>
                 <div class="flex flex-col gap-1.5">
                     {items}
                 </div>

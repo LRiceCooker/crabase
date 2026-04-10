@@ -10,21 +10,21 @@ pub fn TablesList(
 ) -> impl IntoView {
     view! {
         <div class="p-3">
-            <h2 class="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">"Tables"</h2>
+            <h2 class="text-[11px] font-medium text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-2">"Tables"</h2>
             <div class="flex flex-col gap-0.5">
                 {move || {
                     let current_active = active_table.get();
                     tables.get().into_iter().map(|name| {
                         let is_active = current_active.as_ref() == Some(&name);
                         let item_class = if is_active {
-                            "flex items-center gap-2 px-3 py-1 text-[13px] rounded-md cursor-pointer transition-colors duration-100 bg-indigo-50 text-indigo-600"
+                            "flex items-center gap-2 px-3 py-1 text-[13px] rounded-md cursor-pointer transition-colors duration-100 bg-indigo-50 dark:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400"
                         } else {
-                            "flex items-center gap-2 px-3 py-1 text-[13px] text-gray-700 rounded-md hover:bg-gray-100 cursor-pointer transition-colors duration-100"
+                            "flex items-center gap-2 px-3 py-1 text-[13px] text-gray-700 dark:text-zinc-300 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors duration-100"
                         };
                         let icon_class = if is_active {
                             "w-4 h-4 text-indigo-400 shrink-0"
                         } else {
-                            "w-4 h-4 text-gray-400 shrink-0"
+                            "w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0"
                         };
                         let click_name = name.clone();
                         view! {
@@ -41,7 +41,7 @@ pub fn TablesList(
             </div>
             {move || if tables.get().is_empty() {
                 Some(view! {
-                    <p class="text-[13px] text-gray-400 italic px-3">"No tables found"</p>
+                    <p class="text-[13px] text-gray-400 dark:text-zinc-500 italic px-3">"No tables found"</p>
                 })
             } else {
                 None

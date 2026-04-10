@@ -21,20 +21,20 @@ pub fn ConnectionForm(
     on_connect: Callback<()>,
     on_back: Callback<()>,
 ) -> impl IntoView {
-    let input_class = "bg-white border border-gray-200 rounded-md px-3 py-1.5 text-[13px] w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors duration-100";
-    let select_class = "bg-white border border-gray-200 rounded-md px-3 py-1.5 text-[13px] w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors duration-100";
-    let label_class = "text-[13px] font-normal text-gray-700";
+    let input_class = "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-md px-3 py-1.5 text-[13px] text-gray-900 dark:text-neutral-50 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 focus:border-indigo-500 transition-colors duration-100 placeholder-gray-400 dark:placeholder-zinc-500";
+    let select_class = "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-md px-3 py-1.5 text-[13px] text-gray-900 dark:text-neutral-50 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 focus:border-indigo-500 transition-colors duration-100";
+    let label_class = "text-[13px] font-normal text-gray-700 dark:text-zinc-300";
 
     view! {
-        <main class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-lg">
+        <main class="min-h-screen bg-gray-50 dark:bg-neutral-950 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-zinc-900 rounded-lg shadow-xl dark:shadow-black/40 border border-gray-200 dark:border-zinc-800 w-full max-w-lg dark:ring-1 dark:ring-white/[0.06]">
                 <div class="px-6 py-8">
                     <div class="flex flex-col items-center gap-1 mb-6">
                         <div class="flex items-center gap-2">
-                            <IconDatabase class="w-5 h-5 text-indigo-500" />
-                            <h1 class="text-base font-semibold text-gray-900">"crabase"</h1>
+                            <IconDatabase class="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                            <h1 class="text-base font-semibold text-gray-900 dark:text-neutral-50">"crabase"</h1>
                         </div>
-                        <p class="text-[13px] text-gray-500">"Connection details"</p>
+                        <p class="text-[13px] text-gray-500 dark:text-zinc-400">"Connection details"</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
@@ -126,27 +126,27 @@ pub fn ConnectionForm(
                         <div class="col-span-2 flex items-center gap-3 mt-1">
                             <input
                                 type="checkbox"
-                                class="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/20"
+                                class="w-4 h-4 rounded border-gray-300 dark:border-zinc-700 text-indigo-500 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 dark:bg-zinc-900"
                                 prop:checked=move || form_ssl.get()
                                 on:change=move |ev| {
                                     let checked = event_target_checked(&ev);
                                     form_ssl.set(checked);
                                 }
                             />
-                            <label class="text-[13px] text-gray-700 cursor-pointer">"SSL (require)"</label>
+                            <label class="text-[13px] text-gray-700 dark:text-zinc-300 cursor-pointer">"SSL (require)"</label>
                         </div>
                         // Save connection toggle
                         <div class="col-span-2 flex items-center gap-3 mt-1">
                             <input
                                 type="checkbox"
-                                class="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/20"
+                                class="w-4 h-4 rounded border-gray-300 dark:border-zinc-700 text-indigo-500 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 dark:bg-zinc-900"
                                 prop:checked=move || save_connection.get()
                                 on:change=move |ev| {
                                     let checked = event_target_checked(&ev);
                                     save_connection.set(checked);
                                 }
                             />
-                            <label class="text-[13px] text-gray-700 cursor-pointer">"Save connection"</label>
+                            <label class="text-[13px] text-gray-700 dark:text-zinc-300 cursor-pointer">"Save connection"</label>
                         </div>
                         // Connection name (shown when save is checked)
                         {move || save_connection.get().then(|| view! {
@@ -164,22 +164,22 @@ pub fn ConnectionForm(
                     </div>
 
                     {move || error_message.get().map(|msg| view! {
-                        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
-                            <IconAlertTriangle class="w-4 h-4 text-red-500 shrink-0" />
-                            <span class="text-[13px] text-red-700">{msg}</span>
+                        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-md">
+                            <IconAlertTriangle class="w-4 h-4 text-red-500 dark:text-red-400 shrink-0" />
+                            <span class="text-[13px] text-red-700 dark:text-red-400">{msg}</span>
                         </div>
                     })}
 
                     <div class="mt-4 flex gap-2">
                         <button
-                            class="text-gray-500 hover:bg-gray-100 hover:text-gray-900 text-[13px] font-medium px-3 py-1.5 rounded-md flex-1 transition-colors duration-100 flex items-center justify-center gap-1.5"
+                            class="text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-neutral-50 text-[13px] font-medium px-3 py-1.5 rounded-md flex-1 transition-colors duration-100 flex items-center justify-center gap-1.5"
                             on:click=move |_| on_back.run(())
                         >
                             <IconArrowLeft class="w-4 h-4" />
                             "Back"
                         </button>
                         <button
-                            class="bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] font-medium px-3 py-1.5 rounded-md flex-1 transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="bg-indigo-500 hover:bg-indigo-600 dark:hover:bg-indigo-400 text-white text-[13px] font-medium px-3 py-1.5 rounded-md flex-1 transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled=move || connecting.get()
                             on:click=move |_| on_connect.run(())
                         >

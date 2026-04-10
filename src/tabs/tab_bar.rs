@@ -107,7 +107,7 @@ pub fn TabBar(state: TabState) -> impl IntoView {
     let state_close = state;
 
     view! {
-        <div class="flex items-center h-10 border-b border-gray-200 bg-white px-2 gap-0.5 overflow-x-auto shrink-0">
+        <div class="flex items-center h-10 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-neutral-950 px-2 gap-0.5 overflow-x-auto shrink-0">
             {move || {
                 let current_tabs = tabs.get();
                 let current_active = active_id.get();
@@ -121,9 +121,9 @@ pub fn TabBar(state: TabState) -> impl IntoView {
                     let is_active = current_active == Some(tab_id);
 
                     let base_class = if is_active {
-                        "group flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-gray-900 bg-white border-b-2 border-indigo-500 cursor-pointer transition-colors duration-100 shrink-0"
+                        "group flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-gray-900 dark:text-neutral-50 bg-white dark:bg-neutral-950 border-b-2 border-indigo-500 cursor-pointer transition-colors duration-100 shrink-0"
                     } else {
-                        "group flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-gray-500 rounded-t-md hover:text-gray-900 hover:bg-gray-50 cursor-pointer transition-colors duration-100 shrink-0"
+                        "group flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-gray-500 dark:text-zinc-400 rounded-t-md hover:text-gray-900 dark:hover:text-neutral-50 hover:bg-gray-50 dark:hover:bg-white/[0.03] cursor-pointer transition-colors duration-100 shrink-0"
                     };
 
                     let is_table = matches!(tab.kind, TabKind::TableView(_));
@@ -137,19 +137,19 @@ pub fn TabBar(state: TabState) -> impl IntoView {
                             on:click=move |_| switch.switch(tab_id)
                         >
                             {if is_table {
-                                view! { <IconTable class="w-3.5 h-3.5 text-gray-400 shrink-0" /> }.into_any()
+                                view! { <IconTable class="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" /> }.into_any()
                             } else {
-                                view! { <IconTerminal class="w-3.5 h-3.5 text-gray-400 shrink-0" /> }.into_any()
+                                view! { <IconTerminal class="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" /> }.into_any()
                             }}
                             <span class="truncate max-w-[120px]">{tab.title}</span>
                             <button
-                                class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 transition-opacity duration-100"
+                                class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition-opacity duration-100"
                                 on:click=move |ev| {
                                     ev.stop_propagation();
                                     close.close(tab_id);
                                 }
                             >
-                                <IconX class="w-3 h-3 text-gray-400" />
+                                <IconX class="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                             </button>
                         </div>
                     }

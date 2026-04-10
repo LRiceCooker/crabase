@@ -43,20 +43,20 @@ pub fn DataTable(
         <div class="overflow-auto flex-1">
             <table class="w-full text-xs font-mono">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                    <tr class="bg-gray-50 dark:bg-[#0F0F11] border-b border-gray-200 dark:border-zinc-800 sticky top-0 z-10">
                         {columns.iter().map(|col| {
                             let name = col.name.clone();
                             let data_type = col.data_type.clone();
                             view! {
-                                <th class="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 border-r border-gray-100 select-none whitespace-nowrap">
+                                <th class="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-zinc-400 border-r border-gray-100 dark:border-[#1F1F23] select-none whitespace-nowrap">
                                     <div class="flex flex-col gap-0.5">
                                         <span>{name}</span>
-                                        <span class="text-[10px] font-normal text-gray-400 normal-case tracking-normal">{data_type}</span>
+                                        <span class="text-[10px] font-normal text-gray-400 dark:text-zinc-500 normal-case tracking-normal">{data_type}</span>
                                     </div>
                                 </th>
                             }
                         }).collect::<Vec<_>>()}
-                        <th class="px-2 py-2 text-left text-[11px] font-medium text-gray-500 border-r border-gray-100 select-none w-8"></th>
+                        <th class="px-2 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-zinc-400 border-r border-gray-100 dark:border-[#1F1F23] select-none w-8"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,13 +68,13 @@ pub fn DataTable(
                         current_rows.into_iter().enumerate().map(|(row_idx, row)| {
                             let col_types = col_types.clone();
                             let row_class = if changes.is_row_deleted(row_idx) {
-                                "bg-red-50 border-l-2 border-l-red-500 line-through opacity-60"
+                                "bg-red-50 dark:bg-red-950/60 border-l-2 border-l-red-500 dark:border-l-red-400 line-through opacity-60"
                             } else if changes.is_row_added(row_idx) {
-                                "bg-emerald-50 border-l-2 border-emerald-500"
+                                "bg-emerald-50 dark:bg-emerald-950/60 border-l-2 border-emerald-500 dark:border-emerald-400"
                             } else if changes.is_row_modified(row_idx) {
-                                "bg-amber-50 border-l-2 border-amber-500"
+                                "bg-amber-50 dark:bg-amber-950/60 border-l-2 border-amber-500 dark:border-amber-400"
                             } else {
-                                "hover:bg-gray-50"
+                                "hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                             };
                             view! {
                                 <tr class=row_class>
@@ -87,7 +87,7 @@ pub fn DataTable(
                                             let dt = data_type.clone();
                                             let cell_val = cell.clone();
                                             view! {
-                                                <td class="px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 ring-2 ring-indigo-500/30 bg-white max-w-[300px]">
+                                                <td class="px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 ring-2 ring-indigo-500/30 dark:ring-indigo-500/60 bg-white dark:bg-zinc-900 max-w-[300px]">
                                                     <CellEditor
                                                         data_type=dt
                                                         value=cell_val
@@ -109,13 +109,13 @@ pub fn DataTable(
                                             let (text, is_null) = format_cell(&cell);
                                             let cell_modified = changes.is_cell_modified(row_idx, col_idx);
                                             let class = if is_null && cell_modified {
-                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] text-gray-300 italic cursor-pointer bg-amber-100/50"
+                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic cursor-pointer bg-amber-100/50 dark:bg-amber-900/40"
                                             } else if is_null {
-                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] text-gray-300 italic cursor-pointer"
+                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic cursor-pointer"
                                             } else if cell_modified {
-                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] cursor-pointer bg-amber-100/50"
+                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] cursor-pointer bg-amber-100/50 dark:bg-amber-900/40"
                                             } else {
-                                                "px-3 py-1.5 border-b border-gray-100 border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
+                                                "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] cursor-pointer"
                                             };
                                             let title = text.clone();
                                             let cell_for_json = cell.clone();
@@ -140,11 +140,11 @@ pub fn DataTable(
                                             }.into_any()
                                         }
                                     }).collect::<Vec<_>>()}
-                                    <td class="px-2 py-1.5 border-b border-gray-100 text-center w-8">
+                                    <td class="px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] text-center w-8">
                                         {if !changes.is_row_deleted(row_idx) {
                                             Some(view! {
                                                 <button
-                                                    class="text-gray-300 hover:text-red-500 p-0.5 rounded transition-colors duration-100"
+                                                    class="text-gray-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 p-0.5 rounded transition-colors duration-100"
                                                     title="Delete row"
                                                     on:click=move |_| on_delete_row.run(row_idx)
                                                 >

@@ -53,7 +53,7 @@ pub fn CellEditor(
             view! {
                 <input
                     type="number"
-                    class="w-full bg-white text-xs font-mono px-1 py-0 border-0 outline-none"
+                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
                     prop:value=move || val.get()
                     on:input=move |ev| set_val.set(event_target_value(&ev))
                     on:keydown=move |ev| {
@@ -98,7 +98,7 @@ pub fn CellEditor(
                 <input
                     type="number"
                     step="any"
-                    class="w-full bg-white text-xs font-mono px-1 py-0 border-0 outline-none"
+                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
                     prop:value=move || val.get()
                     on:input=move |ev| set_val.set(event_target_value(&ev))
                     on:keydown=move |ev| {
@@ -146,7 +146,7 @@ pub fn CellEditor(
             view! {
                 <input
                     type=input_type
-                    class="w-full bg-white text-xs font-mono px-1 py-0 border-0 outline-none"
+                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
                     prop:value=move || val.get()
                     on:input=move |ev| set_val.set(event_target_value(&ev))
                     on:keydown=move |ev| {
@@ -188,7 +188,7 @@ pub fn CellEditor(
             view! {
                 <input
                     type="text"
-                    class="w-full bg-white text-xs font-mono px-1 py-0 border-0 outline-none"
+                    class="w-full bg-white dark:bg-zinc-900 text-xs font-mono text-gray-900 dark:text-neutral-50 px-1 py-0 border-0 outline-none"
                     prop:value=move || val.get()
                     on:input=move |ev| set_val.set(event_target_value(&ev))
                     on:keydown=move |ev| {

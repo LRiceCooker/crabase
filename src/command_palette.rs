@@ -109,15 +109,15 @@ pub fn CommandPalette(
                         on:click=move |_| set_show.set(false)
                     ></div>
                     // Palette panel
-                    <div class="relative z-10 w-[560px] max-h-[400px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden mt-[20vh]">
+                    <div class="relative z-10 w-[560px] max-h-[400px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl dark:shadow-black/40 border border-gray-200 dark:border-white/[0.08] overflow-hidden mt-[20vh] dark:ring-1 dark:ring-white/[0.06]">
                         // Search input
-                        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                            <IconSearch class="w-4 h-4 text-gray-400 shrink-0" />
+                        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-[#1F1F23]">
+                            <IconSearch class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
                             <input
                                 type="text"
                                 node_ref=input_ref
                                 placeholder="Type a command..."
-                                class="text-base w-full focus:outline-none text-gray-900 placeholder-gray-400"
+                                class="text-base w-full focus:outline-none bg-transparent text-gray-900 dark:text-neutral-50 placeholder-gray-400 dark:placeholder-zinc-500"
                                 prop:value=move || query.get()
                                 on:input=move |ev| set_query.set(event_target_value(&ev))
                                 on:keydown={
@@ -154,16 +154,16 @@ pub fn CommandPalette(
                             />
                         </div>
                         // Command group
-                        <div class="text-[11px] font-medium text-gray-400 uppercase px-4 py-2">"Commands"</div>
+                        <div class="text-[11px] font-medium text-gray-400 dark:text-zinc-500 uppercase px-4 py-2">"Commands"</div>
                         // Command list
                         <div class="pb-2 max-h-64 overflow-y-auto">
                             {filtered.into_iter().enumerate().map(|(idx, (name, desc, shortcut))| {
                                 let cmd_name = name.to_string();
                                 let is_selected = selected_idx.get() == idx;
                                 let class = if is_selected {
-                                    "px-4 py-2 flex items-center justify-between text-[13px] cursor-pointer bg-indigo-50 text-indigo-600"
+                                    "px-4 py-2 flex items-center justify-between text-[13px] cursor-pointer bg-indigo-50 dark:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400"
                                 } else {
-                                    "px-4 py-2 flex items-center justify-between text-[13px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-100"
+                                    "px-4 py-2 flex items-center justify-between text-[13px] cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-500/25 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-100"
                                 };
                                 view! {
                                     <div
@@ -174,12 +174,12 @@ pub fn CommandPalette(
                                         }
                                     >
                                         <div class="flex flex-col">
-                                            <span class="font-medium text-gray-900">{name.to_string()}</span>
-                                            <span class="text-[11px] text-gray-400">{desc.to_string()}</span>
+                                            <span class="font-medium text-gray-900 dark:text-neutral-50">{name.to_string()}</span>
+                                            <span class="text-[11px] text-gray-400 dark:text-zinc-500">{desc.to_string()}</span>
                                         </div>
                                         {if !shortcut.is_empty() {
                                             Some(view! {
-                                                <span class="text-[11px] text-gray-400 font-mono">{shortcut.to_string()}</span>
+                                                <span class="text-[11px] text-gray-400 dark:text-zinc-500 font-mono">{shortcut.to_string()}</span>
                                             })
                                         } else {
                                             None

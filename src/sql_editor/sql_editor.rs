@@ -37,7 +37,7 @@ pub fn SqlEditor(
     view! {
         <div class="flex flex-1 overflow-hidden">
             // Line number gutter
-            <div class="bg-gray-50 text-gray-400 text-right pr-2 pl-2 select-none border-r border-gray-100 font-mono text-[13px] leading-relaxed pt-2 overflow-hidden shrink-0">
+            <div class="bg-gray-50 dark:bg-[#0F0F11] text-gray-400 dark:text-zinc-500 text-right pr-2 pl-2 select-none border-r border-gray-100 dark:border-[#1F1F23] font-mono text-[13px] leading-relaxed pt-2 overflow-hidden shrink-0">
                 {move || {
                     (1..=line_count()).map(|n| {
                         view! { <div>{n}</div> }
@@ -46,7 +46,7 @@ pub fn SqlEditor(
             </div>
             // Editor textarea
             <textarea
-                class="flex-1 bg-white font-mono text-[13px] leading-relaxed p-2 resize-none focus:outline-none text-gray-900"
+                class="flex-1 bg-white dark:bg-[#0D0D0F] font-mono text-[13px] leading-relaxed p-2 resize-none focus:outline-none text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-500"
                 spellcheck="false"
                 autocomplete="off"
                 prop:value=move || sql.get()

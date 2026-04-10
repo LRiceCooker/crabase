@@ -38,11 +38,11 @@ pub fn Pagination(
     };
 
     view! {
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50 text-[12px] text-gray-500 shrink-0">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-[#0F0F11] text-[12px] text-gray-500 dark:text-zinc-400 shrink-0">
             <div class="flex items-center gap-2">
                 <span>"Rows per page:"</span>
                 <select
-                    class="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded px-1.5 py-0.5 text-[12px] text-gray-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 focus:border-indigo-500"
                     on:change=move |ev| {
                         if let Ok(v) = event_target_value(&ev).parse::<u32>() {
                             on_page_size_change.run(v);
@@ -53,7 +53,7 @@ pub fn Pagination(
                     <option value="50" selected=move || page_size.get() == 50>"50"</option>
                     <option value="100" selected=move || page_size.get() == 100>"100"</option>
                 </select>
-                <span class="text-gray-400">
+                <span class="text-gray-400 dark:text-zinc-500">
                     {move || format!("{} rows", total_count.get())}
                 </span>
             </div>
@@ -62,14 +62,14 @@ pub fn Pagination(
                     {move || format!("Page {} of {}", page.get(), total_pages())}
                 </span>
                 <button
-                    class="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-100"
+                    class="p-1 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-100"
                     disabled=move || !can_prev()
                     on:click=on_prev
                 >
                     <IconChevronLeft class="w-4 h-4" />
                 </button>
                 <button
-                    class="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-100"
+                    class="p-1 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-100"
                     disabled=move || !can_next()
                     on:click=on_next
                 >

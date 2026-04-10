@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 8 — Theme System & Settings Foundation
-- [ ] Apply dark theme palette from specs/design.md to ALL existing components (use `dark:` variants)
 - [ ] Backend: `load_settings` and `save_settings` commands (read/write `app_data_dir/settings.json`)
 - [ ] Frontend: theme.rs provider that reads settings, applies `dark` class to `<html>`, exposes a toggle
 - [ ] Add "Disconnect" button in header that closes connection and returns to connection screen
@@ -143,3 +142,4 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [x] Non-fatal pg_restore errors treated as success
 - [x] pg_restore --clean --if-exists for idempotent restores
 - [x] Add `dark` class strategy to Tailwind config and update Trunk build
+- [x] Apply dark theme palette from specs/design.md to ALL existing components (use `dark:` variants)
