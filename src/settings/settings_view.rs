@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::icons::IconX;
+use super::shortcuts_settings::ShortcutsSetting;
 use super::theme_setting::ThemeSetting;
 
 #[component]
@@ -30,11 +31,7 @@ pub fn SettingsView(
                 // Divider
                 <div class="border-t border-gray-200 dark:border-zinc-800 my-4"></div>
 
-                // Keyboard shortcuts placeholder
-                <div class="flex flex-col gap-1.5">
-                    <label class="text-[13px] font-semibold text-gray-700 dark:text-zinc-300">"Keyboard Shortcuts"</label>
-                    <p class="text-[13px] text-gray-500 dark:text-zinc-400">"Shortcut customization coming soon."</p>
-                </div>
+                <ShortcutsSetting />
             </div>
         </div>
     }
