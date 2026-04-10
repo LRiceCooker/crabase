@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 9 — Settings View
-- [ ] settings/shortcut_input.rs: clickable shortcut input that listens for key combinations to bind
 - [ ] settings/shortcuts_settings.rs: list of all configurable shortcuts grouped by category, with click-to-rebind, "Reset to defaults" button
 - [ ] All existing shortcuts (Cmd+Shift+P, Cmd+P, Cmd+S, Cmd+/, Cmd+Z, Cmd+F, etc.) registered through shortcuts.rs and customizable
 
@@ -141,3 +140,4 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [x] Add "Settings" command in the command palette (Cmd+Shift+P)
 - [x] settings/theme_setting.rs: Light / Dark / System toggle that persists to settings.json and applies immediately
 - [x] shortcuts.rs: keyboard shortcuts registry (default bindings + dispatcher)
+- [x] settings/shortcut_input.rs: clickable shortcut input that listens for key combinations to bind
