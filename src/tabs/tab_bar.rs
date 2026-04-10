@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use std::collections::HashSet;
 
 use crate::icons::{IconTable, IconTerminal, IconX};
+use crate::tabs::tab_title::TabTitle;
 
 // ── Tab types ───────────────────────────────────────────
 
@@ -117,15 +118,30 @@ impl TabState {
             });
         }
     }
+
+    /// Rename a tab's title.
+    pub fn rename_tab(&self, id: usize, new_title: String) {
+        self.tabs.update(|tabs| {
+            if let Some(tab) = tabs.iter_mut().find(|t| t.id == id) {
+                tab.title = new_title;
+            }
+        });
+    }
 }
 
 // ── TabBar component ────────────────────────────────────
 
 #[component]
-pub fn TabBar(state: TabState) -> impl IntoView {
+pub fn TabBar(
+    state: TabState,
+    /// Called when a SQL editor tab is renamed: (tab_id, old_name, new_name).
+    #[prop(optional)]
+    on_tab_rename: Option<Callback<(usize, String, String)>>,
+) -> impl IntoView {
     let tabs = state.tabs;
     let active_id = state.active_id;
     let dirty_tabs = state.dirty_tabs;
+    let state_rename = state.clone();
     let state_switch = state.clone();
     let state_close = state;
 
@@ -150,9 +166,24 @@ pub fn TabBar(state: TabState) -> impl IntoView {
                     };
 
                     let is_table = matches!(tab.kind, TabKind::TableView(_));
+                    let is_sql = matches!(tab.kind, TabKind::SqlEditor);
+                    let tab_title = tab.title.clone();
 
                     let switch = state_switch.clone();
                     let close = state_close.clone();
+                    let rename_state = state_rename.clone();
+
+                    let on_rename = if is_sql {
+                        let old_name = tab_title.clone();
+                        Some(Callback::new(move |new_name: String| {
+                            rename_state.rename_tab(tab_id, new_name.clone());
+                            if let Some(cb) = on_tab_rename {
+                                cb.run((tab_id, old_name.clone(), new_name));
+                            }
+                        }))
+                    } else {
+                        None
+                    };
 
                     view! {
                         <div
@@ -164,7 +195,11 @@ pub fn TabBar(state: TabState) -> impl IntoView {
                             } else {
                                 view! { <IconTerminal class="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" /> }.into_any()
                             }}
-                            <span class="truncate max-w-[120px]">{tab.title}</span>
+                            {if let Some(rename_cb) = on_rename {
+                                view! { <TabTitle title=tab_title editable=is_sql on_rename=rename_cb /> }.into_any()
+                            } else {
+                                view! { <TabTitle title=tab_title editable=is_sql /> }.into_any()
+                            }}
                             // Dirty indicator dot
                             {move || {
                                 if dirty_tabs.get().contains(&tab_id) {

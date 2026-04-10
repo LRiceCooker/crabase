@@ -405,7 +405,14 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                 // Right panel: tab bar + content
                 <div class="flex-1 flex flex-col overflow-hidden">
                     // Tab bar — h-10
-                    <TabBar state=tab_state.clone() />
+                    <TabBar
+                        state=tab_state.clone()
+                        on_tab_rename=Callback::new(move |(_tab_id, old_name, new_name): (usize, String, String)| {
+                            spawn_local(async move {
+                                let _ = tauri::rename_query(&old_name, &new_name).await;
+                            });
+                        })
+                    />
 
                     // Content area — scrolls independently
                     <main class="flex-1 overflow-y-auto">
