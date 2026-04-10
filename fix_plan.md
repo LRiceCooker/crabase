@@ -5,9 +5,6 @@
 ## Backlog
 
 ### Phase 15 — Right-Click Context Menu
-- [ ] context_menu.rs: right-click context menu component with options
-- [ ] Right-click on a row opens menu; right-click on a row that is part of a multi-selection keeps the selection and shows the same menu
-- [ ] Option: **Delete** — marks row(s) for deletion (red highlight, persists on save)
 - [ ] Option: **Duplicate** — duplicates row(s) as new rows (green highlight, persists on save)
 - [ ] Option: **Copy as JSON** — copies row(s) to clipboard as JSON
 - [ ] Option: **Copy as SQL INSERT** — copies row(s) to clipboard as SQL INSERT statements
@@ -37,6 +34,7 @@
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Option: **Delete** — marks row(s) for deletion (red highlight, persists on save)
 - [x] Right-click on a row opens menu; right-click on a row that is part of a multi-selection keeps the selection and shows the same menu
 - [x] context_menu.rs: right-click context menu component with options
 - [x] Remove the inline delete button column from each row (deletion now via context menu)
