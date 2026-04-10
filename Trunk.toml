@@ -9,3 +9,8 @@ watch = ["src", "index.html", "input.css"]
 stage = "pre_build"
 command = "sh"
 command_arguments = ["-c", "npx tailwindcss -i input.css -o style/output.css --minify"]
+
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "npx esbuild js/codemirror-bridge.js --bundle --outfile=js/codemirror-bundle.js --format=iife --minify"]

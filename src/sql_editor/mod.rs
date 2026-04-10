@@ -1,3 +1,4 @@
+pub mod codemirror;
 pub mod sql_editor;
 pub mod sql_results;
 pub mod sql_tab;
