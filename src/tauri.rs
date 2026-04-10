@@ -256,6 +256,20 @@ pub struct ColumnInfo {
     pub data_type: String,
     pub is_nullable: bool,
     pub is_primary_key: bool,
+    #[serde(default)]
+    pub is_auto_increment: bool,
+    #[serde(default)]
+    pub is_array: bool,
+    #[serde(default)]
+    pub is_enum: bool,
+    #[serde(default)]
+    pub enum_values: Vec<String>,
+    #[serde(default)]
+    pub max_length: Option<i32>,
+    #[serde(default)]
+    pub numeric_precision: Option<i32>,
+    #[serde(default)]
+    pub numeric_scale: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
