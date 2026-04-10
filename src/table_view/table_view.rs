@@ -399,6 +399,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             columns=columns.get()
                             rows=rows
                             changes=changes
+                            page=page.get()
+                            page_size=page_size.get()
                             on_cell_edit=on_cell_edit
                             on_json_edit=on_json_edit
                             on_array_edit=on_array_edit

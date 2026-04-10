@@ -105,6 +105,8 @@ pub fn DataTable(
     columns: Vec<ColumnInfo>,
     rows: RwSignal<Vec<Vec<serde_json::Value>>>,
     changes: ChangeTracker,
+    page: u32,
+    page_size: u32,
     on_cell_edit: Callback<CellEdit>,
     on_json_edit: Callback<JsonEditRequest>,
     on_array_edit: Callback<ArrayEditRequest>,
@@ -122,6 +124,7 @@ pub fn DataTable(
             <table class="w-full text-xs font-mono">
                 <thead>
                     <tr class="bg-gray-50 dark:bg-[#0F0F11] border-b border-gray-200 dark:border-zinc-800 sticky top-0 z-10">
+                        <th class="sticky left-0 z-20 bg-gray-50 dark:bg-[#0F0F11] px-2 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-zinc-400 border-r border-gray-100 dark:border-[#1F1F23] select-none w-10"></th>
                         {columns.iter().map(|col| {
                             let name = col.name.clone();
                             let data_type = col.data_type.clone();
@@ -154,8 +157,12 @@ pub fn DataTable(
                             } else {
                                 "hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                             };
+                            let global_idx = (page - 1) * page_size + (row_idx as u32) + 1;
                             view! {
                                 <tr class=row_class>
+                                    <td class="sticky left-0 z-[5] bg-gray-50 dark:bg-[#0F0F11] px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono">
+                                        {global_idx}
+                                    </td>
                                     {row.into_iter().enumerate().map(|(col_idx, cell)| {
                                         let is_editing = active == Some((row_idx, col_idx));
                                         let col_info = col_types.get(col_idx).cloned().unwrap_or_else(|| ColumnInfo {
