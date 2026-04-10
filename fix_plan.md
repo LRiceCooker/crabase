@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 10 — SQL Editor Rewrite (CodeMirror 6)
-- [ ] Replace existing SQL editor with CodeMirror integration. Verify VS Code shortcuts work natively (Cmd+Z, Cmd+Shift+Z, Cmd+F, Cmd+D, Cmd+/, Cmd+A)
 - [ ] Auto-focus the editor when SQL editor tab is opened or activated
 - [ ] CodeMirror theme: switch between light theme and dark theme (one-dark) based on app theme
 - [ ] Backend: `get_columns_for_autocomplete(table_names)` command — returns table → columns map
@@ -101,6 +100,7 @@ This is a foundational fix: the current table view incorrectly displays many Pos
 - [ ] Verify that both windows share the same config files (settings, saved connections, queries)
 
 ## Completed
+- [x] Replace existing SQL editor with CodeMirror integration. Verify VS Code shortcuts work natively (Cmd+Z, Cmd+Shift+Z, Cmd+F, Cmd+D, Cmd+/, Cmd+A)
 - [x] Initialize Tauri v2 + Leptos (CSR) + Tailwind + DaisyUI
 - [x] Configure sqlx with PostgreSQL connection pool
 - [x] Tauri commands: connect_db, get_connection_info, list_tables, disconnect_db

@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
-use crate::sql_editor::sql_editor::SqlEditor;
+use crate::sql_editor::codemirror::{CodeMirrorEditor, CodeMirrorHandle};
 use crate::sql_editor::sql_results::SqlResults;
 use crate::sql_editor::sql_toolbar::SqlToolbar;
 use crate::tauri;
@@ -9,12 +9,15 @@ use crate::tauri;
 /// Full SQL editor tab: toolbar + editor + results pane.
 #[component]
 pub fn SqlTab() -> impl IntoView {
-    let sql = RwSignal::new(String::new());
+    let (cm_handle, set_cm_handle) = signal(Option::<CodeMirrorHandle>::None);
     let (running, set_running) = signal(false);
     let (result, set_result) = signal(Option::<Result<tauri::QueryResult, String>>::None);
 
     let on_run = Callback::new(move |_: ()| {
-        let query = sql.get();
+        let Some(handle) = cm_handle.get_untracked() else {
+            return;
+        };
+        let query = handle.get_content();
         if query.trim().is_empty() {
             return;
         }
@@ -32,7 +35,11 @@ pub fn SqlTab() -> impl IntoView {
         <div class="flex flex-col h-full">
             <SqlToolbar on_run=on_run running=running />
             <div class="flex flex-col flex-1 overflow-hidden">
-                <SqlEditor sql=sql />
+                <CodeMirrorEditor
+                    language="sql".to_string()
+                    placeholder="Write your SQL query here...".to_string()
+                    handle=set_cm_handle
+                />
                 <SqlResults result=result />
             </div>
         </div>
