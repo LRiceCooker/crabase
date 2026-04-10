@@ -566,6 +566,14 @@ pub async fn load_query(name: &str) -> Result<SavedQuery, String> {
         .map_err(|e| format!("Failed to parse query: {}", e))
 }
 
+pub async fn open_new_window() -> Result<(), String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({})).map_err(|e| e.to_string())?;
+    invoke("open_new_window", args)
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to open window".to_string()))?;
+    Ok(())
+}
+
 pub async fn listen_restore_logs(
     callback: impl Fn(String) + 'static,
 ) -> Result<js_sys::Function, String> {
