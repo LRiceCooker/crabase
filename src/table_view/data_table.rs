@@ -108,6 +108,7 @@ pub fn DataTable(
     rows: RwSignal<Vec<Vec<serde_json::Value>>>,
     changes: ChangeTracker,
     selected_rows: RwSignal<HashSet<usize>>,
+    selection_anchor: RwSignal<Option<usize>>,
     page: u32,
     page_size: u32,
     on_cell_edit: Callback<CellEdit>,
@@ -194,8 +195,24 @@ pub fn DataTable(
                                     <td
                                         class=index_td_class
                                         on:click=move |ev: web_sys::MouseEvent| {
-                                            if ev.meta_key() || ev.ctrl_key() {
-                                                // Cmd+click (Mac) or Ctrl+click (Win/Linux): toggle row in selection
+                                            if ev.shift_key() {
+                                                // Shift+click: range select from anchor to clicked row
+                                                let anchor = selection_anchor.get().unwrap_or(row_idx);
+                                                let start = anchor.min(row_idx);
+                                                let end = anchor.max(row_idx);
+                                                let mut set = if ev.meta_key() || ev.ctrl_key() {
+                                                    // Shift+Cmd: add range to existing selection
+                                                    selected_rows.get()
+                                                } else {
+                                                    HashSet::new()
+                                                };
+                                                for i in start..=end {
+                                                    set.insert(i);
+                                                }
+                                                selected_rows.set(set);
+                                                // Don't update anchor on shift+click
+                                            } else if ev.meta_key() || ev.ctrl_key() {
+                                                // Cmd+click: toggle row in selection
                                                 let mut set = selected_rows.get();
                                                 if set.contains(&row_idx) {
                                                     set.remove(&row_idx);
@@ -203,11 +220,13 @@ pub fn DataTable(
                                                     set.insert(row_idx);
                                                 }
                                                 selected_rows.set(set);
+                                                selection_anchor.set(Some(row_idx));
                                             } else {
                                                 // Plain click: select single row
                                                 let mut new_set = HashSet::new();
                                                 new_set.insert(row_idx);
                                                 selected_rows.set(new_set);
+                                                selection_anchor.set(Some(row_idx));
                                             }
                                         }
                                     >

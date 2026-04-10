@@ -31,6 +31,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     let (xml_edit, set_xml_edit) = signal(Option::<XmlEditRequest>::None);
     let changes = ChangeTracker::new();
     let selected_rows = RwSignal::new(HashSet::<usize>::new());
+    let selection_anchor = RwSignal::new(Option::<usize>::None);
 
     // Fetch data helper (called when table, page, or page_size change)
     let fetch_data = move |name: String, pg: u32, ps: u32| {
@@ -404,6 +405,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             rows=rows
                             changes=changes
                             selected_rows=selected_rows
+                            selection_anchor=selection_anchor
                             page=page.get()
                             page_size=page_size.get()
                             on_cell_edit=on_cell_edit
