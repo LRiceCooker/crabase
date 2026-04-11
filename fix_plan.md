@@ -9,7 +9,6 @@
 ### Phase 20 — Overlay Mutual Exclusion Bug Fix
 
 ### Phase 21 — Type Display Fixes
-- [ ] **Bug fix**: timestamp/date columns in tables (e.g. `created_at`, `deleted_at`) currently sometimes show the literal type name `Timestamp` as a string. Fix the backend serialization to always return the actual value, formatted as ISO string. Frontend displays as `YYYY-MM-DD HH:MM:SS` and clicking the cell opens a **date picker** to edit it. **The date picker output MUST be re-formatted to a Postgres-compatible string** (e.g. `2026-04-10 14:30:00` for timestamp, `2026-04-10` for date, `2026-04-10T14:30:00Z` for timestamptz) before sending to the backend, otherwise the SQL UPDATE will fail.
 - [ ] SQL editor read-only result table: must use the same cell formatting and click-to-view behavior as the editable table view. JSON cells clickable to open the JSON modal in **read-only mode**, arrays expand, enums show their value, dates are formatted.
 
 ### Phase 22 — JSON Modal Fixes
@@ -82,6 +81,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] **Bug fix**: timestamp/date columns now properly serialized via chrono with Postgres-compatible formatting; date picker output reformatted
 - [x] **Bug fix**: schema-prefixed enums — fetch udt_schema for correct enum value lookup across schemas
 - [x] **Bug fix**: when not on `public` schema, query results currently show each cell as the raw tagged-JSON object — frontend now always extracts the inner value via unwrap_tagged
 - [x] Refactor overlay state management so only ONE overlay can be open at a time (Command Palette, Table Finder, Find Bar, Restore, Settings, Chat)

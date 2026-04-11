@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
 use sqlx::{Column, Executor, Row, TypeInfo};
@@ -838,6 +839,26 @@ fn pg_value_to_json(row: &sqlx::postgres::PgRow, idx: usize) -> serde_json::Valu
         },
         "JSON" | "JSONB" => match row.try_get::<Option<serde_json::Value>, _>(idx) {
             Ok(Some(v)) => tagged(canonical, v),
+            Ok(None) => serde_json::Value::Null,
+            Err(_) => tagged_unknown(type_name),
+        },
+        "TIMESTAMP" => match row.try_get::<Option<NaiveDateTime>, _>(idx) {
+            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%Y-%m-%d %H:%M:%S").to_string())),
+            Ok(None) => serde_json::Value::Null,
+            Err(_) => tagged_unknown(type_name),
+        },
+        "TIMESTAMPTZ" => match row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(idx) {
+            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%Y-%m-%dT%H:%M:%SZ").to_string())),
+            Ok(None) => serde_json::Value::Null,
+            Err(_) => tagged_unknown(type_name),
+        },
+        "DATE" => match row.try_get::<Option<NaiveDate>, _>(idx) {
+            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%Y-%m-%d").to_string())),
+            Ok(None) => serde_json::Value::Null,
+            Err(_) => tagged_unknown(type_name),
+        },
+        "TIME" | "TIMETZ" => match row.try_get::<Option<NaiveTime>, _>(idx) {
+            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%H:%M:%S").to_string())),
             Ok(None) => serde_json::Value::Null,
             Err(_) => tagged_unknown(type_name),
         },
