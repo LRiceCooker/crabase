@@ -152,7 +152,7 @@ impl DbState {
                 .unwrap_or_else(|| "public".to_string())
         };
 
-        // Extended query: fetch type info, max_length, precision, scale, default, UDT name
+        // Extended query: fetch type info, max_length, precision, scale, default, UDT name + schema
         let rows: Vec<(
             String,          // column_name
             String,          // data_type
@@ -163,6 +163,7 @@ impl DbState {
             Option<i32>,     // numeric_scale
             Option<String>,  // column_default
             Option<String>,  // udt_name
+            Option<String>,  // udt_schema
         )> = sqlx::query_as(
             r#"
             SELECT
@@ -174,7 +175,8 @@ impl DbState {
                 c.numeric_precision::int4,
                 c.numeric_scale::int4,
                 c.column_default,
-                c.udt_name
+                c.udt_name,
+                c.udt_schema
             FROM information_schema.columns c
             LEFT JOIN information_schema.key_column_usage kcu
                 ON c.table_schema = kcu.table_schema
@@ -196,7 +198,7 @@ impl DbState {
         .map_err(|e| format!("Failed to get column info: {}", e))?;
 
         let mut columns = Vec::new();
-        for (name, data_type, is_nullable, constraint_type, max_len, precision, scale, col_default, udt_name) in rows {
+        for (name, data_type, is_nullable, constraint_type, max_len, precision, scale, col_default, udt_name, udt_schema) in rows {
             let is_auto = col_default
                 .as_deref()
                 .map(|d| d.starts_with("nextval("))
@@ -205,9 +207,11 @@ impl DbState {
             let is_enum = data_type == "USER-DEFINED";
 
             // Fetch enum values if this is an enum column
+            // Use the enum's own schema (udt_schema), not the table's schema
             let enum_values = if is_enum {
                 if let Some(ref udt) = udt_name {
-                    Self::fetch_enum_values(&pool, &schema, udt).await.unwrap_or_default()
+                    let enum_schema = udt_schema.as_deref().unwrap_or(&schema);
+                    Self::fetch_enum_values(&pool, enum_schema, udt).await.unwrap_or_default()
                 } else {
                     Vec::new()
                 }
