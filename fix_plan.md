@@ -9,7 +9,6 @@
 ### Phase 20 — Overlay Mutual Exclusion Bug Fix
 
 ### Phase 21 — Type Display Fixes
-- [ ] SQL editor read-only result table: must use the same cell formatting and click-to-view behavior as the editable table view. JSON cells clickable to open the JSON modal in **read-only mode**, arrays expand, enums show their value, dates are formatted.
 
 ### Phase 22 — JSON Modal Fixes
 - [ ] JSON cell editor modal: replace current implementation with CodeMirror 6 + `@codemirror/lang-json` (same setup as the SQL editor)
@@ -81,6 +80,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] SQL editor read-only result table: same cell formatting as editable table (boolean checkmarks, JSON clickable to read-only modal, arrays expanded, dates formatted)
 - [x] **Bug fix**: timestamp/date columns now properly serialized via chrono with Postgres-compatible formatting; date picker output reformatted
 - [x] **Bug fix**: schema-prefixed enums — fetch udt_schema for correct enum value lookup across schemas
 - [x] **Bug fix**: when not on `public` schema, query results currently show each cell as the raw tagged-JSON object — frontend now always extracts the inner value via unwrap_tagged
