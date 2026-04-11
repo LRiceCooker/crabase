@@ -3,7 +3,8 @@
 
 import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor, highlightSpecialChars, placeholder as cmPlaceholder } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment, toggleBlockComment, copyLineDown, moveLineUp, moveLineDown, deleteLine, selectLine, cursorMatchingBracket } from "@codemirror/commands";
+import { selectNextOccurrence } from "@codemirror/search";
 import { sql, PostgreSQL } from "@codemirror/lang-sql";
 import { json } from "@codemirror/lang-json";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
@@ -192,6 +193,14 @@ function buildExtensions(opts, langCompartment) {
     foldGutter(),
     history(),
     keymap.of([
+      // VS Code-style keybindings (before defaults so they take priority)
+      { key: "Mod-/", run: toggleComment },
+      { key: "Mod-Shift-a", run: toggleBlockComment },
+      { key: "Mod-Shift-d", run: copyLineDown },
+      { key: "Alt-ArrowUp", run: moveLineUp },
+      { key: "Alt-ArrowDown", run: moveLineDown },
+      { key: "Mod-Shift-k", run: deleteLine },
+      { key: "Mod-d", run: selectNextOccurrence },
       ...closeBracketsKeymap,
       ...defaultKeymap,
       ...searchKeymap,

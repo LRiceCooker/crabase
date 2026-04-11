@@ -17,21 +17,6 @@
 ### Phase 24 — SQL Editor: Save & Rename Fixes
 
 ### Phase 25 — Full VS Code Keybindings + Settings Integration
-- [ ] Implement the full set of VS Code editing shortcuts in CodeMirror, going beyond Cmd+Z/Cmd+Shift+Z. AT MINIMUM:
-  - find (`Cmd+F`), find & replace (`Cmd+Alt+F`)
-  - select next occurrence (`Cmd+D`), select all occurrences (`Cmd+Shift+L`)
-  - toggle line comment (`Cmd+/`), toggle block comment (`Cmd+Shift+A`)
-  - copy line down (`Cmd+Shift+D`), move line up/down (`Alt+Up`/`Alt+Down`)
-  - delete line (`Cmd+Shift+K`)
-  - indent/outdent (`Tab`/`Shift+Tab`)
-  - go to line (`Cmd+G`)
-  - expand/shrink selection (`Cmd+Shift+Right`/`Cmd+Shift+Left`)
-  - word forward/back (`Alt+Right`/`Alt+Left`)
-  - line home/end (`Cmd+Left`/`Cmd+Right`)
-  - document start/end (`Cmd+Up`/`Cmd+Down`)
-- [ ] Register ALL these shortcuts in the `shortcuts.rs` registry under a new "Editor" category
-- [ ] Verify they appear in Settings → Keyboard Shortcuts and are user-customizable
-- [ ] When the user customizes a shortcut, it must update the CodeMirror keybinding at runtime
 
 ### Phase 26 — SQL Autocomplete: Schema-Aware
 - [ ] When the active schema is NOT `public`, all suggested table names in autocomplete must be prefixed with the schema (e.g. `myschema.users` instead of just `users`)
@@ -67,6 +52,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] Full VS Code keybindings in CodeMirror (toggle comment, block comment, copy line, move line, delete line, find, find & replace, select next occurrence, go to line, indent/outdent) + registered in shortcuts.rs under Editor category
 - [x] SQL Editor: tab title rename changed from double-click to single-click; Save button, Cmd+S, and dirty indicator verified working
 - [x] SQL Editor: auto-focus on tab open/activation, click-to-focus everywhere (full-height editor), full-height CodeMirror via CSS height:100%, draggable resize handle between editor and results
 - [x] JSON cell editor modal: CodeMirror 6 with @codemirror/lang-json (already implemented), scroll fixed, syntax highlighting working, read-only mode added, custom dark theme applied

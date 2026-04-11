@@ -9,10 +9,21 @@ pub enum ShortcutAction {
     CommandPalette,
     /// Open table/query finder (global)
     TableFinder,
-    /// Toggle SQL line comment (local to SQL editor)
-    ToggleComment,
     /// Save current context (dirty table changes or SQL query)
     Save,
+    // Editor shortcuts (handled by CodeMirror, shown in Settings)
+    ToggleComment,
+    ToggleBlockComment,
+    Find,
+    FindReplace,
+    SelectNextOccurrence,
+    CopyLineDown,
+    MoveLineUp,
+    MoveLineDown,
+    DeleteLine,
+    GoToLine,
+    IndentMore,
+    IndentLess,
 }
 
 impl ShortcutAction {
@@ -21,8 +32,19 @@ impl ShortcutAction {
         match self {
             Self::CommandPalette => "Command Palette",
             Self::TableFinder => "Table / Query Finder",
-            Self::ToggleComment => "Toggle Comment",
             Self::Save => "Save",
+            Self::ToggleComment => "Toggle Line Comment",
+            Self::ToggleBlockComment => "Toggle Block Comment",
+            Self::Find => "Find",
+            Self::FindReplace => "Find & Replace",
+            Self::SelectNextOccurrence => "Select Next Occurrence",
+            Self::CopyLineDown => "Copy Line Down",
+            Self::MoveLineUp => "Move Line Up",
+            Self::MoveLineDown => "Move Line Down",
+            Self::DeleteLine => "Delete Line",
+            Self::GoToLine => "Go to Line",
+            Self::IndentMore => "Indent",
+            Self::IndentLess => "Outdent",
         }
     }
 
@@ -30,7 +52,7 @@ impl ShortcutAction {
     pub fn category(self) -> &'static str {
         match self {
             Self::CommandPalette | Self::TableFinder | Self::Save => "General",
-            Self::ToggleComment => "SQL Editor",
+            _ => "Editor",
         }
     }
 
@@ -41,6 +63,17 @@ impl ShortcutAction {
             Self::TableFinder,
             Self::Save,
             Self::ToggleComment,
+            Self::ToggleBlockComment,
+            Self::Find,
+            Self::FindReplace,
+            Self::SelectNextOccurrence,
+            Self::CopyLineDown,
+            Self::MoveLineUp,
+            Self::MoveLineDown,
+            Self::DeleteLine,
+            Self::GoToLine,
+            Self::IndentMore,
+            Self::IndentLess,
         ]
     }
 }
@@ -134,22 +167,23 @@ fn code_to_display(code: &str) -> String {
 /// Build the default key bindings for all actions.
 fn default_bindings() -> HashMap<ShortcutAction, KeyBinding> {
     let mut m = HashMap::new();
-    m.insert(
-        ShortcutAction::CommandPalette,
-        KeyBinding::new(true, true, false, "KeyP"),
-    );
-    m.insert(
-        ShortcutAction::TableFinder,
-        KeyBinding::new(true, false, false, "KeyP"),
-    );
-    m.insert(
-        ShortcutAction::ToggleComment,
-        KeyBinding::new(true, false, false, "Slash"),
-    );
-    m.insert(
-        ShortcutAction::Save,
-        KeyBinding::new(true, false, false, "KeyS"),
-    );
+    // General
+    m.insert(ShortcutAction::CommandPalette, KeyBinding::new(true, true, false, "KeyP"));
+    m.insert(ShortcutAction::TableFinder, KeyBinding::new(true, false, false, "KeyP"));
+    m.insert(ShortcutAction::Save, KeyBinding::new(true, false, false, "KeyS"));
+    // Editor
+    m.insert(ShortcutAction::ToggleComment, KeyBinding::new(true, false, false, "Slash"));
+    m.insert(ShortcutAction::ToggleBlockComment, KeyBinding::new(true, true, false, "KeyA"));
+    m.insert(ShortcutAction::Find, KeyBinding::new(true, false, false, "KeyF"));
+    m.insert(ShortcutAction::FindReplace, KeyBinding::new(true, false, true, "KeyF"));
+    m.insert(ShortcutAction::SelectNextOccurrence, KeyBinding::new(true, false, false, "KeyD"));
+    m.insert(ShortcutAction::CopyLineDown, KeyBinding::new(true, true, false, "KeyD"));
+    m.insert(ShortcutAction::MoveLineUp, KeyBinding::new(false, false, true, "ArrowUp"));
+    m.insert(ShortcutAction::MoveLineDown, KeyBinding::new(false, false, true, "ArrowDown"));
+    m.insert(ShortcutAction::DeleteLine, KeyBinding::new(true, true, false, "KeyK"));
+    m.insert(ShortcutAction::GoToLine, KeyBinding::new(true, false, false, "KeyG"));
+    m.insert(ShortcutAction::IndentMore, KeyBinding::new(false, false, false, "Tab"));
+    m.insert(ShortcutAction::IndentLess, KeyBinding::new(false, true, false, "Tab"));
     m
 }
 
