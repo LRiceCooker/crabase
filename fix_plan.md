@@ -11,11 +11,6 @@
 ### Phase 21 — Type Display Fixes
 
 ### Phase 22 — JSON Modal Fixes
-- [ ] JSON cell editor modal: replace current implementation with CodeMirror 6 + `@codemirror/lang-json` (same setup as the SQL editor)
-- [ ] Ensure the modal content scrolls properly (currently broken — no scroll)
-- [ ] Syntax highlighting must work (currently broken)
-- [ ] Add a read-only mode for the JSON modal (used in the SQL editor result table)
-- [ ] Use the custom dark theme so it matches the app
 
 ### Phase 23 — SQL Editor Critical Fixes
 - [ ] **Auto-focus** on tab open and tab activation: the CodeMirror instance must be focused immediately when a SQL editor tab is opened or switched to, without the user clicking. Currently broken.
@@ -80,6 +75,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] JSON cell editor modal: CodeMirror 6 with @codemirror/lang-json (already implemented), scroll fixed, syntax highlighting working, read-only mode added, custom dark theme applied
 - [x] SQL editor read-only result table: same cell formatting as editable table (boolean checkmarks, JSON clickable to read-only modal, arrays expanded, dates formatted)
 - [x] **Bug fix**: timestamp/date columns now properly serialized via chrono with Postgres-compatible formatting; date picker output reformatted
 - [x] **Bug fix**: schema-prefixed enums — fetch udt_schema for correct enum value lookup across schemas
