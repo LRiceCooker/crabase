@@ -76,7 +76,7 @@ pub fn TabTitle(
                 view! {
                     <span
                         class=format!("truncate max-w-[120px] {}", cursor_class)
-                        on:dblclick=start_editing
+                        on:click=start_editing
                     >
                         {title_display}
                     </span>

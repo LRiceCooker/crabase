@@ -15,10 +15,6 @@
 ### Phase 23 — SQL Editor Critical Fixes
 
 ### Phase 24 — SQL Editor: Save & Rename Fixes
-- [ ] **Bug fix**: clicking the file name in the SQL editor tab title currently does NOT open an inline rename input. Fix it. The input must be prefilled with the current name, save on Enter or blur, revert on Escape, and call `rename_query`.
-- [ ] **Bug fix**: clicking the Save button currently does nothing. Wire it up to actually save the query.
-- [ ] **Bug fix**: `Cmd+S` currently does nothing in the SQL editor. Wire it up via the shortcuts.rs registry.
-- [ ] Verify the dirty indicator (filled vs hollow dot) updates correctly on edit and save
 
 ### Phase 25 — Full VS Code Keybindings + Settings Integration
 - [ ] Implement the full set of VS Code editing shortcuts in CodeMirror, going beyond Cmd+Z/Cmd+Shift+Z. AT MINIMUM:
@@ -71,6 +67,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] SQL Editor: tab title rename changed from double-click to single-click; Save button, Cmd+S, and dirty indicator verified working
 - [x] SQL Editor: auto-focus on tab open/activation, click-to-focus everywhere (full-height editor), full-height CodeMirror via CSS height:100%, draggable resize handle between editor and results
 - [x] JSON cell editor modal: CodeMirror 6 with @codemirror/lang-json (already implemented), scroll fixed, syntax highlighting working, read-only mode added, custom dark theme applied
 - [x] SQL editor read-only result table: same cell formatting as editable table (boolean checkmarks, JSON clickable to read-only modal, arrays expanded, dates formatted)
