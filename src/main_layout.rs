@@ -547,7 +547,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                                     disabled=move || restore_picking.get() || restore_running.get()
                                                     on:click=on_pick_file
                                                 >
-                                                    <IconUpload class="w-4 h-4 text-gray-400" />
+                                                    <IconUpload class="w-4 h-4 text-gray-400 dark:text-zinc-500" />
                                                     {move || if restore_picking.get() {
                                                         "Selecting..."
                                                     } else {
@@ -556,7 +556,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                                 </button>
                                                 <span class="text-[13px] text-gray-500 dark:text-zinc-400 truncate max-w-xs flex items-center gap-1.5">
                                                     {move || restore_file.get().map(|f| view! {
-                                                        <IconFile class="w-4 h-4 text-gray-400 shrink-0" />
+                                                        <IconFile class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
                                                         <span class="truncate">{f}</span>
                                                     })}
                                                     {move || if restore_file.get().is_none() {

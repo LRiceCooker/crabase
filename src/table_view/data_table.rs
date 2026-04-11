@@ -368,9 +368,9 @@ pub fn DataTable(
                                             } else if is_null {
                                                 format!("{} text-gray-300 dark:text-zinc-600 italic {}{}", base, cursor, find_highlight)
                                             } else if cell_modified {
-                                                format!("{} {} bg-amber-100/50 dark:bg-amber-900/40{}", base, cursor, find_highlight)
+                                                format!("{} text-gray-900 dark:text-neutral-50 {} bg-amber-100/50 dark:bg-amber-900/40{}", base, cursor, find_highlight)
                                             } else {
-                                                format!("{} {}{}", base, cursor, find_highlight)
+                                                format!("{} text-gray-900 dark:text-neutral-50 {}{}", base, cursor, find_highlight)
                                             };
                                             let title = if is_readonly {
                                                 format!("{} (read-only)", text)
