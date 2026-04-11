@@ -13,10 +13,6 @@
 ### Phase 22 — JSON Modal Fixes
 
 ### Phase 23 — SQL Editor Critical Fixes
-- [ ] **Auto-focus** on tab open and tab activation: the CodeMirror instance must be focused immediately when a SQL editor tab is opened or switched to, without the user clicking. Currently broken.
-- [ ] **Click-to-focus everywhere**: clicking ANYWHERE in the editor area (not just the first line) focuses CodeMirror at the nearest valid position. Currently only the first line is clickable. Fix the underlying layout/CSS issue.
-- [ ] **Full-height editor**: the CodeMirror instance must fill 100% of the available editor area (toolbar excluded) until the results pane. Currently it stops mid-screen when many lines are added. Fix the CSS sizing.
-- [ ] Add a draggable resize handle (cursor-row-resize) between the editor area and the results pane
 
 ### Phase 24 — SQL Editor: Save & Rename Fixes
 - [ ] **Bug fix**: clicking the file name in the SQL editor tab title currently does NOT open an inline rename input. Fix it. The input must be prefilled with the current name, save on Enter or blur, revert on Escape, and call `rename_query`.
@@ -75,6 +71,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] SQL Editor: auto-focus on tab open/activation, click-to-focus everywhere (full-height editor), full-height CodeMirror via CSS height:100%, draggable resize handle between editor and results
 - [x] JSON cell editor modal: CodeMirror 6 with @codemirror/lang-json (already implemented), scroll fixed, syntax highlighting working, read-only mode added, custom dark theme applied
 - [x] SQL editor read-only result table: same cell formatting as editable table (boolean checkmarks, JSON clickable to read-only modal, arrays expanded, dates formatted)
 - [x] **Bug fix**: timestamp/date columns now properly serialized via chrono with Postgres-compatible formatting; date picker output reformatted

@@ -22,6 +22,10 @@ const lightTheme = EditorView.theme({
     color: "#111827",
     fontSize: "13px",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    height: "100%",
+  },
+  ".cm-scroller": {
+    overflow: "auto",
   },
   ".cm-content": {
     caretColor: "#6366F1",
@@ -65,6 +69,10 @@ const crabaseDarkTheme = EditorView.theme({
     color: "#E4E4E7", // zinc-200
     fontSize: "13px",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    height: "100%",
+  },
+  ".cm-scroller": {
+    overflow: "auto",
   },
   ".cm-content": {
     caretColor: "#FAFAFA",
