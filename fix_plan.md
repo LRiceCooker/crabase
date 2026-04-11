@@ -19,9 +19,6 @@
 ### Phase 25 — Full VS Code Keybindings + Settings Integration
 
 ### Phase 26 — SQL Autocomplete: Schema-Aware
-- [ ] When the active schema is NOT `public`, all suggested table names in autocomplete must be prefixed with the schema (e.g. `myschema.users` instead of just `users`)
-- [ ] When the active schema IS `public`, do not prefix
-- [ ] Verify autocomplete also returns columns for the correct tables across schemas
 
 ### Phase 27 — Multi-Statement SQL Execution
 - [ ] Backend: rename `execute_query` → `execute_query_multi` (or add new command). Use sqlx multi-statement support (`fetch_many` / `simple_query`) to execute the entire editor content as a single multi-statement script.
@@ -52,6 +49,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] Schema-aware SQL autocomplete: table names prefixed with schema when not on public, columns returned for correct tables
 - [x] Full VS Code keybindings in CodeMirror (toggle comment, block comment, copy line, move line, delete line, find, find & replace, select next occurrence, go to line, indent/outdent) + registered in shortcuts.rs under Editor category
 - [x] SQL Editor: tab title rename changed from double-click to single-click; Save button, Cmd+S, and dirty indicator verified working
 - [x] SQL Editor: auto-focus on tab open/activation, click-to-focus everywhere (full-height editor), full-height CodeMirror via CSS height:100%, draggable resize handle between editor and results

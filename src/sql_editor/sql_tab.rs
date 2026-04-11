@@ -49,7 +49,7 @@ pub fn SqlTab(
             );
             cb.forget();
 
-            // Fetch table names and columns for autocomplete
+            // Fetch table names and columns for autocomplete (schema-aware)
             spawn_local(async move {
                 let Ok(tables) = tauri::list_tables().await else {
                     return;
@@ -57,10 +57,22 @@ pub fn SqlTab(
                 if tables.is_empty() {
                     return;
                 }
-                let Ok(schema) = tauri::get_columns_for_autocomplete(&tables).await else {
+                let Ok(cols) = tauri::get_columns_for_autocomplete(&tables).await else {
                     return;
                 };
-                handle.set_schema(&schema);
+                // Check if active schema is not public — if so, prefix table names
+                let schema_prefix = match tauri::get_connection_info().await {
+                    Ok(info) if info.schema != "public" => Some(info.schema),
+                    _ => None,
+                };
+                let autocomplete_schema: std::collections::HashMap<String, Vec<String>> = if let Some(prefix) = schema_prefix {
+                    cols.into_iter()
+                        .map(|(table, columns)| (format!("{}.{}", prefix, table), columns))
+                        .collect()
+                } else {
+                    cols
+                };
+                handle.set_schema(&autocomplete_schema);
             });
         }
     });
