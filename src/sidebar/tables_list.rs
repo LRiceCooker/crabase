@@ -22,7 +22,7 @@ pub fn TablesList(
                             "flex items-center gap-2 px-3 py-1 text-[13px] text-gray-700 dark:text-zinc-300 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors duration-100"
                         };
                         let icon_class = if is_active {
-                            "w-4 h-4 text-indigo-400 shrink-0"
+                            "w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0"
                         } else {
                             "w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0"
                         };

@@ -44,7 +44,7 @@ pub fn SqlResults(
                                                         let class = if is_null {
                                                             "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-300 dark:text-zinc-600 italic"
                                                         } else {
-                                                            "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px]"
+                                                            "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px] text-gray-900 dark:text-neutral-50"
                                                         };
                                                         let title = text.clone();
                                                         view! {
