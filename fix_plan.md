@@ -7,11 +7,6 @@
 ### Phase 19 — Dark Theme Fixes (Critical Visual Bugs)
 
 ### Phase 20 — Overlay Mutual Exclusion Bug Fix
-- [ ] Opening any overlay must close any currently-open overlay first
-- [ ] Cmd+Shift+P → Command Palette closes Table Finder if open
-- [ ] Cmd+P → Table Finder closes Command Palette if open
-- [ ] Escape always closes the active overlay
-- [ ] Verify no "stuck" state where the user can't escape an overlay
 
 ### Phase 21 — Type Display Fixes
 - [ ] **Bug fix**: when not on `public` schema, query results currently show each cell as the raw tagged-JSON object (e.g. `{"raw":"TIMESTAMP","type":"unknown"}`). The frontend MUST always extract the value and render it appropriately. Fix in BOTH the editable table view AND the SQL editor result table.
@@ -90,6 +85,11 @@
 
 ## Completed
 - [x] Refactor overlay state management so only ONE overlay can be open at a time (Command Palette, Table Finder, Find Bar, Restore, Settings, Chat)
+- [x] Opening any overlay must close any currently-open overlay first
+- [x] Cmd+Shift+P → Command Palette closes Table Finder if open
+- [x] Cmd+P → Table Finder closes Command Palette if open
+- [x] Escape always closes the active overlay
+- [x] Verify no "stuck" state where the user can't escape an overlay
 - [x] Verify dark mode contrast across the entire app — find any remaining unreadable text (sql results table, JSON modal, settings inputs, etc.) and fix
 - [x] Build a custom CodeMirror theme matching design.md exactly: editor background `#0A0A0A`, gutter background `#0A0A0A`, gutter text `text-zinc-600`, active line highlight `bg-white/[0.03]`, selection `bg-indigo-500/25`, cursor `text-neutral-50`. Replace the default `one-dark` theme with this custom theme.
 - [x] Audit ALL table cell text styles: ensure every `text-gray-*` has a `dark:text-zinc-*` (target `dark:text-zinc-200`) so cell text is readable in dark mode
