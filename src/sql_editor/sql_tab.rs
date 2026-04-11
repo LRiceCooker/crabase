@@ -2,7 +2,8 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
-use crate::shortcuts::use_save_trigger;
+use crate::shortcuts::{self, ShortcutAction, use_save_trigger};
+use crate::sql_editor::chat_panel::ChatPanel;
 use crate::sql_editor::codemirror::{CodeMirrorEditor, CodeMirrorHandle};
 use crate::sql_editor::sql_results::SqlResults;
 use crate::sql_editor::sql_toolbar::SqlToolbar;
@@ -144,6 +145,25 @@ pub fn SqlTab(
 
     let dirty_signal: Signal<bool> = Signal::derive(move || is_dirty.get());
 
+    // Chat panel state (Cmd+I)
+    let (chat_visible, set_chat_visible) = signal(false);
+
+    // Cmd+I keyboard handler
+    {
+        let sc = shortcuts::use_shortcuts();
+        let closure = wasm_bindgen::closure::Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
+            move |ev: web_sys::KeyboardEvent| {
+                if sc.matches(ShortcutAction::OpenAIChat, &ev) {
+                    ev.prevent_default();
+                    set_chat_visible.update(|v| *v = !*v);
+                }
+            },
+        );
+        let win = web_sys::window().unwrap();
+        win.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref()).unwrap();
+        closure.forget();
+    }
+
     // Resizable split: editor fraction (0.0 to 1.0). Default: 60% editor, 40% results.
     let editor_fraction = RwSignal::new(0.6_f64);
     let dragging = RwSignal::new(false);
@@ -184,37 +204,48 @@ pub fn SqlTab(
         on_up.forget();
     }
 
+    let get_sql = Callback::new(move |_: ()| -> String {
+        cm_handle.get_untracked().map(|h| h.get_content()).unwrap_or_default()
+    });
+
     view! {
-        <div class="flex flex-col h-full">
-            <SqlToolbar
-                on_run=on_run
-                running=running
-                on_save=do_save
-                is_dirty=dirty_signal
-            />
-            <div node_ref=container_ref class="flex flex-col flex-1 overflow-hidden">
-                <div style=move || format!("flex: 0 0 {}%; overflow: hidden; display: flex; flex-direction: column;", editor_fraction.get() * 100.0)>
-                    <CodeMirrorEditor
-                        language="sql".to_string()
-                        placeholder="Write your SQL query here...".to_string()
-                        on_change=on_change
-                        handle=set_cm_handle
-                    />
-                </div>
-                // Drag handle
-                <div
-                    class="h-1.5 cursor-row-resize bg-gray-100 dark:bg-zinc-800 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors duration-100 shrink-0 flex items-center justify-center"
-                    on:mousedown=move |ev| {
-                        ev.prevent_default();
-                        dragging.set(true);
-                    }
-                >
-                    <div class="w-8 h-0.5 rounded-full bg-gray-300 dark:bg-zinc-600"></div>
-                </div>
-                <div style=move || format!("flex: 0 0 {}%; overflow: hidden; display: flex; flex-direction: column;", (1.0 - editor_fraction.get()) * 100.0)>
-                    <SqlResults result=result />
+        <div class="flex h-full">
+            <div class="flex flex-col flex-1 overflow-hidden">
+                <SqlToolbar
+                    on_run=on_run
+                    running=running
+                    on_save=do_save
+                    is_dirty=dirty_signal
+                />
+                <div node_ref=container_ref class="flex flex-col flex-1 overflow-hidden">
+                    <div style=move || format!("flex: 0 0 {}%; overflow: hidden; display: flex; flex-direction: column;", editor_fraction.get() * 100.0)>
+                        <CodeMirrorEditor
+                            language="sql".to_string()
+                            placeholder="Write your SQL query here...".to_string()
+                            on_change=on_change
+                            handle=set_cm_handle
+                        />
+                    </div>
+                    // Drag handle
+                    <div
+                        class="h-1.5 cursor-row-resize bg-gray-100 dark:bg-zinc-800 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors duration-100 shrink-0 flex items-center justify-center"
+                        on:mousedown=move |ev| {
+                            ev.prevent_default();
+                            dragging.set(true);
+                        }
+                    >
+                        <div class="w-8 h-0.5 rounded-full bg-gray-300 dark:bg-zinc-600"></div>
+                    </div>
+                    <div style=move || format!("flex: 0 0 {}%; overflow: hidden; display: flex; flex-direction: column;", (1.0 - editor_fraction.get()) * 100.0)>
+                        <SqlResults result=result />
+                    </div>
                 </div>
             </div>
+            <ChatPanel
+                visible=chat_visible
+                on_close=Callback::new(move |_| set_chat_visible.set(false))
+                get_sql=get_sql
+            />
         </div>
     }
 }

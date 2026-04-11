@@ -1,3 +1,4 @@
+pub mod chat_panel;
 pub mod codemirror;
 pub mod sql_results;
 pub mod sql_tab;

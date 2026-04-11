@@ -23,18 +23,9 @@
 ### Phase 27 — Multi-Statement SQL Execution
 
 ### Phase 28 — Inline AI Chat Panel (Cmd+I)
-- [ ] Backend: `check_claude_installed()` command — checks if `claude` is in PATH via `which claude` and returns bool
-- [ ] Backend: `chat_with_claude(prompt)` command — spawns `claude -p "<prompt>" --output-format stream-json --dangerously-skip-permissions` as a subprocess. Streams parsed `assistant` text events back via Tauri events to the frontend
-- [ ] Backend: `get_full_schema_for_chat()` command — returns a formatted text representation of **ALL postgres schemas** of the connected database (not just the active schema). For each schema: list of tables, and for each table: columns + types + primary keys. The user explicitly said "il va avoir la connaissance de tous mes schémas" — full database context.
-- [ ] sql_editor/chat_panel.rs: side panel (`w-96`) that slides in from the right side of the editor area
-- [ ] sql_editor/chat_messages.rs: scrollable list of message bubbles (alternating user/assistant)
-- [ ] Cmd+I toggles the chat panel (open if closed, close if open)
-- [ ] Register Cmd+I in shortcuts.rs as "Open AI Chat" under a new "AI" category
-- [ ] When sending a message, prefix with the auto-injected context: full schema + current SQL editor content + user message
-- [ ] If `check_claude_installed` returns false, the chat panel opens but shows a message: "Claude Code is not installed. Install it from claude.com/code to use the AI assistant." Input is disabled.
-- [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] Inline AI Chat Panel (Cmd+I): backend check_claude_installed, chat_with_claude (streaming), get_full_schema_for_chat; frontend chat_panel.rs side panel with message bubbles, auto-injected DB context, Claude not-installed message, fresh conversation per open
 - [x] Multi-statement SQL execution: backend execute_query_multi returns Vec<StatementResult> (Rows/Affected/Error), frontend shows multi-statement navigator below results, statement selector with previews
 - [x] Schema-aware SQL autocomplete: table names prefixed with schema when not on public, columns returned for correct tables
 - [x] Full VS Code keybindings in CodeMirror (toggle comment, block comment, copy line, move line, delete line, find, find & replace, select next occurrence, go to line, indent/outdent) + registered in shortcuts.rs under Editor category

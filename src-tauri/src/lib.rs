@@ -4,6 +4,8 @@ mod saved_connections;
 mod saved_queries;
 mod settings;
 
+use tauri::Emitter;
+
 #[tauri::command]
 fn parse_connection_string(connection_string: String) -> Result<db::ConnectionInfo, String> {
     db::parse_connection_string(&connection_string)
@@ -228,6 +230,65 @@ fn cmd_load_query(
 }
 
 #[tauri::command]
+fn check_claude_installed() -> bool {
+    std::process::Command::new("which")
+        .arg("claude")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[tauri::command]
+async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), String> {
+    use std::io::BufRead;
+
+    let child = std::process::Command::new("claude")
+        .args(["-p", &prompt, "--output-format", "stream-json", "--dangerously-skip-permissions"])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn claude: {}", e))?;
+
+    let stdout = child.stdout.ok_or("No stdout")?;
+    let reader = std::io::BufReader::new(stdout);
+
+    for line in reader.lines() {
+        let Ok(line) = line else { continue };
+        if line.trim().is_empty() { continue; }
+        // Parse stream-json: look for {"type":"assistant","content":"..."} events
+        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line) {
+            if obj.get("type").and_then(|t| t.as_str()) == Some("assistant") {
+                if let Some(content) = obj.get("content").and_then(|c| c.as_str()) {
+                    let _ = app.emit("chat-response", content.to_string());
+                }
+            }
+            // Also handle content_block_delta for streaming
+            if obj.get("type").and_then(|t| t.as_str()) == Some("content_block_delta") {
+                if let Some(delta) = obj.get("delta").and_then(|d| d.get("text")).and_then(|t| t.as_str()) {
+                    let _ = app.emit("chat-response", delta.to_string());
+                }
+            }
+            // Handle result type
+            if obj.get("type").and_then(|t| t.as_str()) == Some("result") {
+                if let Some(result) = obj.get("result").and_then(|r| r.as_str()) {
+                    let _ = app.emit("chat-response", result.to_string());
+                }
+            }
+        }
+    }
+
+    let _ = app.emit("chat-done", ());
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_full_schema_for_chat(
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<String, String> {
+    db_state.get_full_schema_text().await
+}
+
+#[tauri::command]
 async fn open_new_window(app: tauri::AppHandle) -> Result<(), String> {
     use std::sync::atomic::{AtomicU32, Ordering};
     static WINDOW_COUNTER: AtomicU32 = AtomicU32::new(2);
@@ -246,7 +307,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_columns_for_autocomplete, get_table_data, get_table_data_filtered, execute_query, execute_query_multi, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings, cmd_save_query, cmd_update_query, cmd_rename_query, cmd_delete_query, cmd_list_queries, cmd_load_query, open_new_window])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_columns_for_autocomplete, get_table_data, get_table_data_filtered, execute_query, execute_query_multi, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings, cmd_save_query, cmd_update_query, cmd_rename_query, cmd_delete_query, cmd_list_queries, cmd_load_query, open_new_window, check_claude_installed, chat_with_claude, get_full_schema_for_chat])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -24,6 +24,8 @@ pub enum ShortcutAction {
     GoToLine,
     IndentMore,
     IndentLess,
+    // AI
+    OpenAIChat,
 }
 
 impl ShortcutAction {
@@ -45,6 +47,7 @@ impl ShortcutAction {
             Self::GoToLine => "Go to Line",
             Self::IndentMore => "Indent",
             Self::IndentLess => "Outdent",
+            Self::OpenAIChat => "Open AI Chat",
         }
     }
 
@@ -52,6 +55,7 @@ impl ShortcutAction {
     pub fn category(self) -> &'static str {
         match self {
             Self::CommandPalette | Self::TableFinder | Self::Save => "General",
+            Self::OpenAIChat => "AI",
             _ => "Editor",
         }
     }
@@ -74,6 +78,7 @@ impl ShortcutAction {
             Self::GoToLine,
             Self::IndentMore,
             Self::IndentLess,
+            Self::OpenAIChat,
         ]
     }
 }
@@ -184,6 +189,8 @@ fn default_bindings() -> HashMap<ShortcutAction, KeyBinding> {
     m.insert(ShortcutAction::GoToLine, KeyBinding::new(true, false, false, "KeyG"));
     m.insert(ShortcutAction::IndentMore, KeyBinding::new(false, false, false, "Tab"));
     m.insert(ShortcutAction::IndentLess, KeyBinding::new(false, true, false, "Tab"));
+    // AI
+    m.insert(ShortcutAction::OpenAIChat, KeyBinding::new(true, false, false, "KeyI"));
     m
 }
 
