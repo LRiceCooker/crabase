@@ -4,7 +4,96 @@
 
 ## Backlog
 
+### Phase 19 — Dark Theme Fixes (Critical Visual Bugs)
+- [ ] Audit ALL table cell text styles: ensure every `text-gray-*` has a `dark:text-zinc-*` (target `dark:text-zinc-200`) so cell text is readable in dark mode
+- [ ] Build a custom CodeMirror theme matching design.md exactly: editor background `#0A0A0A`, gutter background `#0A0A0A`, gutter text `text-zinc-600`, active line highlight `bg-white/[0.03]` (only the focused line), selection `bg-indigo-500/25`, cursor `text-neutral-50`. Replace the default `one-dark` theme with this custom theme.
+- [ ] Verify dark mode contrast across the entire app — find any remaining unreadable text (sql results table, JSON modal, settings inputs, etc.) and fix
+
+### Phase 20 — Overlay Mutual Exclusion Bug Fix
+- [ ] Refactor overlay state management so only ONE overlay can be open at a time (Command Palette, Table Finder, Find Bar, Restore, Settings, Chat)
+- [ ] Opening any overlay must close any currently-open overlay first
+- [ ] Cmd+Shift+P → Command Palette closes Table Finder if open
+- [ ] Cmd+P → Table Finder closes Command Palette if open
+- [ ] Escape always closes the active overlay
+- [ ] Verify no "stuck" state where the user can't escape an overlay
+
+### Phase 21 — Type Display Fixes
+- [ ] **Bug fix**: when not on `public` schema, query results currently show each cell as the raw tagged-JSON object (e.g. `{"raw":"TIMESTAMP","type":"unknown"}`). The frontend MUST always extract the value and render it appropriately. Fix in BOTH the editable table view AND the SQL editor result table.
+- [ ] **Bug fix**: schema-prefixed enums. Backend `pg_value_to_json` (and `get_column_info`) currently doesn't recognize enums when their type is `"schema_name"."enum_name"`. Detect enums in any schema, fetch values from `pg_enum`, and tag as `{ type: "enum", value: ..., enum_name: ... }`. Display only the value, never the schema-qualified type.
+- [ ] **Bug fix**: timestamp/date columns in tables (e.g. `created_at`, `deleted_at`) currently sometimes show the literal type name `Timestamp` as a string. Fix the backend serialization to always return the actual value, formatted as ISO string. Frontend displays as `YYYY-MM-DD HH:MM:SS` and clicking the cell opens a **date picker** to edit it. **The date picker output MUST be re-formatted to a Postgres-compatible string** (e.g. `2026-04-10 14:30:00` for timestamp, `2026-04-10` for date, `2026-04-10T14:30:00Z` for timestamptz) before sending to the backend, otherwise the SQL UPDATE will fail.
+- [ ] SQL editor read-only result table: must use the same cell formatting and click-to-view behavior as the editable table view. JSON cells clickable to open the JSON modal in **read-only mode**, arrays expand, enums show their value, dates are formatted.
+
+### Phase 22 — JSON Modal Fixes
+- [ ] JSON cell editor modal: replace current implementation with CodeMirror 6 + `@codemirror/lang-json` (same setup as the SQL editor)
+- [ ] Ensure the modal content scrolls properly (currently broken — no scroll)
+- [ ] Syntax highlighting must work (currently broken)
+- [ ] Add a read-only mode for the JSON modal (used in the SQL editor result table)
+- [ ] Use the custom dark theme so it matches the app
+
+### Phase 23 — SQL Editor Critical Fixes
+- [ ] **Auto-focus** on tab open and tab activation: the CodeMirror instance must be focused immediately when a SQL editor tab is opened or switched to, without the user clicking. Currently broken.
+- [ ] **Click-to-focus everywhere**: clicking ANYWHERE in the editor area (not just the first line) focuses CodeMirror at the nearest valid position. Currently only the first line is clickable. Fix the underlying layout/CSS issue.
+- [ ] **Full-height editor**: the CodeMirror instance must fill 100% of the available editor area (toolbar excluded) until the results pane. Currently it stops mid-screen when many lines are added. Fix the CSS sizing.
+- [ ] Add a draggable resize handle (cursor-row-resize) between the editor area and the results pane
+
+### Phase 24 — SQL Editor: Save & Rename Fixes
+- [ ] **Bug fix**: clicking the file name in the SQL editor tab title currently does NOT open an inline rename input. Fix it. The input must be prefilled with the current name, save on Enter or blur, revert on Escape, and call `rename_query`.
+- [ ] **Bug fix**: clicking the Save button currently does nothing. Wire it up to actually save the query.
+- [ ] **Bug fix**: `Cmd+S` currently does nothing in the SQL editor. Wire it up via the shortcuts.rs registry.
+- [ ] Verify the dirty indicator (filled vs hollow dot) updates correctly on edit and save
+
+### Phase 25 — Full VS Code Keybindings + Settings Integration
+- [ ] Implement the full set of VS Code editing shortcuts in CodeMirror, going beyond Cmd+Z/Cmd+Shift+Z. AT MINIMUM:
+  - find (`Cmd+F`), find & replace (`Cmd+Alt+F`)
+  - select next occurrence (`Cmd+D`), select all occurrences (`Cmd+Shift+L`)
+  - toggle line comment (`Cmd+/`), toggle block comment (`Cmd+Shift+A`)
+  - copy line down (`Cmd+Shift+D`), move line up/down (`Alt+Up`/`Alt+Down`)
+  - delete line (`Cmd+Shift+K`)
+  - indent/outdent (`Tab`/`Shift+Tab`)
+  - go to line (`Cmd+G`)
+  - expand/shrink selection (`Cmd+Shift+Right`/`Cmd+Shift+Left`)
+  - word forward/back (`Alt+Right`/`Alt+Left`)
+  - line home/end (`Cmd+Left`/`Cmd+Right`)
+  - document start/end (`Cmd+Up`/`Cmd+Down`)
+- [ ] Register ALL these shortcuts in the `shortcuts.rs` registry under a new "Editor" category
+- [ ] Verify they appear in Settings → Keyboard Shortcuts and are user-customizable
+- [ ] When the user customizes a shortcut, it must update the CodeMirror keybinding at runtime
+
+### Phase 26 — SQL Autocomplete: Schema-Aware
+- [ ] When the active schema is NOT `public`, all suggested table names in autocomplete must be prefixed with the schema (e.g. `myschema.users` instead of just `users`)
+- [ ] When the active schema IS `public`, do not prefix
+- [ ] Verify autocomplete also returns columns for the correct tables across schemas
+
+### Phase 27 — Multi-Statement SQL Execution
+- [ ] Backend: rename `execute_query` → `execute_query_multi` (or add new command). Use sqlx multi-statement support (`fetch_many` / `simple_query`) to execute the entire editor content as a single multi-statement script.
+- [ ] Backend: return `Vec<StatementResult>` where each statement is one of:
+  - `Rows { columns, rows }` for SELECTs
+  - `Affected { command, rows_affected }` for INSERT/UPDATE/DELETE/etc.
+  - `Notice { message }` for NOTICE/RAISE
+  - `Error { statement_index, message }` for failures
+- [ ] Frontend: replace single-result results pane with a multi-statement result navigator
+  - Statement selector (tabs or dropdown) **BELOW the result table** (at the bottom of the results pane), not above. The user explicitly said "en dessous du tableau".
+  - The selector is scrollable horizontally if there are many statements
+  - Each entry shows the statement index + a short preview of the SQL
+  - Clicking an entry switches the result shown in the table above
+- [ ] sql_result_table.rs: read-only data table for SELECT results. Same type display as the table view (clickable JSON, formatted dates, enums, etc.). Currently broken — fix.
+- [ ] sql_result_console.rs: console-style output for Affected/Notice/Error results. Same dark style as the existing error console.
+- [ ] Run button executes the entire editor content (no more single-line limitation)
+
+### Phase 28 — Inline AI Chat Panel (Cmd+I)
+- [ ] Backend: `check_claude_installed()` command — checks if `claude` is in PATH via `which claude` and returns bool
+- [ ] Backend: `chat_with_claude(prompt)` command — spawns `claude -p "<prompt>" --output-format stream-json --dangerously-skip-permissions` as a subprocess. Streams parsed `assistant` text events back via Tauri events to the frontend
+- [ ] Backend: `get_full_schema_for_chat()` command — returns a formatted text representation of **ALL postgres schemas** of the connected database (not just the active schema). For each schema: list of tables, and for each table: columns + types + primary keys. The user explicitly said "il va avoir la connaissance de tous mes schémas" — full database context.
+- [ ] sql_editor/chat_panel.rs: side panel (`w-96`) that slides in from the right side of the editor area
+- [ ] sql_editor/chat_messages.rs: scrollable list of message bubbles (alternating user/assistant)
+- [ ] Cmd+I toggles the chat panel (open if closed, close if open)
+- [ ] Register Cmd+I in shortcuts.rs as "Open AI Chat" under a new "AI" category
+- [ ] When sending a message, prefix with the auto-injected context: full schema + current SQL editor content + user message
+- [ ] If `check_claude_installed` returns false, the chat panel opens but shows a message: "Claude Code is not installed. Install it from claude.com/code to use the AI assistant." Input is disabled.
+- [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
+
 ## Completed
+- [x] Tauri window background: set `backgroundColor` in `tauri.conf.json` to dark color (`#0A0A0A`) and ensure `<html>`/`<body>` use `bg-white dark:bg-neutral-950` so the white window edges no longer bleed through in dark mode
 - [x] Verify that both windows share the same config files (settings, saved connections, queries)
 - [x] Cmd+Shift+N opens a new app window (independent instance, starts at connection screen)
 - [x] Backend: `open_new_window` command using Tauri WebviewWindowBuilder

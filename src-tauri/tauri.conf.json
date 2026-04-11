@@ -15,7 +15,8 @@
       {
         "title": "crabase",
         "width": 1200,
-        "height": 800
+        "height": 800,
+        "backgroundColor": "#0A0A0A"
       }
     ],
     "security": {

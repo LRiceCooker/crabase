@@ -228,6 +228,7 @@ async fn open_new_window(app: tauri::AppHandle) -> Result<(), String> {
     tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App("index.html".into()))
         .title("crabase")
         .inner_size(1200.0, 800.0)
+        .background_color(tauri::webview::Color(10, 10, 10, 255))
         .build()
         .map_err(|e| format!("Failed to create window: {}", e))?;
     Ok(())
