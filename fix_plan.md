@@ -21,20 +21,6 @@
 ### Phase 26 — SQL Autocomplete: Schema-Aware
 
 ### Phase 27 — Multi-Statement SQL Execution
-- [ ] Backend: rename `execute_query` → `execute_query_multi` (or add new command). Use sqlx multi-statement support (`fetch_many` / `simple_query`) to execute the entire editor content as a single multi-statement script.
-- [ ] Backend: return `Vec<StatementResult>` where each statement is one of:
-  - `Rows { columns, rows }` for SELECTs
-  - `Affected { command, rows_affected }` for INSERT/UPDATE/DELETE/etc.
-  - `Notice { message }` for NOTICE/RAISE
-  - `Error { statement_index, message }` for failures
-- [ ] Frontend: replace single-result results pane with a multi-statement result navigator
-  - Statement selector (tabs or dropdown) **BELOW the result table** (at the bottom of the results pane), not above. The user explicitly said "en dessous du tableau".
-  - The selector is scrollable horizontally if there are many statements
-  - Each entry shows the statement index + a short preview of the SQL
-  - Clicking an entry switches the result shown in the table above
-- [ ] sql_result_table.rs: read-only data table for SELECT results. Same type display as the table view (clickable JSON, formatted dates, enums, etc.). Currently broken — fix.
-- [ ] sql_result_console.rs: console-style output for Affected/Notice/Error results. Same dark style as the existing error console.
-- [ ] Run button executes the entire editor content (no more single-line limitation)
 
 ### Phase 28 — Inline AI Chat Panel (Cmd+I)
 - [ ] Backend: `check_claude_installed()` command — checks if `claude` is in PATH via `which claude` and returns bool
@@ -49,6 +35,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] Multi-statement SQL execution: backend execute_query_multi returns Vec<StatementResult> (Rows/Affected/Error), frontend shows multi-statement navigator below results, statement selector with previews
 - [x] Schema-aware SQL autocomplete: table names prefixed with schema when not on public, columns returned for correct tables
 - [x] Full VS Code keybindings in CodeMirror (toggle comment, block comment, copy line, move line, delete line, find, find & replace, select next occurrence, go to line, indent/outdent) + registered in shortcuts.rs under Editor category
 - [x] SQL Editor: tab title rename changed from double-click to single-click; Save button, Cmd+S, and dirty indicator verified working

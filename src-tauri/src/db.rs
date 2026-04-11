@@ -581,6 +581,89 @@ impl DbState {
 
         Ok(QueryResult { columns, rows })
     }
+
+    /// Execute multiple SQL statements separated by semicolons.
+    /// Returns a Vec<StatementResult> — one entry per statement.
+    pub async fn execute_query_multi(&self, sql: &str) -> Result<Vec<StatementResult>, String> {
+        let pool = {
+            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            pool_guard
+                .clone()
+                .ok_or_else(|| "Not connected to any database".to_string())?
+        };
+
+        // Split SQL into individual statements (simple split on semicolons, skip empty)
+        let statements: Vec<&str> = sql
+            .split(';')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        let mut results = Vec::new();
+
+        for stmt in statements {
+            let preview = if stmt.len() > 60 {
+                format!("{}...", &stmt[..60])
+            } else {
+                stmt.to_string()
+            };
+
+            // Try to detect if this is a SELECT-like statement (returns rows)
+            let upper = stmt.trim_start().to_uppercase();
+            let is_select = upper.starts_with("SELECT")
+                || upper.starts_with("WITH")
+                || upper.starts_with("TABLE")
+                || upper.starts_with("VALUES")
+                || upper.starts_with("SHOW")
+                || upper.starts_with("EXPLAIN");
+
+            if is_select {
+                match sqlx::query(stmt).fetch_all(&pool).await {
+                    Ok(pg_rows) => {
+                        let columns: Vec<String> = if let Some(first) = pg_rows.first() {
+                            (0..first.len())
+                                .map(|i| first.column(i).name().to_string())
+                                .collect()
+                        } else {
+                            Vec::new()
+                        };
+                        let rows: Vec<Vec<serde_json::Value>> = pg_rows
+                            .iter()
+                            .map(|row| (0..row.len()).map(|i| pg_value_to_json(row, i)).collect())
+                            .collect();
+                        results.push(StatementResult::Rows { columns, rows, sql_preview: preview });
+                    }
+                    Err(e) => {
+                        results.push(StatementResult::Error { message: e.to_string(), sql_preview: preview });
+                    }
+                }
+            } else {
+                match sqlx::query(stmt).execute(&pool).await {
+                    Ok(result) => {
+                        let cmd = upper.split_whitespace().next().unwrap_or("UNKNOWN").to_string();
+                        results.push(StatementResult::Affected {
+                            command: cmd,
+                            rows_affected: result.rows_affected(),
+                            sql_preview: preview,
+                        });
+                    }
+                    Err(e) => {
+                        results.push(StatementResult::Error { message: e.to_string(), sql_preview: preview });
+                    }
+                }
+            }
+        }
+
+        if results.is_empty() {
+            results.push(StatementResult::Affected {
+                command: "EMPTY".to_string(),
+                rows_affected: 0,
+                sql_preview: String::new(),
+            });
+        }
+
+        Ok(results)
+    }
 }
 
 /// Build a WHERE clause from primary key values starting at parameter index `start_idx`.
@@ -991,6 +1074,15 @@ pub struct ChangeSet {
 pub struct QueryResult {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<serde_json::Value>>,
+}
+
+/// Result of a single statement in a multi-statement execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum StatementResult {
+    Rows { columns: Vec<String>, rows: Vec<Vec<serde_json::Value>>, sql_preview: String },
+    Affected { command: String, rows_affected: u64, sql_preview: String },
+    Error { message: String, sql_preview: String },
 }
 
 pub fn build_connection_string(info: &ConnectionInfo) -> String {

@@ -20,7 +20,7 @@ pub fn SqlTab(
 ) -> impl IntoView {
     let (cm_handle, set_cm_handle) = signal(Option::<CodeMirrorHandle>::None);
     let (running, set_running) = signal(false);
-    let (result, set_result) = signal(Option::<Result<tauri::QueryResult, String>>::None);
+    let (result, set_result) = signal(Option::<Result<Vec<tauri::StatementResult>, String>>::None);
     let (is_dirty, set_is_dirty) = signal(false);
     let name = RwSignal::new(query_name.clone());
     let (is_saved, set_is_saved) = signal(!query_name.is_empty());
@@ -136,7 +136,7 @@ pub fn SqlTab(
         set_result.set(None);
 
         spawn_local(async move {
-            let res = tauri::execute_query(&query).await;
+            let res = tauri::execute_query_multi(&query).await;
             set_result.set(Some(res));
             set_running.set(false);
         });

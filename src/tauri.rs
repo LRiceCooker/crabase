@@ -392,6 +392,14 @@ pub struct QueryResult {
     pub rows: Vec<Vec<serde_json::Value>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum StatementResult {
+    Rows { columns: Vec<String>, rows: Vec<Vec<serde_json::Value>>, sql_preview: String },
+    Affected { command: String, rows_affected: u64, sql_preview: String },
+    Error { message: String, sql_preview: String },
+}
+
 pub async fn execute_query(sql: &str) -> Result<QueryResult, String> {
     #[derive(Serialize)]
     struct Args<'a> {
@@ -410,6 +418,26 @@ pub async fn execute_query(sql: &str) -> Result<QueryResult, String> {
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to parse query result: {}", e))
+}
+
+pub async fn execute_query_multi(sql: &str) -> Result<Vec<StatementResult>, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        sql: &'a str,
+    }
+
+    let args = serde_wasm_bindgen::to_value(&Args { sql })
+        .map_err(|e| e.to_string())?;
+
+    let result = invoke("execute_query_multi", args)
+        .await
+        .map_err(|e| {
+            e.as_string()
+                .unwrap_or_else(|| "Multi-statement execution failed".to_string())
+        })?;
+
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| format!("Failed to parse multi-statement result: {}", e))
 }
 
 pub async fn save_changes(table_name: &str, changes: &ChangeSet) -> Result<String, String> {
