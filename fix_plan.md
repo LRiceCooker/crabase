@@ -7,7 +7,6 @@
 ### Phase 19 — Dark Theme Fixes (Critical Visual Bugs)
 
 ### Phase 20 — Overlay Mutual Exclusion Bug Fix
-- [ ] Refactor overlay state management so only ONE overlay can be open at a time (Command Palette, Table Finder, Find Bar, Restore, Settings, Chat)
 - [ ] Opening any overlay must close any currently-open overlay first
 - [ ] Cmd+Shift+P → Command Palette closes Table Finder if open
 - [ ] Cmd+P → Table Finder closes Command Palette if open
@@ -90,6 +89,7 @@
 - [ ] Each new chat panel opening starts a fresh conversation (no persistence required for this iteration)
 
 ## Completed
+- [x] Refactor overlay state management so only ONE overlay can be open at a time (Command Palette, Table Finder, Find Bar, Restore, Settings, Chat)
 - [x] Verify dark mode contrast across the entire app — find any remaining unreadable text (sql results table, JSON modal, settings inputs, etc.) and fix
 - [x] Build a custom CodeMirror theme matching design.md exactly: editor background `#0A0A0A`, gutter background `#0A0A0A`, gutter text `text-zinc-600`, active line highlight `bg-white/[0.03]`, selection `bg-indigo-500/25`, cursor `text-neutral-50`. Replace the default `one-dark` theme with this custom theme.
 - [x] Audit ALL table cell text styles: ensure every `text-gray-*` has a `dark:text-zinc-*` (target `dark:text-zinc-200`) so cell text is readable in dark mode

@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
 use crate::icons::IconSearch;
+use crate::overlay::{self, ActiveOverlay};
 
 /// Fuzzy match: checks if all characters in `pattern` appear in order in `text`.
 /// Returns a score (higher = better match) or None if no match.
@@ -49,10 +50,9 @@ pub fn fuzzy_score(pattern: &str, text: &str) -> Option<i32> {
 
 #[component]
 pub fn CommandPalette(
-    show: ReadSignal<bool>,
-    set_show: WriteSignal<bool>,
     on_command: Callback<String>,
 ) -> impl IntoView {
+    let overlay_ctx = overlay::use_overlay();
     let (query, set_query) = signal(String::new());
     let (selected_idx, set_selected_idx) = signal(0usize);
     let input_ref = NodeRef::<leptos::html::Input>::new();
@@ -66,7 +66,7 @@ pub fn CommandPalette(
 
     // Focus input when palette opens, clear query when it closes
     Effect::new(move |_| {
-        if show.get() {
+        if overlay_ctx.is_open(ActiveOverlay::CommandPalette) {
             if let Some(el) = input_ref.get() {
                 let _ = el.focus();
             }
@@ -83,7 +83,7 @@ pub fn CommandPalette(
     });
 
     move || {
-        if show.get() {
+        if overlay_ctx.is_open(ActiveOverlay::CommandPalette) {
             let q = query.get();
             let mut scored: Vec<_> = commands
                 .iter()
@@ -107,7 +107,7 @@ pub fn CommandPalette(
                     // Backdrop
                     <div
                         class="absolute inset-0 backdrop-blur-sm bg-black/30"
-                        on:click=move |_| set_show.set(false)
+                        on:click=move |_| overlay_ctx.close()
                     ></div>
                     // Palette panel
                     <div class="relative z-10 w-[560px] max-h-[400px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl dark:shadow-black/40 border border-gray-200 dark:border-white/[0.08] overflow-hidden mt-[20vh] dark:ring-1 dark:ring-white/[0.06]">
@@ -126,12 +126,12 @@ pub fn CommandPalette(
                                     move |ev| {
                                         let ev: &web_sys::KeyboardEvent = ev.unchecked_ref();
                                         match ev.key().as_str() {
-                                            "Escape" => set_show.set(false),
+                                            "Escape" => overlay_ctx.close(),
                                             "Enter" => {
                                                 let idx = selected_idx.get();
                                                 if let Some((name, _, _)) = filtered.get(idx) {
                                                     on_command.run(name.to_string());
-                                                    set_show.set(false);
+                                                    overlay_ctx.close();
                                                 }
                                             }
                                             "ArrowDown" => {
@@ -171,7 +171,7 @@ pub fn CommandPalette(
                                         class=class
                                         on:click=move |_| {
                                             on_command.run(cmd_name.clone());
-                                            set_show.set(false);
+                                            overlay_ctx.close();
                                         }
                                     >
                                         <div class="flex flex-col">

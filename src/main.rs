@@ -3,6 +3,7 @@ mod command_palette;
 mod connection;
 pub mod icons;
 mod main_layout;
+pub mod overlay;
 mod settings;
 pub mod shortcuts;
 mod sidebar;

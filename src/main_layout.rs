@@ -8,6 +8,7 @@ use crate::icons::{
     IconAlertTriangle, IconCheckCircle, IconDatabase, IconEdit, IconFile, IconLoader, IconLogOut,
     IconPlus, IconUpload, IconX, IconXCircle,
 };
+use crate::overlay::{self, ActiveOverlay};
 use crate::settings::settings_view::SettingsView;
 use crate::shortcuts::{self, ShortcutAction, use_save_trigger};
 use crate::sidebar::saved_queries_list::SavedQueriesList;
@@ -38,11 +39,8 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
     let (reconnecting, set_reconnecting) = signal(false);
     let (header_error, set_header_error) = signal(Option::<String>::None);
 
-    // Command palette state
-    let (show_palette, set_show_palette) = signal(false);
-
-    // Table finder state (Cmd+P)
-    let (show_finder, set_show_finder) = signal(false);
+    // Centralized overlay state (only one overlay open at a time)
+    let overlay_ctx = overlay::use_overlay();
 
     // Tab state
     let tab_state = TabState::new();
@@ -88,11 +86,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
         })
     };
 
-    // Settings panel state
-    let (show_settings, set_show_settings) = signal(false);
-
-    // Restore panel state
-    let (show_restore, set_show_restore) = signal(false);
+    // Restore panel state (file-related signals remain separate)
     let (restore_file, set_restore_file) = signal(Option::<String>::None);
     let (restore_picking, set_restore_picking) = signal(false);
     let (restore_running, set_restore_running) = signal(false);
@@ -105,8 +99,8 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
         Callback::new(move |cmd: String| {
             match cmd.as_str() {
                 "New SQL Editor" => { ts.open(TabKind::SqlEditor); },
-                "Restore Backup" => set_show_restore.set(true),
-                "Settings" => set_show_settings.set(true),
+                "Restore Backup" => overlay_ctx.open(ActiveOverlay::Restore),
+                "Settings" => overlay_ctx.open(ActiveOverlay::Settings),
                 _ => {}
             }
         })
@@ -118,12 +112,15 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
         let save_trigger = use_save_trigger();
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |ev: web_sys::KeyboardEvent| {
-                if sc.matches(ShortcutAction::CommandPalette, &ev) {
+                if ev.key() == "Escape" && overlay_ctx.active.get_untracked() != ActiveOverlay::None {
                     ev.prevent_default();
-                    set_show_palette.set(true);
+                    overlay_ctx.close();
+                } else if sc.matches(ShortcutAction::CommandPalette, &ev) {
+                    ev.prevent_default();
+                    overlay_ctx.open(ActiveOverlay::CommandPalette);
                 } else if sc.matches(ShortcutAction::TableFinder, &ev) {
                     ev.prevent_default();
-                    set_show_finder.set(true);
+                    overlay_ctx.open(ActiveOverlay::TableFinder);
                 } else if sc.matches(ShortcutAction::Save, &ev) {
                     ev.prevent_default();
                     save_trigger.request();
@@ -227,12 +224,10 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
     view! {
         <div class="h-screen flex flex-col bg-white dark:bg-neutral-950 overflow-hidden">
             // Command palette overlay
-            <CommandPalette show=show_palette set_show=set_show_palette on_command=on_command />
+            <CommandPalette on_command=on_command />
 
             // Table finder overlay (Cmd+P)
             <TableFinder
-                show=show_finder
-                set_show=set_show_finder
                 tables=tables
                 saved_queries=saved_query_names
                 on_select=on_table_select
@@ -467,7 +462,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                     // Content area — scrolls independently
                     <main class="flex-1 overflow-y-auto">
                         {move || {
-                            if show_restore.get() {
+                            if overlay_ctx.is_open(ActiveOverlay::Restore) {
                             let on_pick_file = move |_| {
                                 set_restore_picking.set(true);
                                 spawn_local(async move {
@@ -481,7 +476,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                             };
 
                             let on_close = move |_| {
-                                set_show_restore.set(false);
+                                overlay_ctx.close();
                                 set_restore_file.set(None);
                                 set_restore_logs.set(Vec::new());
                                 set_restore_status.set(None);
@@ -629,9 +624,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                     </div>
                                 </div>
                             }.into_any()
-                        } else if show_settings.get() {
+                        } else if overlay_ctx.is_open(ActiveOverlay::Settings) {
                             view! {
-                                <SettingsView set_show=set_show_settings />
+                                <SettingsView />
                             }.into_any()
                         } else if active_table.get().is_some() {
                             view! {

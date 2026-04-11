@@ -4,6 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::connection::connection_form::ConnectionForm;
 use crate::connection::connection_screen::ConnectionScreen;
 use crate::main_layout::MainLayout;
+use crate::overlay;
 use crate::shortcuts;
 use crate::tauri::{self, build_connection_string_js, ConnectionInfo, SavedConnection};
 use crate::theme;
@@ -18,6 +19,9 @@ pub fn App() -> impl IntoView {
 
     // Initialize global save trigger (provides SaveTrigger via Leptos context)
     shortcuts::provide_save_trigger();
+
+    // Initialize overlay state (provides OverlayCtx via Leptos context)
+    overlay::provide_overlay_ctx();
 
     // 3 states: "input" -> "form" -> "connected"
     let (screen, set_screen) = signal(String::from("input"));

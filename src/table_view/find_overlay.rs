@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::icons::{IconChevronLeft, IconChevronRight, IconSearch, IconX};
+use crate::overlay::{self, ActiveOverlay};
 
 /// A match position: (row_idx, col_idx).
 pub type FindMatch = (usize, usize);
@@ -8,22 +9,21 @@ pub type FindMatch = (usize, usize);
 /// Floating find bar overlay for searching visible table cells.
 #[component]
 pub fn FindOverlay(
-    /// Whether the overlay is visible
-    visible: ReadSignal<bool>,
     /// Signal to write search query
     search_query: RwSignal<String>,
     /// Current matches (computed externally)
     matches: Memo<Vec<FindMatch>>,
     /// Current match index
     current_match: RwSignal<usize>,
-    /// Close callback
+    /// Close callback (for cleanup like clearing search query)
     on_close: Callback<()>,
 ) -> impl IntoView {
+    let overlay_ctx = overlay::use_overlay();
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
     // Auto-focus input when overlay becomes visible
     Effect::new(move |_| {
-        if visible.get() {
+        if overlay_ctx.is_open(ActiveOverlay::FindBar) {
             if let Some(el) = input_ref.get() {
                 let _ = el.focus();
             }
@@ -53,7 +53,7 @@ pub fn FindOverlay(
     view! {
         <div
             class="absolute top-0 right-0 z-30 m-2"
-            class:hidden=move || !visible.get()
+            class:hidden=move || !overlay_ctx.is_open(ActiveOverlay::FindBar)
         >
             <div class="flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 dark:ring-1 dark:ring-white/[0.06] rounded-md shadow-xl px-2.5 py-1.5">
                 <IconSearch class="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" />

@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::icons::{IconLoader, IconPlus, IconRefreshCw, IconTable};
+use crate::overlay::{self, ActiveOverlay};
 use crate::shortcuts::use_save_trigger;
 use crate::table_view::cell_editor::CellEdit;
 use crate::table_view::cell_editors::array_editor_modal::{ArrayEditRequest, ArrayEditorModal};
@@ -40,8 +41,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     // Filter & sort state
     let active_filters = RwSignal::new(Vec::<tauri::Filter>::new());
     let active_sort = RwSignal::new(Vec::<tauri::SortCol>::new());
-    // Find overlay state
-    let (find_visible, set_find_visible) = signal(false);
+    // Find overlay state (uses centralized overlay ctx)
+    let overlay_ctx = overlay::use_overlay();
     let find_query = RwSignal::new(String::new());
     let find_current = RwSignal::new(0usize);
     let find_matches = Memo::new(move |_| {
@@ -406,7 +407,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 if (ev.meta_key() || ev.ctrl_key()) && !ev.shift_key() && ev.code() == "KeyF" {
                     if loaded_table.get().is_some() {
                         ev.prevent_default();
-                        set_find_visible.set(true);
+                        overlay_ctx.open(ActiveOverlay::FindBar);
                     }
                 }
             }
@@ -482,12 +483,11 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                     view! {
                         <div class="relative flex-1 flex flex-col overflow-hidden">
                             <FindOverlay
-                                visible=find_visible
                                 search_query=find_query
                                 matches=find_matches
                                 current_match=find_current
                                 on_close=Callback::new(move |_| {
-                                    set_find_visible.set(false);
+                                    overlay_ctx.close();
                                     find_query.set(String::new());
                                 })
                             />

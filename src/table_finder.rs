@@ -3,6 +3,7 @@ use wasm_bindgen::JsCast;
 
 use crate::command_palette::fuzzy_score;
 use crate::icons::{IconSearch, IconTable, IconTerminal};
+use crate::overlay::{self, ActiveOverlay};
 
 #[derive(Clone, Debug)]
 enum FinderItemKind {
@@ -18,20 +19,19 @@ struct FinderItem {
 
 #[component]
 pub fn TableFinder(
-    show: ReadSignal<bool>,
-    set_show: WriteSignal<bool>,
     tables: ReadSignal<Vec<String>>,
     #[prop(optional)] saved_queries: Option<ReadSignal<Vec<String>>>,
     on_select: Callback<String>,
     #[prop(optional)] on_query_select: Option<Callback<String>>,
 ) -> impl IntoView {
+    let overlay_ctx = overlay::use_overlay();
     let (query, set_query) = signal(String::new());
     let (selected_idx, set_selected_idx) = signal(0usize);
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
-    // Focus input when palette opens, clear query when it closes
+    // Focus input when finder opens, clear query when it closes
     Effect::new(move |_| {
-        if show.get() {
+        if overlay_ctx.is_open(ActiveOverlay::TableFinder) {
             if let Some(el) = input_ref.get() {
                 let _ = el.focus();
             }
@@ -48,7 +48,7 @@ pub fn TableFinder(
     });
 
     move || {
-        if show.get() {
+        if overlay_ctx.is_open(ActiveOverlay::TableFinder) {
             let q = query.get();
             let all_tables = tables.get();
             let all_queries = saved_queries.map(|s| s.get()).unwrap_or_default();
@@ -93,7 +93,7 @@ pub fn TableFinder(
                     // Backdrop
                     <div
                         class="absolute inset-0 backdrop-blur-sm bg-black/30"
-                        on:click=move |_| set_show.set(false)
+                        on:click=move |_| overlay_ctx.close()
                     ></div>
                     // Panel
                     <div class="relative z-10 w-[560px] max-h-[400px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl dark:shadow-black/40 border border-gray-200 dark:border-white/[0.08] overflow-hidden mt-[20vh] dark:ring-1 dark:ring-white/[0.06]">
@@ -112,7 +112,7 @@ pub fn TableFinder(
                                     move |ev| {
                                         let ev: &web_sys::KeyboardEvent = ev.unchecked_ref();
                                         match ev.key().as_str() {
-                                            "Escape" => set_show.set(false),
+                                            "Escape" => overlay_ctx.close(),
                                             "Enter" => {
                                                 let idx = selected_idx.get();
                                                 if let Some(item) = items.get(idx) {
@@ -124,7 +124,7 @@ pub fn TableFinder(
                                                             }
                                                         }
                                                     }
-                                                    set_show.set(false);
+                                                    overlay_ctx.close();
                                                 }
                                             }
                                             "ArrowDown" => {
@@ -178,7 +178,7 @@ pub fn TableFinder(
                                                 if let Some(cb) = on_query_select {
                                                     cb.run(click_name.clone());
                                                 }
-                                                set_show.set(false);
+                                                overlay_ctx.close();
                                             }
                                         >
                                             <IconTerminal class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
@@ -210,7 +210,7 @@ pub fn TableFinder(
                                             class=class
                                             on:click=move |_| {
                                                 on_select.run(click_name.clone());
-                                                set_show.set(false);
+                                                overlay_ctx.close();
                                             }
                                         >
                                             <IconTable class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />

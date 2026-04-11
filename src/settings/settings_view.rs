@@ -1,15 +1,15 @@
 use leptos::prelude::*;
 
 use crate::icons::IconX;
+use crate::overlay;
 use super::shortcuts_settings::ShortcutsSetting;
 use super::theme_setting::ThemeSetting;
 
 #[component]
-pub fn SettingsView(
-    set_show: WriteSignal<bool>,
-) -> impl IntoView {
+pub fn SettingsView() -> impl IntoView {
+    let overlay_ctx = overlay::use_overlay();
     let on_close = move |_| {
-        set_show.set(false);
+        overlay_ctx.close();
     };
 
     view! {
