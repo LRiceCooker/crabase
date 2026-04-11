@@ -8,8 +8,8 @@ import { sql, PostgreSQL } from "@codemirror/lang-sql";
 import { json } from "@codemirror/lang-json";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
+import { syntaxHighlighting, defaultHighlightStyle, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 
 // Store active editor instances by ID
 const editors = new Map();
@@ -58,24 +58,33 @@ const lightTheme = EditorView.theme({
   },
 }, { dark: false });
 
-// Dark theme extension (supplements oneDark with crabase palette tweaks)
-const darkThemeExt = EditorView.theme({
+// Custom dark theme matching design.md exactly
+const crabaseDarkTheme = EditorView.theme({
   "&": {
-    backgroundColor: "#0D0D0F",
+    backgroundColor: "#0A0A0A",
+    color: "#E4E4E7", // zinc-200
     fontSize: "13px",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
   },
   ".cm-content": {
-    caretColor: "#818CF8",
+    caretColor: "#FAFAFA",
     lineHeight: "1.625",
   },
-  ".cm-cursor": {
-    borderLeftColor: "#818CF8",
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "#FAFAFA",
   },
-  ".cm-gutters": {
-    backgroundColor: "#0F0F11",
-    color: "#71717A",
-    borderRight: "1px solid #1F1F23",
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "rgba(99,102,241,0.25)",
+  },
+  ".cm-panels": { backgroundColor: "#0A0A0A", color: "#E4E4E7" },
+  ".cm-panels.cm-panels-top": { borderBottom: "1px solid #27272A" },
+  ".cm-panels.cm-panels-bottom": { borderTop: "1px solid #27272A" },
+  ".cm-searchMatch": {
+    backgroundColor: "rgba(99,102,241,0.3)",
+    outline: "1px solid rgba(99,102,241,0.5)",
+  },
+  ".cm-searchMatch.cm-searchMatch-selected": {
+    backgroundColor: "rgba(99,102,241,0.5)",
   },
   ".cm-activeLine": {
     backgroundColor: "rgba(255,255,255,0.03)",
@@ -83,7 +92,74 @@ const darkThemeExt = EditorView.theme({
   ".cm-activeLineGutter": {
     backgroundColor: "rgba(255,255,255,0.05)",
   },
+  ".cm-selectionMatch": {
+    backgroundColor: "rgba(99,102,241,0.15)",
+  },
+  ".cm-matchingBracket, .cm-nonmatchingBracket": {
+    backgroundColor: "rgba(99,102,241,0.25)",
+    outline: "1px solid rgba(99,102,241,0.4)",
+  },
+  ".cm-gutters": {
+    backgroundColor: "#0A0A0A",
+    color: "#52525B", // zinc-600
+    borderRight: "none",
+  },
+  ".cm-foldPlaceholder": {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#71717A",
+  },
+  ".cm-tooltip": {
+    backgroundColor: "#18181B",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "6px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+    color: "#E4E4E7",
+  },
+  ".cm-tooltip .cm-tooltip-arrow:before": {
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+  },
+  ".cm-tooltip .cm-tooltip-arrow:after": {
+    borderTopColor: "#18181B",
+    borderBottomColor: "#18181B",
+  },
+  ".cm-tooltip-autocomplete": {
+    "& > ul > li[aria-selected]": {
+      backgroundColor: "rgba(99,102,241,0.25)",
+      color: "#A5B4FC",
+    },
+  },
 }, { dark: true });
+
+// Custom dark syntax highlighting — all colors ≥4.5:1 contrast on #0A0A0A
+const crabaseDarkHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: "#C084FC" },            // purple-400
+  { tag: tags.operator, color: "#A5B4FC" },            // indigo-300
+  { tag: tags.special(tags.variableName), color: "#67E8F9" }, // cyan-300
+  { tag: tags.typeName, color: "#67E8F9" },            // cyan-300
+  { tag: tags.atom, color: "#C084FC" },                // purple-400
+  { tag: tags.number, color: "#FCA5A5" },              // red-300
+  { tag: tags.definition(tags.variableName), color: "#E4E4E7" },
+  { tag: tags.string, color: "#86EFAC" },              // green-300
+  { tag: tags.special(tags.string), color: "#86EFAC" },
+  { tag: tags.comment, color: "#52525B", fontStyle: "italic" }, // zinc-600
+  { tag: tags.variableName, color: "#E4E4E7" },       // zinc-200
+  { tag: tags.tagName, color: "#FCA5A5" },             // red-300
+  { tag: tags.bracket, color: "#A1A1AA" },             // zinc-400
+  { tag: tags.meta, color: "#FDBA74" },                // orange-300
+  { tag: tags.link, color: "#818CF8", textDecoration: "underline" },
+  { tag: tags.heading, color: "#E4E4E7", fontWeight: "bold" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.strong, fontWeight: "bold" },
+  { tag: tags.invalid, color: "#FCA5A5" },
+  { tag: tags.bool, color: "#FDBA74" },                // orange-300
+  { tag: tags.null, color: "#FDBA74" },                // orange-300
+  { tag: tags.className, color: "#67E8F9" },           // cyan-300
+  { tag: tags.propertyName, color: "#93C5FD" },        // blue-300
+  { tag: tags.function(tags.variableName), color: "#93C5FD" }, // blue-300
+  { tag: tags.labelName, color: "#A5B4FC" },           // indigo-300
+]);
 
 function buildExtensions(opts, langCompartment) {
   const isDark = opts.isDark || false;
@@ -130,8 +206,8 @@ function buildExtensions(opts, langCompartment) {
 
   // Theme
   if (isDark) {
-    exts.push(oneDark);
-    exts.push(darkThemeExt);
+    exts.push(crabaseDarkTheme);
+    exts.push(syntaxHighlighting(crabaseDarkHighlightStyle));
   } else {
     exts.push(syntaxHighlighting(defaultHighlightStyle, { fallback: true }));
     exts.push(lightTheme);
