@@ -18,13 +18,18 @@ pub fn SqlTab(
     /// Callback to notify parent of dirty state changes.
     #[prop(optional)]
     on_dirty_change: Option<Callback<bool>>,
+    /// Callback to notify parent when a query is saved (so the sidebar can refresh).
+    #[prop(optional)]
+    on_query_saved: Option<Callback<()>>,
 ) -> impl IntoView {
     let (cm_handle, set_cm_handle) = signal(Option::<CodeMirrorHandle>::None);
     let (running, set_running) = signal(false);
     let (result, set_result) = signal(Option::<Result<Vec<tauri::StatementResult>, String>>::None);
     let (is_dirty, set_is_dirty) = signal(false);
     let name = RwSignal::new(query_name.clone());
-    let (is_saved, set_is_saved) = signal(!query_name.is_empty());
+    // is_saved starts false for new editors. It becomes true after the first successful save,
+    // or if the query was loaded from a saved file (detected by checking if the file exists on mount).
+    let (is_saved, set_is_saved) = signal(false);
 
     // Track dirty state from editor changes
     let on_change = Callback::new(move |_: String| {
@@ -36,7 +41,7 @@ pub fn SqlTab(
         }
     });
 
-    // Auto-focus the editor and load schema for autocomplete once mounted
+    // Auto-focus the editor, load saved query content, and load schema for autocomplete
     Effect::new(move |_| {
         if let Some(handle) = cm_handle.get() {
             // Schedule focus after a micro-delay to ensure DOM is ready
@@ -49,6 +54,20 @@ pub fn SqlTab(
                 10,
             );
             cb.forget();
+
+            // Try to load saved query content (if this query was opened from the sidebar)
+            let qn = name.get_untracked();
+            if !qn.is_empty() {
+                let handle_for_load = handle;
+                spawn_local(async move {
+                    if let Ok(saved) = tauri::load_query(&qn).await {
+                        handle_for_load.set_content(&saved.sql);
+                        set_is_saved.set(true);
+                        set_is_dirty.set(false);
+                    }
+                    // If load fails, the query hasn't been saved yet — that's fine
+                });
+            }
 
             // Fetch table names and columns for autocomplete (schema-aware)
             spawn_local(async move {
@@ -102,9 +121,12 @@ pub fn SqlTab(
                     if let Some(cb) = on_dirty_change {
                         cb.run(false);
                     }
+                    if let Some(cb) = on_query_saved {
+                        cb.run(());
+                    }
                 }
-                Err(_e) => {
-                    // Error saving — silently ignore for now
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Failed to save query: {}", e).into());
                 }
             }
         });
@@ -208,6 +230,16 @@ pub fn SqlTab(
         cm_handle.get_untracked().map(|h| h.get_content()).unwrap_or_default()
     });
 
+    let set_sql = Callback::new(move |sql: String| {
+        if let Some(handle) = cm_handle.get_untracked() {
+            handle.set_content(&sql);
+            set_is_dirty.set(true);
+            if let Some(cb) = on_dirty_change {
+                cb.run(true);
+            }
+        }
+    });
+
     view! {
         <div class="flex h-full">
             <div class="flex flex-col flex-1 overflow-hidden">
@@ -245,6 +277,7 @@ pub fn SqlTab(
                 visible=chat_visible
                 on_close=Callback::new(move |_| set_chat_visible.set(false))
                 get_sql=get_sql
+                set_sql=set_sql
             />
         </div>
     }

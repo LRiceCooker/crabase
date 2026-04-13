@@ -220,16 +220,29 @@ impl DbState {
                 Vec::new()
             };
 
+            // Normalize long-form Postgres type names to short canonical forms
+            let normalized_type = if is_enum {
+                udt_name.clone().unwrap_or(data_type)
+            } else if is_array {
+                udt_name.clone().unwrap_or(data_type)
+            } else {
+                match data_type.as_str() {
+                    "timestamp without time zone" => "timestamp".to_string(),
+                    "timestamp with time zone" => "timestamptz".to_string(),
+                    "time without time zone" => "time".to_string(),
+                    "time with time zone" => "timetz".to_string(),
+                    "character varying" => "varchar".to_string(),
+                    "character" => "char".to_string(),
+                    "double precision" => "double".to_string(),
+                    "bit varying" => "varbit".to_string(),
+                    "boolean" => "boolean".to_string(),
+                    other => other.to_string(),
+                }
+            };
+
             columns.push(ColumnInfo {
                 name,
-                data_type: if is_enum {
-                    udt_name.clone().unwrap_or(data_type)
-                } else if is_array {
-                    // Use udt_name (e.g. "_int4") to derive element type
-                    udt_name.clone().unwrap_or(data_type)
-                } else {
-                    data_type
-                },
+                data_type: normalized_type,
                 is_nullable: is_nullable == "YES",
                 is_primary_key: constraint_type.as_deref() == Some("PRIMARY KEY"),
                 is_auto_increment: is_auto,
@@ -325,11 +338,13 @@ impl DbState {
         let total_count = count_row.0 as u64;
 
         // Get paginated rows with smart default ordering
+        // Cast enum columns to text so sqlx can decode them properly
+        let select_cols = build_select_columns(&columns);
         let order_clause = default_order_clause(&columns);
         let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
         let data_query = format!(
-            "SELECT * FROM {}{} LIMIT {} OFFSET {}",
-            qualified_table, order_clause, page_size, offset
+            "SELECT {} FROM {}{} LIMIT {} OFFSET {}",
+            select_cols, qualified_table, order_clause, page_size, offset
         );
 
         let pg_rows = sqlx::query(&data_query)
@@ -407,10 +422,12 @@ impl DbState {
         let total_count = count_row.0 as u64;
 
         // Get paginated filtered rows
+        // Cast enum columns to text so sqlx can decode them properly
+        let select_cols = build_select_columns(&columns);
         let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
         let data_query = format!(
-            "SELECT * FROM {}{}{} LIMIT {} OFFSET {}",
-            qualified_table, where_clause, order_clause, page_size, offset
+            "SELECT {} FROM {}{}{} LIMIT {} OFFSET {}",
+            select_cols, qualified_table, where_clause, order_clause, page_size, offset
         );
 
         let pg_rows = sqlx::query(&data_query)
@@ -556,28 +573,29 @@ impl DbState {
                 .ok_or_else(|| "Not connected to any database".to_string())?
         };
 
-        let pg_rows = sqlx::query(sql)
-            .fetch_all(&pool)
-            .await
-            .map_err(|e| format!("{}", e))?;
+        // Use raw_sql (simple query protocol) — returns all values as text,
+        // avoiding binary protocol issues with enums, arrays, and custom types.
+        use futures::TryStreamExt;
+        let mut stream = sqlx::raw_sql(sql).fetch_many(&pool);
+        let mut columns: Vec<String> = Vec::new();
+        let mut rows: Vec<Vec<serde_json::Value>> = Vec::new();
 
-        // Extract column names from the first row (or empty if no rows)
-        let columns: Vec<String> = if let Some(first) = pg_rows.first() {
-            (0..first.len())
-                .map(|i| first.column(i).name().to_string())
-                .collect()
-        } else {
-            Vec::new()
-        };
-
-        let rows: Vec<Vec<serde_json::Value>> = pg_rows
-            .iter()
-            .map(|row| {
-                (0..row.len())
-                    .map(|i| pg_value_to_json(row, i))
-                    .collect()
-            })
-            .collect();
+        while let Some(either) = stream.try_next().await.map_err(|e| format!("{}", e))? {
+            match either {
+                sqlx::Either::Right(row) => {
+                    if columns.is_empty() {
+                        columns = (0..row.len())
+                            .map(|i| row.column(i).name().to_string())
+                            .collect();
+                    }
+                    let row_values: Vec<serde_json::Value> = (0..row.len())
+                        .map(|i| pg_value_to_json(&row, i))
+                        .collect();
+                    rows.push(row_values);
+                }
+                sqlx::Either::Left(_) => {}
+            }
+        }
 
         Ok(QueryResult { columns, rows })
     }
@@ -645,8 +663,9 @@ impl DbState {
         Ok(output)
     }
 
-    /// Execute multiple SQL statements separated by semicolons.
+    /// Execute multiple SQL statements using the simple query protocol (raw_sql).
     /// Returns a Vec<StatementResult> — one entry per statement.
+    /// The simple protocol returns all values as text, avoiding binary issues with enums/arrays.
     pub async fn execute_query_multi(&self, sql: &str) -> Result<Vec<StatementResult>, String> {
         let pool = {
             let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
@@ -655,71 +674,85 @@ impl DbState {
                 .ok_or_else(|| "Not connected to any database".to_string())?
         };
 
-        // Split SQL into individual statements (simple split on semicolons, skip empty)
-        let statements: Vec<&str> = sql
-            .split(';')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .collect();
+        use futures::TryStreamExt;
 
-        let mut results = Vec::new();
+        // raw_sql sends everything via the simple query protocol.
+        // It returns a stream of Either<QueryResult, Row> — Left for commands, Right for data rows.
+        let mut stream = sqlx::raw_sql(sql).fetch_many(&pool);
 
-        for stmt in statements {
-            let preview = if stmt.len() > 60 {
-                format!("{}...", &stmt[..60])
-            } else {
-                stmt.to_string()
-            };
+        let mut results: Vec<StatementResult> = Vec::new();
+        let mut current_columns: Vec<String> = Vec::new();
+        let mut current_rows: Vec<Vec<serde_json::Value>> = Vec::new();
+        let mut current_preview = String::new();
 
-            // Try to detect if this is a SELECT-like statement (returns rows)
-            let upper = stmt.trim_start().to_uppercase();
-            let is_select = upper.starts_with("SELECT")
-                || upper.starts_with("WITH")
-                || upper.starts_with("TABLE")
-                || upper.starts_with("VALUES")
-                || upper.starts_with("SHOW")
-                || upper.starts_with("EXPLAIN");
+        // Track which statement we're on for previews
+        let statements: Vec<&str> = sql.split(';').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+        let mut stmt_idx = 0usize;
 
-            if is_select {
-                match sqlx::query(stmt).fetch_all(&pool).await {
-                    Ok(pg_rows) => {
-                        let columns: Vec<String> = if let Some(first) = pg_rows.first() {
-                            (0..first.len())
-                                .map(|i| first.column(i).name().to_string())
-                                .collect()
-                        } else {
-                            Vec::new()
-                        };
-                        let rows: Vec<Vec<serde_json::Value>> = pg_rows
-                            .iter()
-                            .map(|row| (0..row.len()).map(|i| pg_value_to_json(row, i)).collect())
+        while let Some(either) = stream.try_next().await.map_err(|e| format!("{}", e))? {
+            match either {
+                sqlx::Either::Right(row) => {
+                    // Data row — accumulate into current result
+                    if current_columns.is_empty() {
+                        current_columns = (0..row.len())
+                            .map(|i| row.column(i).name().to_string())
                             .collect();
-                        results.push(StatementResult::Rows { columns, rows, sql_preview: preview });
+                        current_preview = statements.get(stmt_idx).map(|s| {
+                            if s.len() > 60 { format!("{}...", &s[..60]) } else { s.to_string() }
+                        }).unwrap_or_default();
                     }
-                    Err(e) => {
-                        results.push(StatementResult::Error { message: e.to_string(), sql_preview: preview });
-                    }
+                    let row_values: Vec<serde_json::Value> = (0..row.len())
+                        .map(|i| pg_value_to_json(&row, i))
+                        .collect();
+                    current_rows.push(row_values);
                 }
-            } else {
-                match sqlx::query(stmt).execute(&pool).await {
-                    Ok(result) => {
-                        let cmd = upper.split_whitespace().next().unwrap_or("UNKNOWN").to_string();
-                        results.push(StatementResult::Affected {
-                            command: cmd,
-                            rows_affected: result.rows_affected(),
-                            sql_preview: preview,
+                sqlx::Either::Left(result) => {
+                    // Command completed — flush any accumulated rows first
+                    if !current_columns.is_empty() {
+                        results.push(StatementResult::Rows {
+                            columns: std::mem::take(&mut current_columns),
+                            rows: std::mem::take(&mut current_rows),
+                            sql_preview: std::mem::take(&mut current_preview),
                         });
+                        stmt_idx += 1;
                     }
-                    Err(e) => {
-                        results.push(StatementResult::Error { message: e.to_string(), sql_preview: preview });
+
+                    // Record the command result
+                    let preview = statements.get(stmt_idx).map(|s| {
+                        if s.len() > 60 { format!("{}...", &s[..60]) } else { s.to_string() }
+                    }).unwrap_or_default();
+                    let affected = result.rows_affected();
+
+                    // Only record if it actually did something (skip the "no rows" result from SELECT)
+                    if affected > 0 || current_rows.is_empty() {
+                        let upper = preview.trim_start().to_uppercase();
+                        let cmd = upper.split_whitespace().next().unwrap_or("OK").to_string();
+                        // Don't add Affected for SELECT statements (they come with Rows)
+                        if !cmd.starts_with("SELECT") && !cmd.starts_with("WITH") && !cmd.starts_with("TABLE") {
+                            results.push(StatementResult::Affected {
+                                command: cmd,
+                                rows_affected: affected,
+                                sql_preview: preview,
+                            });
+                        }
                     }
+                    stmt_idx += 1;
                 }
             }
         }
 
+        // Flush any remaining rows
+        if !current_columns.is_empty() {
+            results.push(StatementResult::Rows {
+                columns: current_columns,
+                rows: current_rows,
+                sql_preview: current_preview,
+            });
+        }
+
         if results.is_empty() {
             results.push(StatementResult::Affected {
-                command: "EMPTY".to_string(),
+                command: "OK".to_string(),
                 rows_affected: 0,
                 sql_preview: String::new(),
             });
@@ -727,6 +760,106 @@ impl DbState {
 
         Ok(results)
     }
+
+    pub async fn drop_table(&self, table_name: &str) -> Result<String, String> {
+        let pool = {
+            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
+        };
+        let schema = {
+            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
+        };
+        let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
+        let sql = format!("DROP TABLE {} CASCADE", qualified);
+        sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("DROP TABLE failed: {}", e))?;
+        Ok(format!("Table {} dropped", table_name))
+    }
+
+    pub async fn truncate_table(&self, table_name: &str) -> Result<String, String> {
+        let pool = {
+            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
+        };
+        let schema = {
+            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
+        };
+        let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
+        let sql = format!("TRUNCATE TABLE {} CASCADE", qualified);
+        sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("TRUNCATE failed: {}", e))?;
+        Ok(format!("Table {} truncated", table_name))
+    }
+
+    pub async fn export_table_json(&self, table_name: &str) -> Result<String, String> {
+        let pool = {
+            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
+        };
+        let schema = {
+            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
+        };
+        let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
+        let query = format!("SELECT row_to_json(t) FROM {} t", qualified);
+        let rows: Vec<(serde_json::Value,)> = sqlx::query_as(&query)
+            .fetch_all(&pool).await
+            .map_err(|e| format!("Export failed: {}", e))?;
+        let arr: Vec<serde_json::Value> = rows.into_iter().map(|(v,)| v).collect();
+        serde_json::to_string_pretty(&arr).map_err(|e| format!("JSON serialization failed: {}", e))
+    }
+
+    pub async fn export_table_sql(&self, table_name: &str) -> Result<String, String> {
+        let columns = self.get_column_info(table_name).await?;
+        let pool = {
+            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
+        };
+        let schema = {
+            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
+            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
+        };
+        let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
+        let query = format!("SELECT * FROM {}", qualified);
+        let rows = sqlx::query(&query).fetch_all(&pool).await
+            .map_err(|e| format!("Export failed: {}", e))?;
+
+        let col_names: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c.name.replace('"', "\"\""))).collect();
+        let header = format!("-- Export of {}\n", qualified);
+        let mut inserts = Vec::new();
+        for row in &rows {
+            let values: Vec<String> = (0..columns.len()).map(|i| {
+                let val = pg_value_to_json(row, i);
+                let inner = if let Some(v) = val.get("value") { v.clone() } else if let Some(r) = val.get("raw") { r.clone() } else { val };
+                match inner {
+                    serde_json::Value::Null => "NULL".to_string(),
+                    serde_json::Value::Bool(b) => if b { "TRUE".to_string() } else { "FALSE".to_string() },
+                    serde_json::Value::Number(n) => n.to_string(),
+                    serde_json::Value::String(s) => format!("'{}'", s.replace('\'', "''")),
+                    other => format!("'{}'", serde_json::to_string(&other).unwrap_or_default().replace('\'', "''")),
+                }
+            }).collect();
+            inserts.push(format!("INSERT INTO {} ({}) VALUES ({});", qualified, col_names.join(", "), values.join(", ")));
+        }
+        Ok(format!("{}{}", header, inserts.join("\n")))
+    }
+}
+
+/// Build a SELECT column list, casting enum and array columns to text
+/// so that sqlx can decode their values as strings without binary protocol issues.
+fn build_select_columns(columns: &[ColumnInfo]) -> String {
+    columns
+        .iter()
+        .map(|col| {
+            let quoted = format!("\"{}\"", col.name.replace('"', "\"\""));
+            if col.is_enum || col.is_array {
+                format!("{}::text AS {}", quoted, quoted)
+            } else {
+                quoted
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Build a WHERE clause from primary key values starting at parameter index `start_idx`.
@@ -1009,9 +1142,8 @@ fn pg_value_to_json(row: &sqlx::postgres::PgRow, idx: usize) -> serde_json::Valu
             Err(_) => tagged_unknown(type_name),
         },
         _ => {
-            // For all other types, try as String — covers text, varchar, timestamp,
-            // uuid, inet, cidr, macaddr, interval, date, time, xml, bytea, numeric,
-            // money, bit, range, geometry, arrays, enums, etc.
+            // For all other types, try as String first — covers text, varchar,
+            // uuid, inet, cidr, macaddr, interval, xml, numeric, money, bit, range, etc.
             match row.try_get::<Option<String>, _>(idx) {
                 Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v)),
                 Ok(None) => serde_json::Value::Null,
@@ -1339,6 +1471,13 @@ mod tests {
         let result = state.execute_query("SELECT 1").await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+
+    #[tokio::test]
+    async fn test_drop_table_not_connected() {
+        let state = DbState::new();
+        let result = state.drop_table("test").await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

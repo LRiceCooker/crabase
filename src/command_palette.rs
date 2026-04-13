@@ -67,12 +67,29 @@ pub fn CommandPalette(
     // Focus input when palette opens, clear query when it closes
     Effect::new(move |_| {
         if overlay_ctx.is_open(ActiveOverlay::CommandPalette) {
-            if let Some(el) = input_ref.get() {
-                let _ = el.focus();
-            }
+            // Delay focus to next frame so CodeMirror releases focus first
+            let input = input_ref;
+            let cb = wasm_bindgen::closure::Closure::once(move || {
+                if let Some(el) = input.get() {
+                    let _ = el.focus();
+                }
+            });
+            let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref(),
+                20,
+            );
+            cb.forget();
         } else {
-            set_query.set(String::new());
-            set_selected_idx.set(0);
+            // Defer signal writes to avoid re-entrant borrow panics
+            let cb = wasm_bindgen::closure::Closure::once(move || {
+                set_query.set(String::new());
+                set_selected_idx.set(0);
+            });
+            let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref(),
+                0,
+            );
+            cb.forget();
         }
     });
 
@@ -130,8 +147,9 @@ pub fn CommandPalette(
                                             "Enter" => {
                                                 let idx = selected_idx.get();
                                                 if let Some((name, _, _)) = filtered.get(idx) {
-                                                    on_command.run(name.to_string());
+                                                    // Close palette FIRST so on_command can open another overlay if needed
                                                     overlay_ctx.close();
+                                                    on_command.run(name.to_string());
                                                 }
                                             }
                                             "ArrowDown" => {
@@ -170,8 +188,9 @@ pub fn CommandPalette(
                                     <div
                                         class=class
                                         on:click=move |_| {
-                                            on_command.run(cmd_name.clone());
+                                            // Close palette FIRST so on_command can open another overlay if needed
                                             overlay_ctx.close();
+                                            on_command.run(cmd_name.clone());
                                         }
                                     >
                                         <div class="flex flex-col">

@@ -159,6 +159,32 @@ fn save_settings(
     settings::save_settings(&app_handle, &settings)
 }
 
+#[tauri::command]
+fn set_app_icon(is_dark: bool, app_handle: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+
+    let png_bytes: &[u8] = if is_dark {
+        include_bytes!("../icons/dark/icon.png")
+    } else {
+        include_bytes!("../icons/light/icon.png")
+    };
+
+    // Decode PNG to RGBA using the png crate
+    let decoder = png::Decoder::new(std::io::Cursor::new(png_bytes));
+    let mut reader = decoder.read_info().map_err(|e| format!("PNG decode error: {}", e))?;
+    let info = reader.info().clone();
+    let mut buf = vec![0u8; info.raw_bytes()];
+    reader.next_frame(&mut buf).map_err(|e| format!("PNG frame error: {}", e))?;
+
+    let icon = tauri::image::Image::new_owned(buf, info.width, info.height);
+
+    // Set icon on the main window
+    if let Some(window) = app_handle.get_webview_window("main") {
+        let _ = window.set_icon(icon);
+    }
+    Ok(())
+}
+
 /// Helper: derive connection key from current DB state.
 fn get_conn_key(db_state: &db::DbState) -> Result<String, String> {
     let info = db_state.get_connection_info()?;
@@ -240,45 +266,32 @@ fn check_claude_installed() -> bool {
 
 #[tauri::command]
 async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), String> {
-    use std::io::BufRead;
+    // Run the blocking subprocess on a background thread
+    tokio::task::spawn_blocking(move || {
+        use std::io::BufRead;
 
-    let child = std::process::Command::new("claude")
-        .args(["-p", &prompt, "--output-format", "stream-json", "--dangerously-skip-permissions"])
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to spawn claude: {}", e))?;
+        let mut child = std::process::Command::new("claude")
+            .args(["--print", "-p", &prompt, "--dangerously-skip-permissions"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn claude: {}", e))?;
 
-    let stdout = child.stdout.ok_or("No stdout")?;
-    let reader = std::io::BufReader::new(stdout);
-
-    for line in reader.lines() {
-        let Ok(line) = line else { continue };
-        if line.trim().is_empty() { continue; }
-        // Parse stream-json: look for {"type":"assistant","content":"..."} events
-        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line) {
-            if obj.get("type").and_then(|t| t.as_str()) == Some("assistant") {
-                if let Some(content) = obj.get("content").and_then(|c| c.as_str()) {
-                    let _ = app.emit("chat-response", content.to_string());
-                }
-            }
-            // Also handle content_block_delta for streaming
-            if obj.get("type").and_then(|t| t.as_str()) == Some("content_block_delta") {
-                if let Some(delta) = obj.get("delta").and_then(|d| d.get("text")).and_then(|t| t.as_str()) {
-                    let _ = app.emit("chat-response", delta.to_string());
-                }
-            }
-            // Handle result type
-            if obj.get("type").and_then(|t| t.as_str()) == Some("result") {
-                if let Some(result) = obj.get("result").and_then(|r| r.as_str()) {
-                    let _ = app.emit("chat-response", result.to_string());
-                }
+        if let Some(stdout) = child.stdout.take() {
+            let reader = std::io::BufReader::new(stdout);
+            for line in reader.lines() {
+                let Ok(line) = line else { continue };
+                // --print outputs plain text, stream line by line
+                let _ = app.emit("chat-response", format!("{}\n", line));
             }
         }
-    }
 
-    let _ = app.emit("chat-done", ());
-    Ok(())
+        let _ = child.wait();
+        let _ = app.emit("chat-done", ());
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| format!("Task failed: {}", e))?
 }
 
 #[tauri::command]
@@ -303,11 +316,36 @@ async fn open_new_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn write_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, &content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[tauri::command]
+async fn drop_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.drop_table(&table_name).await
+}
+
+#[tauri::command]
+async fn truncate_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.truncate_table(&table_name).await
+}
+
+#[tauri::command]
+async fn export_table_json(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.export_table_json(&table_name).await
+}
+
+#[tauri::command]
+async fn export_table_sql(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.export_table_sql(&table_name).await
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_columns_for_autocomplete, get_table_data, get_table_data_filtered, execute_query, execute_query_multi, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings, cmd_save_query, cmd_update_query, cmd_rename_query, cmd_delete_query, cmd_list_queries, cmd_load_query, open_new_window, check_claude_installed, chat_with_claude, get_full_schema_for_chat])
+        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_columns_for_autocomplete, get_table_data, get_table_data_filtered, execute_query, execute_query_multi, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings, cmd_save_query, cmd_update_query, cmd_rename_query, cmd_delete_query, cmd_list_queries, cmd_load_query, open_new_window, check_claude_installed, chat_with_claude, get_full_schema_for_chat, drop_table, truncate_table, export_table_json, export_table_sql, write_file, set_app_icon])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

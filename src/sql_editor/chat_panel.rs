@@ -1,14 +1,47 @@
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
+
+use wasm_bindgen::prelude::*;
 
 use crate::icons::{IconLoader, IconX};
 use crate::tauri;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["__markdown"], js_name = "render")]
+    fn markdown_render(text: &str) -> String;
+}
 
 /// A single chat message.
 #[derive(Clone, Debug)]
 struct ChatMessage {
     role: &'static str, // "user" or "assistant"
     content: String,
+}
+
+/// Extract SQL code blocks from text (```sql ... ``` or ``` ... ```)
+fn extract_sql_blocks(text: &str) -> Vec<String> {
+    let mut blocks = Vec::new();
+    let mut in_block = false;
+    let mut current_block = String::new();
+
+    for line in text.lines() {
+        if line.trim().starts_with("```") && !in_block {
+            in_block = true;
+            current_block.clear();
+        } else if line.trim() == "```" && in_block {
+            in_block = false;
+            let trimmed = current_block.trim().to_string();
+            if !trimmed.is_empty() {
+                blocks.push(trimmed);
+            }
+        } else if in_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+    blocks
 }
 
 /// Side panel for AI chat (Cmd+I). Slides in from the right.
@@ -20,6 +53,8 @@ pub fn ChatPanel(
     on_close: Callback<()>,
     /// Callback to get current SQL editor content
     get_sql: Callback<(), String>,
+    /// Callback to set the SQL editor content (apply SQL from chat)
+    set_sql: Callback<String>,
 ) -> impl IntoView {
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
     let (input, set_input) = signal(String::new());
@@ -40,10 +75,18 @@ pub fn ChatPanel(
                 set_claude_installed.set(Some(installed));
             });
 
-            // Focus input
-            if let Some(el) = input_ref.get() {
-                let _ = el.focus();
-            }
+            // Focus input with delay
+            let input = input_ref;
+            let cb = wasm_bindgen::closure::Closure::once(move || {
+                if let Some(el) = input.get() {
+                    let _ = el.focus();
+                }
+            });
+            let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref(),
+                50,
+            );
+            cb.forget();
         }
     });
 
@@ -73,16 +116,18 @@ pub fn ChatPanel(
 
             // Build the prompt with context
             let prompt = format!(
-                "You are a PostgreSQL expert assistant. The user is working in a SQL editor.\n\n\
+                "You are a PostgreSQL expert assistant. The user is working in a SQL editor.\n\
+                 When the user asks you to write or modify SQL, output the COMPLETE SQL in a ```sql code block.\n\
+                 Be concise in your explanations.\n\n\
                  --- Database Schema ---\n{}\n\n\
-                 --- Current SQL in Editor ---\n{}\n\n\
+                 --- Current SQL in Editor ---\n```sql\n{}\n```\n\n\
                  --- User Message ---\n{}",
                 schema, sql_content, msg
             );
 
-            // Set up listener for streaming responses
+            // Set up listener for streaming text
             let set_messages_clone = set_messages;
-            let _ = tauri::listen_chat_response(move |text| {
+            let unlisten_response = tauri::listen_chat_response(move |text| {
                 set_messages_clone.update(|msgs| {
                     if let Some(last) = msgs.last_mut() {
                         if last.role == "assistant" {
@@ -93,7 +138,7 @@ pub fn ChatPanel(
             }).await;
 
             let set_sending_clone = set_sending;
-            let _ = tauri::listen_chat_done(move |_| {
+            let unlisten_done = tauri::listen_chat_done(move |_| {
                 set_sending_clone.set(false);
             }).await;
 
@@ -107,6 +152,14 @@ pub fn ChatPanel(
                     }
                 });
                 set_sending.set(false);
+            }
+
+            // Cleanup listeners
+            if let Ok(f) = unlisten_response {
+                let _ = f.call0(&wasm_bindgen::JsValue::NULL);
+            }
+            if let Ok(f) = unlisten_done {
+                let _ = f.call0(&wasm_bindgen::JsValue::NULL);
             }
         });
     };
@@ -134,7 +187,7 @@ pub fn ChatPanel(
                     if claude_installed.get() == Some(false) {
                         return view! {
                             <div class="flex-1 flex items-center justify-center text-[13px] text-gray-500 dark:text-zinc-400 text-center px-4">
-                                <p>"Claude Code is not installed. Install it from claude.ai/code to use the AI assistant."</p>
+                                <p>"Claude Code is not installed. Install it from "<a href="https://claude.ai/code" class="text-indigo-500 underline">"claude.ai/code"</a>" to use the AI assistant."</p>
                             </div>
                         }.into_any();
                     }
@@ -150,16 +203,53 @@ pub fn ChatPanel(
 
                     view! {
                         <div class="flex flex-col gap-3">
-                            {msgs.iter().map(|msg| {
+                            {msgs.iter().enumerate().map(|(i, msg)| {
                                 let is_user = msg.role == "user";
-                                let bubble_class = if is_user {
-                                    "self-end bg-indigo-500 dark:bg-indigo-600 text-white rounded-lg px-3 py-2 text-[13px] max-w-[85%]"
-                                } else {
-                                    "self-start bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-neutral-50 rounded-lg px-3 py-2 text-[13px] max-w-[85%] font-mono whitespace-pre-wrap"
-                                };
                                 let content = msg.content.clone();
-                                view! {
-                                    <div class=bubble_class>{content}</div>
+                                let content_for_blocks = content.clone();
+
+                                if is_user {
+                                    view! {
+                                        <div class="self-end bg-indigo-500 dark:bg-indigo-600 text-white rounded-lg px-3 py-2 text-[13px] max-w-[85%]">
+                                            {content}
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    // Assistant message: render markdown with syntax highlighting
+                                    let sql_blocks = extract_sql_blocks(&content_for_blocks);
+                                    let has_blocks = !sql_blocks.is_empty();
+                                    let rendered_html = markdown_render(&content);
+
+                                    view! {
+                                        <div class="self-start max-w-[95%] flex flex-col gap-2">
+                                            <div
+                                                class="markdown-body bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-zinc-200 rounded-lg px-3 py-2 text-[13px]"
+                                                inner_html=rendered_html
+                                            />
+                                            {if has_blocks {
+                                                Some(view! {
+                                                    <div class="flex flex-col gap-1">
+                                                        {sql_blocks.into_iter().enumerate().map(|(j, sql)| {
+                                                            let sql_clone = sql.clone();
+                                                            let label = if j == 0 { "Apply to Editor" } else { &format!("Apply block {}", j + 1) };
+                                                            view! {
+                                                                <button
+                                                                    class="self-start bg-indigo-500 hover:bg-indigo-600 text-white text-[11px] font-medium px-2 py-1 rounded-md transition-colors duration-100"
+                                                                    on:click=move |_| {
+                                                                        set_sql.run(sql_clone.clone());
+                                                                    }
+                                                                >
+                                                                    {label.to_string()}
+                                                                </button>
+                                                            }
+                                                        }).collect::<Vec<_>>()}
+                                                    </div>
+                                                })
+                                            } else {
+                                                None
+                                            }}
+                                        </div>
+                                    }.into_any()
                                 }
                             }).collect::<Vec<_>>()}
                             {move || if sending.get() {

@@ -93,9 +93,14 @@ pub fn provide_theme() {
     // Listen for OS theme changes (for "System" preference)
     listen_system_theme(system_is_dark);
 
-    // Apply/remove `dark` class on <html> reactively
+    // Apply/remove `dark` class on <html> reactively + switch app icon
     Effect::new(move |_| {
-        apply_dark_class(is_dark.get());
+        let dark = is_dark.get();
+        apply_dark_class(dark);
+        // Switch the window icon to match the theme
+        spawn_local(async move {
+            let _ = tauri::set_app_icon(dark).await;
+        });
     });
 }
 

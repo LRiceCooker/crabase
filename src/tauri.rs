@@ -10,6 +10,9 @@ extern "C" {
     #[wasm_bindgen(js_namespace = ["__TAURI__", "dialog"], js_name = "open", catch)]
     async fn dialog_open(options: JsValue) -> Result<JsValue, JsValue>;
 
+    #[wasm_bindgen(js_namespace = ["__TAURI__", "dialog"], js_name = "save", catch)]
+    async fn dialog_save(options: JsValue) -> Result<JsValue, JsValue>;
+
     #[wasm_bindgen(js_namespace = ["__TAURI__", "event"], catch)]
     async fn listen(event: &str, handler: &JsValue) -> Result<JsValue, JsValue>;
 }
@@ -625,6 +628,47 @@ pub async fn listen_restore_logs(
     Ok(unlisten.unchecked_into::<js_sys::Function>())
 }
 
+pub async fn save_file_dialog(default_name: &str, content: &str) -> Result<(), String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct SaveDialogOptions<'a> {
+        default_path: &'a str,
+    }
+
+    let options = SaveDialogOptions { default_path: default_name };
+    let args = serde_wasm_bindgen::to_value(&options).map_err(|e| e.to_string())?;
+
+    let result = dialog_save(args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Save dialog failed".to_string()))?;
+
+    if result.is_null() || result.is_undefined() {
+        return Ok(()); // User cancelled
+    }
+
+    let path = result.as_string().ok_or("Invalid path")?;
+
+    // Write file via backend
+    #[derive(Serialize)]
+    struct WriteArgs<'a> {
+        path: &'a str,
+        content: &'a str,
+    }
+    let write_args = serde_wasm_bindgen::to_value(&WriteArgs { path: &path, content }).map_err(|e| e.to_string())?;
+    invoke("write_file", write_args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Write failed".to_string()))?;
+    Ok(())
+}
+
+pub async fn set_app_icon(is_dark: bool) -> Result<(), String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args { is_dark: bool }
+    let args = serde_wasm_bindgen::to_value(&Args { is_dark }).map_err(|e| e.to_string())?;
+    invoke("set_app_icon", args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to set icon".to_string()))?;
+    Ok(())
+}
+
 pub async fn check_claude_installed() -> bool {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({})).unwrap_or(JsValue::UNDEFINED);
     match invoke("check_claude_installed", args).await {
@@ -685,4 +729,44 @@ pub async fn listen_chat_done(
 
     closure.forget();
     Ok(unlisten.unchecked_into::<js_sys::Function>())
+}
+
+pub async fn drop_table(table_name: &str) -> Result<String, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> { table_name: &'a str }
+    let args = serde_wasm_bindgen::to_value(&Args { table_name }).map_err(|e| e.to_string())?;
+    let result = invoke("drop_table", args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Drop failed".to_string()))?;
+    Ok(result.as_string().unwrap_or_default())
+}
+
+pub async fn truncate_table(table_name: &str) -> Result<String, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> { table_name: &'a str }
+    let args = serde_wasm_bindgen::to_value(&Args { table_name }).map_err(|e| e.to_string())?;
+    let result = invoke("truncate_table", args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Truncate failed".to_string()))?;
+    Ok(result.as_string().unwrap_or_default())
+}
+
+pub async fn export_table_json(table_name: &str) -> Result<String, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> { table_name: &'a str }
+    let args = serde_wasm_bindgen::to_value(&Args { table_name }).map_err(|e| e.to_string())?;
+    let result = invoke("export_table_json", args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Export failed".to_string()))?;
+    Ok(result.as_string().unwrap_or_default())
+}
+
+pub async fn export_table_sql(table_name: &str) -> Result<String, String> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Args<'a> { table_name: &'a str }
+    let args = serde_wasm_bindgen::to_value(&Args { table_name }).map_err(|e| e.to_string())?;
+    let result = invoke("export_table_sql", args).await
+        .map_err(|e| e.as_string().unwrap_or_else(|| "Export failed".to_string()))?;
+    Ok(result.as_string().unwrap_or_default())
 }

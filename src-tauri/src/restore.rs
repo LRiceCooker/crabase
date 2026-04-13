@@ -56,6 +56,8 @@ pub fn run_pg_restore(pgsql_path: &Path, connection_string: &str) -> Result<Stri
     let output = Command::new("pg_restore")
         .arg("--no-owner")
         .arg("--no-privileges")
+        .arg("--clean")
+        .arg("--if-exists")
         .arg("-d")
         .arg(connection_string)
         .arg(pgsql_path)
@@ -111,6 +113,8 @@ pub fn run_pg_restore_streaming(
     let mut child = Command::new("pg_restore")
         .arg("--no-owner")
         .arg("--no-privileges")
+        .arg("--clean")
+        .arg("--if-exists")
         .arg("-d")
         .arg(connection_string)
         .arg(pgsql_path)
@@ -152,7 +156,11 @@ pub fn run_pg_restore_streaming(
         .wait()
         .map_err(|e| format!("Failed to wait for pg_restore: {}", e))?;
 
-    if status.success() {
+    let exit_code = status.code().unwrap_or(-1);
+    let has_warnings = stderr_lines.iter().any(|l| l.contains("warning:") || l.contains("errors ignored"));
+
+    if status.success() || (exit_code == 1 && has_warnings) {
+        // exit code 0 = clean success, exit code 1 with warnings = non-fatal errors (e.g. SET param mismatch)
         let mut result = "Restore completed successfully.".to_string();
         if !stderr_lines.is_empty() {
             result.push_str(&format!("\nWarnings:\n{}", stderr_lines.join("\n")));
@@ -163,10 +171,7 @@ pub fn run_pg_restore_streaming(
         let stdout_text = stdout_lines.join("\n");
         Err(format!(
             "pg_restore failed (exit code: {}):\n{}{}",
-            status
-                .code()
-                .map(|c| c.to_string())
-                .unwrap_or_else(|| "unknown".to_string()),
+            exit_code,
             stderr_text,
             if !stdout_text.is_empty() {
                 format!("\nstdout:\n{}", stdout_text)

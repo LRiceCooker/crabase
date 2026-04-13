@@ -114,27 +114,43 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             move |ev: web_sys::KeyboardEvent| {
                 if ev.key() == "Escape" && overlay_ctx.active.get_untracked() != ActiveOverlay::None {
                     ev.prevent_default();
+                    ev.stop_propagation(); // Prevent CodeMirror from seeing Escape
                     overlay_ctx.close();
                 } else if sc.matches(ShortcutAction::CommandPalette, &ev) {
                     ev.prevent_default();
+                    ev.stop_propagation(); // Prevent CodeMirror from capturing the event
+                    // Blur active element (e.g. CodeMirror) so the overlay input gets focus
+                    if let Some(el) = web_sys::window().unwrap().document().unwrap().active_element() {
+                        if let Ok(html_el) = el.dyn_into::<web_sys::HtmlElement>() {
+                            let _ = html_el.blur();
+                        }
+                    }
                     overlay_ctx.open(ActiveOverlay::CommandPalette);
                 } else if sc.matches(ShortcutAction::TableFinder, &ev) {
                     ev.prevent_default();
+                    ev.stop_propagation();
+                    if let Some(el) = web_sys::window().unwrap().document().unwrap().active_element() {
+                        if let Ok(html_el) = el.dyn_into::<web_sys::HtmlElement>() {
+                            let _ = html_el.blur();
+                        }
+                    }
                     overlay_ctx.open(ActiveOverlay::TableFinder);
                 } else if sc.matches(ShortcutAction::Save, &ev) {
                     ev.prevent_default();
                     save_trigger.request();
                 } else if (ev.meta_key() || ev.ctrl_key()) && ev.shift_key() && ev.code() == "KeyN" {
                     ev.prevent_default();
+                    ev.stop_propagation();
                     wasm_bindgen_futures::spawn_local(async {
                         let _ = crate::tauri::open_new_window().await;
                     });
                 }
             },
         );
+        // Use capture phase (true) so we intercept shortcuts BEFORE CodeMirror
         web_sys::window()
             .unwrap()
-            .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
+            .add_event_listener_with_callback_and_bool("keydown", closure.as_ref().unchecked_ref(), true)
             .unwrap();
         closure.forget();
     }
@@ -423,13 +439,12 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             // Body: sidebar (left) + tab bar + content area
             <div class="flex flex-1 overflow-hidden">
                 // Left sidebar — scrolls independently
-                <aside class="w-56 bg-gray-50 dark:bg-[#111113] border-r border-gray-200 dark:border-zinc-800 overflow-y-auto shrink-0">
+                <aside class="w-56 bg-gray-50 dark:bg-[#111113] border-r border-gray-200 dark:border-zinc-800 flex flex-col overflow-hidden shrink-0">
                     <SavedQueriesList
                         queries=saved_query_names
                         on_select=Callback::new({
                             let ts = tab_state.clone();
                             move |name: String| {
-                                // Check if a tab with this name already exists
                                 let existing = ts.tabs.get().iter().find(|t| {
                                     matches!(&t.kind, TabKind::SqlEditor) && t.title == name
                                 }).map(|t| t.id);
@@ -437,14 +452,31 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                 if let Some(id) = existing {
                                     ts.switch(id);
                                 } else {
-                                    // Open a new SQL tab and rename it
                                     let id = ts.open(TabKind::SqlEditor);
                                     ts.rename_tab(id, name);
                                 }
                             }
                         })
+                        on_queries_changed=Callback::new(move |_: ()| {
+                            spawn_local(async move {
+                                if let Ok(queries) = tauri::list_queries().await {
+                                    set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect());
+                                }
+                            });
+                        })
                     />
-                    <TablesList tables=tables active_table=active_table on_select=on_table_select />
+                    <TablesList
+                        tables=tables
+                        active_table=active_table
+                        on_select=on_table_select
+                        on_tables_changed=Callback::new(move |_: ()| {
+                            spawn_local(async move {
+                                if let Ok(t) = tauri::list_tables().await {
+                                    set_tables.set(t);
+                                }
+                            });
+                        })
+                    />
                 </aside>
 
                 // Right panel: tab bar + content
@@ -640,9 +672,10 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                             let on_dirty = Callback::new(move |dirty: bool| {
                                 ts.set_dirty(tab_id, dirty);
                             });
-                            // Get the tab title for query_name
+                            // Get the tab title for query_name — use get_untracked to avoid
+                            // re-creating the SqlTab (and losing editor content) on tab rename
                             let query_name = {
-                                let tabs = tab_state.tabs.get();
+                                let tabs = tab_state.tabs.get_untracked();
                                 tabs.iter()
                                     .find(|t| t.id == tab_id)
                                     .map(|t| t.title.clone())
@@ -650,7 +683,17 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                             };
                             view! {
                                 <div class="h-full">
-                                    <SqlTab query_name=query_name on_dirty_change=on_dirty />
+                                    <SqlTab
+                                        query_name=query_name
+                                        on_dirty_change=on_dirty
+                                        on_query_saved=Callback::new(move |_: ()| {
+                                            spawn_local(async move {
+                                                if let Ok(queries) = tauri::list_queries().await {
+                                                    set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect());
+                                                }
+                                            });
+                                        })
+                                    />
                                 </div>
                             }.into_any()
                         } else {

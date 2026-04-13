@@ -14,3 +14,8 @@ command_arguments = ["-c", "npx tailwindcss -i input.css -o style/output.css --m
 stage = "pre_build"
 command = "sh"
 command_arguments = ["-c", "npx esbuild js/codemirror-bridge.js --bundle --outfile=js/codemirror-bundle.js --format=iife --minify"]
+
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "npx esbuild js/markdown-bridge.js --bundle --outfile=js/markdown-bundle.js --format=iife --minify"]

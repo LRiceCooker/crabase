@@ -1,3 +1,60 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Markdown rendered content styles */
+.markdown-body pre {
+  @apply bg-gray-900 dark:bg-[#0D0D0F] rounded-md p-3 overflow-x-auto my-2;
+}
+.markdown-body pre code {
+  @apply text-xs font-mono text-gray-200;
+}
+.markdown-body code:not(pre code) {
+  @apply bg-gray-100 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 px-1 py-0.5 rounded text-xs font-mono;
+}
+.markdown-body p {
+  @apply my-1;
+}
+.markdown-body ul, .markdown-body ol {
+  @apply pl-4 my-1;
+}
+.markdown-body li {
+  @apply list-disc;
+}
+.markdown-body ol li {
+  @apply list-decimal;
+}
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  @apply font-semibold mt-2 mb-1;
+}
+.markdown-body a {
+  @apply text-indigo-500 dark:text-indigo-400 underline;
+}
+.markdown-body blockquote {
+  @apply border-l-2 border-gray-300 dark:border-zinc-600 pl-3 text-gray-500 dark:text-zinc-400 italic my-2;
+}
+.markdown-body table {
+  @apply border-collapse w-full my-2 text-xs;
+}
+.markdown-body th, .markdown-body td {
+  @apply border border-gray-200 dark:border-zinc-700 px-2 py-1;
+}
+.markdown-body th {
+  @apply bg-gray-50 dark:bg-zinc-800 font-medium;
+}
+
+/* highlight.js token colors (works for both themes) */
+.hljs-keyword { color: #c678dd; }
+.hljs-string { color: #98c379; }
+.hljs-number { color: #d19a66; }
+.hljs-comment { color: #5c6370; font-style: italic; }
+.hljs-built_in { color: #e06c75; }
+.hljs-function { color: #61afef; }
+.hljs-title { color: #61afef; }
+.hljs-type { color: #e5c07b; }
+.hljs-attr { color: #d19a66; }
+.hljs-selector-tag { color: #e06c75; }
+.hljs-selector-class { color: #d19a66; }
+.hljs-selector-id { color: #61afef; }
+.hljs-literal { color: #56b6c2; }
+.hljs-meta { color: #5c6370; }

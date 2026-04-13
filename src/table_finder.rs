@@ -32,12 +32,29 @@ pub fn TableFinder(
     // Focus input when finder opens, clear query when it closes
     Effect::new(move |_| {
         if overlay_ctx.is_open(ActiveOverlay::TableFinder) {
-            if let Some(el) = input_ref.get() {
-                let _ = el.focus();
-            }
+            // Delay focus to next frame so CodeMirror releases focus first
+            let input = input_ref;
+            let cb = wasm_bindgen::closure::Closure::once(move || {
+                if let Some(el) = input.get() {
+                    let _ = el.focus();
+                }
+            });
+            let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref(),
+                20,
+            );
+            cb.forget();
         } else {
-            set_query.set(String::new());
-            set_selected_idx.set(0);
+            // Defer signal writes to avoid re-entrant borrow panics
+            let cb = wasm_bindgen::closure::Closure::once(move || {
+                set_query.set(String::new());
+                set_selected_idx.set(0);
+            });
+            let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref(),
+                0,
+            );
+            cb.forget();
         }
     });
 
@@ -116,15 +133,18 @@ pub fn TableFinder(
                                             "Enter" => {
                                                 let idx = selected_idx.get();
                                                 if let Some(item) = items.get(idx) {
-                                                    match item.kind {
-                                                        FinderItemKind::Table => on_select.run(item.name.clone()),
+                                                    let name = item.name.clone();
+                                                    let kind = item.kind.clone();
+                                                    // Close FIRST so handlers can open another overlay if needed
+                                                    overlay_ctx.close();
+                                                    match kind {
+                                                        FinderItemKind::Table => on_select.run(name),
                                                         FinderItemKind::Query => {
                                                             if let Some(cb) = on_query_select {
-                                                                cb.run(item.name.clone());
+                                                                cb.run(name);
                                                             }
                                                         }
                                                     }
-                                                    overlay_ctx.close();
                                                 }
                                             }
                                             "ArrowDown" => {
@@ -175,10 +195,11 @@ pub fn TableFinder(
                                         <div
                                             class=class
                                             on:click=move |_| {
+                                                // Close FIRST so handler can open another overlay if needed
+                                                overlay_ctx.close();
                                                 if let Some(cb) = on_query_select {
                                                     cb.run(click_name.clone());
                                                 }
-                                                overlay_ctx.close();
                                             }
                                         >
                                             <IconTerminal class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
@@ -209,8 +230,9 @@ pub fn TableFinder(
                                         <div
                                             class=class
                                             on:click=move |_| {
-                                                on_select.run(click_name.clone());
+                                                // Close FIRST so handler can open another overlay if needed
                                                 overlay_ctx.close();
+                                                on_select.run(click_name.clone());
                                             }
                                         >
                                             <IconTable class="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />

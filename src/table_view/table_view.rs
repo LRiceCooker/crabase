@@ -160,6 +160,12 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             .cloned()
             .unwrap_or(serde_json::Value::Null);
 
+        // Compare the unwrapped original value with the new value to avoid phantom edits
+        let original_inner = crate::table_view::data_table::unwrap_tagged_owned(&original);
+        if original_inner == edit.value {
+            return; // No actual change — skip tracking
+        }
+
         changes.track_cell_edit(edit.row, edit.col, original, &edit.value);
 
         rows.update(|r| {
