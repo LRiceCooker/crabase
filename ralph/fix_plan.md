@@ -145,6 +145,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Add `just test-e2e` command to justfile (`npx playwright test --config tests/e2e/playwright.config.ts`)
 - [x] Install Playwright (`@playwright/test` as devDependency)
 - [x] Create `tests/e2e/global-teardown.ts` — kills spawned processes via saved PIDs, runs just test-teardown
 - [x] Create `tests/e2e/global-setup.ts` — starts Docker Postgres, test HTTP server, Trunk dev server, waits for readiness

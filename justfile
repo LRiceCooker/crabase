@@ -26,3 +26,6 @@ test-frontend:
 
 test-server:
     cargo run --manifest-path tests/test_server/Cargo.toml
+
+test-e2e:
+    npx playwright test --config tests/e2e/playwright.config.ts
