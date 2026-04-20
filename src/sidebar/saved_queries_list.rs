@@ -60,7 +60,7 @@ pub fn SavedQueriesList(
             // Load the original content
             match tauri::load_query(&name).await {
                 Ok(saved) => {
-                    let new_name = format!("{} (copy)", name);
+                    let new_name = format!("{name} (copy)");
                     match tauri::save_query(&new_name, &saved.sql).await {
                         Ok(()) => refresh(),
                         Err(e) => set_action_error.set(Some(e)),
@@ -102,7 +102,7 @@ pub fn SavedQueriesList(
             let cb = wasm_bindgen::closure::Closure::once(move || {
                 if let Some(el) = input.get() {
                     let _ = el.focus();
-                    let _ = el.select();
+                    el.select();
                 }
             });
             let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(

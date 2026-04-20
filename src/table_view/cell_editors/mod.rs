@@ -26,7 +26,7 @@ pub fn auto_focus_input_ref() -> NodeRef<leptos::html::Input> {
     Effect::new(move |_| {
         if let Some(el) = node_ref.get() {
             let _ = el.focus();
-            let _ = el.select();
+            el.select();
         }
     });
     node_ref

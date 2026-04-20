@@ -100,6 +100,8 @@ pub fn App() -> impl IntoView {
             match tauri::connect_db(&info).await {
                 Ok(_) => {
                     if should_save && !name.trim().is_empty() {
+                        // Delete existing connection with the same name (upsert)
+                        let _ = tauri::delete_saved_connection(&name).await;
                         let _ = tauri::save_connection(&name, &info).await;
                     }
                     set_screen.set("connected".to_string());
@@ -120,6 +122,9 @@ pub fn App() -> impl IntoView {
         form_dbname.set(info.dbname.clone());
         form_schema.set(info.schema.clone());
         form_ssl.set(info.sslmode == "require");
+        // Pre-fill save checkbox + name so user can re-save after editing
+        save_connection.set(true);
+        save_name.set(saved.name);
         set_error_message.set(None);
         set_screen.set("form".to_string());
 

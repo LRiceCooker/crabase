@@ -24,7 +24,7 @@ pub fn UuidEditor(
         }
     };
 
-    let commit_clone = commit.clone();
+    let commit_clone = commit;
     view! {
         <div class="flex items-center gap-1 w-full">
             <input

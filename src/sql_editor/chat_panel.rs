@@ -119,10 +119,9 @@ pub fn ChatPanel(
                 "You are a PostgreSQL expert assistant. The user is working in a SQL editor.\n\
                  When the user asks you to write or modify SQL, output the COMPLETE SQL in a ```sql code block.\n\
                  Be concise in your explanations.\n\n\
-                 --- Database Schema ---\n{}\n\n\
-                 --- Current SQL in Editor ---\n```sql\n{}\n```\n\n\
-                 --- User Message ---\n{}",
-                schema, sql_content, msg
+                 --- Database Schema ---\n{schema}\n\n\
+                 --- Current SQL in Editor ---\n```sql\n{sql_content}\n```\n\n\
+                 --- User Message ---\n{msg}"
             );
 
             // Set up listener for streaming text
@@ -147,7 +146,7 @@ pub fn ChatPanel(
                 set_messages.update(|msgs| {
                     if let Some(last) = msgs.last_mut() {
                         if last.role == "assistant" && last.content.is_empty() {
-                            last.content = format!("Error: {}", e);
+                            last.content = format!("Error: {e}");
                         }
                     }
                 });
@@ -203,7 +202,7 @@ pub fn ChatPanel(
 
                     view! {
                         <div class="flex flex-col gap-3">
-                            {msgs.iter().enumerate().map(|(i, msg)| {
+                            {msgs.iter().map(|msg| {
                                 let is_user = msg.role == "user";
                                 let content = msg.content.clone();
                                 let content_for_blocks = content.clone();

@@ -99,7 +99,7 @@ pub fn CellEditor(
             {
                 if scale > 0 {
                     let step_val = 10f64.powi(-scale);
-                    format!("{}", step_val)
+                    format!("{step_val}")
                 } else {
                     "1".to_string()
                 }

@@ -17,7 +17,7 @@ pub fn DirtyBar(
             let label = if count == 1 {
                 "1 change pending".to_string()
             } else {
-                format!("{} changes pending", count)
+                format!("{count} changes pending")
             };
 
             Some(view! {

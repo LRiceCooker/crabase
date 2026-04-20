@@ -52,7 +52,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         }
         let query_lower = query.to_lowercase();
         let current_rows = rows.get();
-        let cols = columns.get();
+        let _cols = columns.get();
         let mut matches = Vec::new();
         for (row_idx, row) in current_rows.iter().enumerate() {
             for (col_idx, cell) in row.iter().enumerate() {
@@ -304,7 +304,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
         // Build updates: group modified cells by row, exclude added/deleted rows
         let mut update_rows: std::collections::HashMap<usize, std::collections::HashMap<String, serde_json::Value>> =
             std::collections::HashMap::new();
-        for ((row_idx, col_idx), _original) in &modified {
+        for (row_idx, col_idx) in modified.keys() {
             if added_set.contains(row_idx) || deleted_set.contains(row_idx) {
                 continue;
             }
@@ -326,11 +326,18 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 let row = current_rows.get(row_idx)?;
                 let mut pk_values = std::collections::HashMap::new();
                 for (pk_idx, pk_name) in &pk_cols {
-                    pk_values.insert(pk_name.clone(), row.get(*pk_idx)?.clone());
+                    // Unwrap tagged values for PK — backend expects raw values
+                    let raw = crate::table_view::data_table::unwrap_tagged_owned(row.get(*pk_idx)?);
+                    pk_values.insert(pk_name.clone(), raw);
                 }
+                // Unwrap tagged values for changes too
+                let unwrapped_changes: std::collections::HashMap<String, serde_json::Value> = change_map
+                    .into_iter()
+                    .map(|(k, v)| (k, crate::table_view::data_table::unwrap_tagged_owned(&v)))
+                    .collect();
                 Some(tauri::RowUpdate {
                     pk_values,
-                    changes: change_map,
+                    changes: unwrapped_changes,
                 })
             })
             .collect();
@@ -343,8 +350,9 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 let mut values = std::collections::HashMap::new();
                 for (i, col) in cols.iter().enumerate() {
                     if let Some(val) = row.get(i) {
-                        if !val.is_null() {
-                            values.insert(col.name.clone(), val.clone());
+                        let raw = crate::table_view::data_table::unwrap_tagged_owned(val);
+                        if !raw.is_null() {
+                            values.insert(col.name.clone(), raw);
                         }
                     }
                 }
@@ -359,7 +367,8 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                 let row = current_rows.get(*row_idx)?;
                 let mut pk_values = std::collections::HashMap::new();
                 for (pk_idx, pk_name) in &pk_cols {
-                    pk_values.insert(pk_name.clone(), row.get(*pk_idx)?.clone());
+                    let raw = crate::table_view::data_table::unwrap_tagged_owned(row.get(*pk_idx)?);
+                    pk_values.insert(pk_name.clone(), raw);
                 }
                 Some(tauri::RowDelete { pk_values })
             })
@@ -378,7 +387,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                     // (signals are Copy, so fetch_data closure works here)
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Save failed: {}", e).into());
+                    web_sys::console::error_1(&format!("Save failed: {e}").into());
                 }
             }
         });
@@ -410,12 +419,11 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             class="flex flex-col h-full"
             on:keydown=move |ev: web_sys::KeyboardEvent| {
                 // Cmd+F / Ctrl+F → open find overlay
-                if (ev.meta_key() || ev.ctrl_key()) && !ev.shift_key() && ev.code() == "KeyF" {
-                    if loaded_table.get().is_some() {
+                if (ev.meta_key() || ev.ctrl_key()) && !ev.shift_key() && ev.code() == "KeyF"
+                    && loaded_table.get().is_some() {
                         ev.prevent_default();
                         overlay_ctx.open(ActiveOverlay::FindBar);
                     }
-                }
             }
             tabindex="-1"
         >
@@ -428,7 +436,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                             <div class="flex items-center gap-2">
                                 <IconTable class="w-4 h-4 text-gray-400 dark:text-zinc-500" />
                                 <span class="text-[13px] font-semibold text-gray-900 dark:text-neutral-50">{name}</span>
-                                <span class="text-[11px] text-gray-400 dark:text-zinc-500">{format!("{} rows", count)}</span>
+                                <span class="text-[11px] text-gray-400 dark:text-zinc-500">{format!("{count} rows")}</span>
                             </div>
                             <div class="flex items-center gap-1">
                                 <button
@@ -639,7 +647,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
                                             let col_name = cols
                                                 .get(col_idx)
                                                 .map(|c| c.name.clone())
-                                                .unwrap_or_else(|| format!("col_{}", col_idx));
+                                                .unwrap_or_else(|| format!("col_{col_idx}"));
                                             obj.insert(col_name, unwrap_tagged_owned(cell));
                                         }
                                         serde_json::Value::Object(obj)

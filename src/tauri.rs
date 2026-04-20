@@ -55,7 +55,7 @@ pub async fn parse_connection_string(connection_string: &str) -> Result<Connecti
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to parse connection string".to_string()))?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse response: {}", e))
+        .map_err(|e| format!("Failed to parse response: {e}"))
 }
 
 pub async fn list_schemas(connection_string: &str) -> Result<Vec<String>, String> {
@@ -73,7 +73,7 @@ pub async fn list_schemas(connection_string: &str) -> Result<Vec<String>, String
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to list schemas".to_string()))?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse schemas: {}", e))
+        .map_err(|e| format!("Failed to parse schemas: {e}"))
 }
 
 pub async fn connect_db(info: &ConnectionInfo) -> Result<String, String> {
@@ -100,7 +100,7 @@ pub async fn get_connection_info() -> Result<ConnectionInfo, String> {
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to get connection info".to_string()))?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse connection info: {}", e))
+        .map_err(|e| format!("Failed to parse connection info: {e}"))
 }
 
 pub async fn disconnect_db() -> Result<String, String> {
@@ -119,7 +119,7 @@ pub async fn list_tables() -> Result<Vec<String>, String> {
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to list tables".to_string()))?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse tables list: {}", e))
+        .map_err(|e| format!("Failed to parse tables list: {e}"))
 }
 
 pub async fn get_columns_for_autocomplete(
@@ -142,7 +142,7 @@ pub async fn get_columns_for_autocomplete(
         })?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse autocomplete columns: {}", e))
+        .map_err(|e| format!("Failed to parse autocomplete columns: {e}"))
 }
 
 /// Opens a native file picker dialog filtered on .tar.gz files.
@@ -234,7 +234,7 @@ pub async fn list_saved_connections() -> Result<Vec<SavedConnection>, String> {
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to list saved connections".to_string()))?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse saved connections: {}", e))
+        .map_err(|e| format!("Failed to parse saved connections: {e}"))
 }
 
 pub async fn delete_saved_connection(name: &str) -> Result<(), String> {
@@ -310,7 +310,7 @@ pub async fn get_table_data(
         })?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse table data: {}", e))
+        .map_err(|e| format!("Failed to parse table data: {e}"))
 }
 
 /// A single filter condition for table data queries.
@@ -363,7 +363,7 @@ pub async fn get_table_data_filtered(
         })?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse table data: {}", e))
+        .map_err(|e| format!("Failed to parse table data: {e}"))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -403,6 +403,7 @@ pub enum StatementResult {
     Error { message: String, sql_preview: String },
 }
 
+#[allow(dead_code)] // Available for single-statement execution if needed
 pub async fn execute_query(sql: &str) -> Result<QueryResult, String> {
     #[derive(Serialize)]
     struct Args<'a> {
@@ -420,7 +421,7 @@ pub async fn execute_query(sql: &str) -> Result<QueryResult, String> {
         })?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse query result: {}", e))
+        .map_err(|e| format!("Failed to parse query result: {e}"))
 }
 
 pub async fn execute_query_multi(sql: &str) -> Result<Vec<StatementResult>, String> {
@@ -440,7 +441,7 @@ pub async fn execute_query_multi(sql: &str) -> Result<Vec<StatementResult>, Stri
         })?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse multi-statement result: {}", e))
+        .map_err(|e| format!("Failed to parse multi-statement result: {e}"))
 }
 
 pub async fn save_changes(table_name: &str, changes: &ChangeSet) -> Result<String, String> {
@@ -494,7 +495,7 @@ pub async fn load_settings() -> Result<Settings, String> {
         })?;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse settings: {}", e))
+        .map_err(|e| format!("Failed to parse settings: {e}"))
 }
 
 pub async fn save_settings(settings: &Settings) -> Result<(), String> {
@@ -581,7 +582,7 @@ pub async fn list_queries() -> Result<Vec<SavedQuery>, String> {
         .await
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to list queries".to_string()))?;
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse queries: {}", e))
+        .map_err(|e| format!("Failed to parse queries: {e}"))
 }
 
 pub async fn load_query(name: &str) -> Result<SavedQuery, String> {
@@ -594,7 +595,7 @@ pub async fn load_query(name: &str) -> Result<SavedQuery, String> {
         .await
         .map_err(|e| e.as_string().unwrap_or_else(|| "Failed to load query".to_string()))?;
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to parse query: {}", e))
+        .map_err(|e| format!("Failed to parse query: {e}"))
 }
 
 pub async fn open_new_window() -> Result<(), String> {

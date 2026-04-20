@@ -87,7 +87,7 @@ pub fn SqlTab(
                 };
                 let autocomplete_schema: std::collections::HashMap<String, Vec<String>> = if let Some(prefix) = schema_prefix {
                     cols.into_iter()
-                        .map(|(table, columns)| (format!("{}.{}", prefix, table), columns))
+                        .map(|(table, columns)| (format!("{prefix}.{table}"), columns))
                         .collect()
                 } else {
                     cols
@@ -126,7 +126,7 @@ pub fn SqlTab(
                     }
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to save query: {}", e).into());
+                    web_sys::console::error_1(&format!("Failed to save query: {e}").into());
                 }
             }
         });

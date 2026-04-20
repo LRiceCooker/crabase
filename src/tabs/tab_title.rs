@@ -28,7 +28,7 @@ pub fn TabTitle(
             if let Some(el) = input_ref.get() {
                 let el: &web_sys::HtmlInputElement = el.as_ref();
                 let _ = el.focus();
-                let _ = el.select();
+                el.select();
             }
         });
     };

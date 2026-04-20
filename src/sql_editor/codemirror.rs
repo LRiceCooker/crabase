@@ -40,6 +40,7 @@ extern "C" {
 
 /// Handle to a mounted CodeMirror instance. Provides methods to interact with the editor.
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub struct CodeMirrorHandle {
     id: RwSignal<Option<u32>>,
     dirty: RwSignal<bool>,
@@ -69,11 +70,13 @@ impl CodeMirrorHandle {
     }
 
     /// Check if the editor has unsaved changes.
+    #[allow(dead_code)]
     pub fn is_dirty(&self) -> bool {
         self.dirty.get()
     }
 
     /// Mark the current content as the clean baseline.
+    #[allow(dead_code)]
     pub fn mark_clean(&self) {
         if let Some(id) = self.id.get_untracked() {
             cm_mark_clean(id);
@@ -82,6 +85,7 @@ impl CodeMirrorHandle {
     }
 
     /// Reactive dirty signal (for UI binding).
+    #[allow(dead_code)]
     pub fn dirty_signal(&self) -> RwSignal<bool> {
         self.dirty
     }

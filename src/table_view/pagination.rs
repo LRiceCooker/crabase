@@ -16,7 +16,7 @@ pub fn Pagination(
         if size == 0 {
             1
         } else {
-            ((count + size - 1) / size).max(1) as u32
+            count.div_ceil(size).max(1) as u32
         }
     };
 

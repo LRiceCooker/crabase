@@ -26,7 +26,7 @@ pub fn TextEditor(
         }
     };
 
-    let commit_clone = commit.clone();
+    let commit_clone = commit;
     let maxlen = if max_length > 0 { max_length.to_string() } else { String::new() };
     let has_maxlen = max_length > 0;
 

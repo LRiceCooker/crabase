@@ -28,7 +28,7 @@ pub fn JsonEditorModal(
     let on_change = Callback::new(move |content: String| {
         match serde_json::from_str::<serde_json::Value>(&content) {
             Ok(_) => set_parse_error.set(None),
-            Err(e) => set_parse_error.set(Some(format!("Invalid JSON: {}", e))),
+            Err(e) => set_parse_error.set(Some(format!("Invalid JSON: {e}"))),
         }
     });
 
@@ -43,12 +43,12 @@ pub fn JsonEditorModal(
                 on_save.run((row, col, val));
             }
             Err(e) => {
-                set_parse_error.set(Some(format!("Invalid JSON: {}", e)));
+                set_parse_error.set(Some(format!("Invalid JSON: {e}")));
             }
         }
     };
 
-    let on_cancel_click = move |_: web_sys::MouseEvent| {
+    let _on_cancel_click = move |_: web_sys::MouseEvent| {
         on_cancel.run(());
     };
 

@@ -65,6 +65,7 @@ impl ChangeTracker {
     }
 
     /// Unmark a row from deletion.
+    #[allow(dead_code)]
     pub fn unmark_row_deleted(&self, row: usize) {
         self.deleted_rows.update(|s| {
             s.remove(&row);

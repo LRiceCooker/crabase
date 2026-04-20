@@ -50,7 +50,7 @@ pub fn TablesList(
                 spawn_local(async move {
                     match tauri::export_table_json(&t).await {
                         Ok(json) => {
-                            let _ = tauri::save_file_dialog(&format!("{}.json", t), &json).await;
+                            let _ = tauri::save_file_dialog(&format!("{t}.json"), &json).await;
                         }
                         Err(e) => set_action_error.set(Some(e)),
                     }
@@ -61,7 +61,7 @@ pub fn TablesList(
                 spawn_local(async move {
                     match tauri::export_table_sql(&t).await {
                         Ok(sql) => {
-                            let _ = tauri::save_file_dialog(&format!("{}.sql", t), &sql).await;
+                            let _ = tauri::save_file_dialog(&format!("{t}.sql"), &sql).await;
                         }
                         Err(e) => set_action_error.set(Some(e)),
                     }
@@ -190,10 +190,10 @@ pub fn TablesList(
                             <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" on:click=move |_| set_confirm.set(None) />
                             <div class="relative bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl dark:shadow-black/40 p-4 max-w-sm w-full">
                                 <h3 class="text-[13px] font-semibold text-gray-900 dark:text-neutral-50 mb-2">
-                                    {format!("{} table?", action_label)}
+                                    {format!("{action_label} table?")}
                                 </h3>
                                 <p class="text-[13px] text-gray-500 dark:text-zinc-400 mb-4">
-                                    {format!("Are you sure you want to {} \"{}\"? This action cannot be undone.", action_label, table_name)}
+                                    {format!("Are you sure you want to {action_label} \"{table_name}\"? This action cannot be undone.")}
                                 </p>
                                 <div class="flex justify-end gap-2">
                                     <button

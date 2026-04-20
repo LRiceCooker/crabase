@@ -65,7 +65,7 @@ impl TabState {
             TabKind::SqlEditor => {
                 let n = self.next_untitled.get();
                 self.next_untitled.set(n + 1);
-                format!("Untitled-{}", n)
+                format!("Untitled-{n}")
             }
         };
 
@@ -94,6 +94,7 @@ impl TabState {
     }
 
     /// Check if a tab is dirty.
+    #[allow(dead_code)]
     pub fn is_dirty(&self, id: usize) -> bool {
         self.dirty_tabs.get().contains(&id)
     }

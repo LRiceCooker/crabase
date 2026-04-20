@@ -157,9 +157,6 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
 
     // Fetch connection info, schemas, and tables on mount
     spawn_local({
-        let set_connection_info = set_connection_info.clone();
-        let set_tables = set_tables.clone();
-        let set_available_schemas = set_available_schemas.clone();
         async move {
             if let Ok(info) = tauri::get_connection_info().await {
                 // Fetch schemas using current connection string
@@ -380,7 +377,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                                             let new_info = info.clone();
                                                             spawn_local(async move {
                                                                 let _ = tauri::disconnect_db().await;
-                                                                if let Ok(_) = tauri::connect_db(&new_info).await {
+                                                                if tauri::connect_db(&new_info).await.is_ok() {
                                                                     if let Ok(updated) = tauri::get_connection_info().await {
                                                                         set_connection_info.set(Some(updated));
                                                                     }
@@ -539,7 +536,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                                 set_restore_logs.update(|logs| logs.push(msg.clone()));
                                             }
                                             Err(msg) => {
-                                                set_restore_logs.update(|logs| logs.push(format!("ERROR: {}", msg)));
+                                                set_restore_logs.update(|logs| logs.push(format!("ERROR: {msg}")));
                                             }
                                         }
                                         set_restore_status.set(Some(result));
@@ -647,7 +644,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                                                 Some(Err(ref msg)) => view! {
                                                     <div class="flex items-center gap-2 mt-4 px-3 py-2 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-md">
                                                         <IconXCircle class="w-4 h-4 text-red-500 dark:text-red-400 shrink-0" />
-                                                        <span class="text-[13px] text-red-700 dark:text-red-400">{format!("Restore failed: {}", msg)}</span>
+                                                        <span class="text-[13px] text-red-700 dark:text-red-400">{format!("Restore failed: {msg}")}</span>
                                                     </div>
                                                 }.into_any(),
                                                 None => view! { <div></div> }.into_any(),

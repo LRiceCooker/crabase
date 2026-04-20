@@ -20,7 +20,7 @@ pub fn DateEditor(
         });
     };
 
-    let commit_clone = commit.clone();
+    let commit_clone = commit;
     view! {
         <input
             type="date"

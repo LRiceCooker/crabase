@@ -302,8 +302,7 @@ mod tests {
         for action in ShortcutAction::all() {
             assert!(
                 defaults.contains_key(action),
-                "Missing default binding for {:?}",
-                action
+                "Missing default binding for {action:?}"
             );
         }
     }
@@ -312,16 +311,14 @@ mod tests {
     fn display_command_palette() {
         let binding = KeyBinding::new(true, true, false, "KeyP");
         let d = binding.display();
-        assert!(d.contains('P'), "display should contain key letter: {}", d);
+        assert!(d.contains('P'), "display should contain key letter: {d}");
         assert!(
             d.contains('\u{2318}'),
-            "display should contain Cmd symbol: {}",
-            d
+            "display should contain Cmd symbol: {d}"
         );
         assert!(
             d.contains('\u{21E7}'),
-            "display should contain Shift symbol: {}",
-            d
+            "display should contain Shift symbol: {d}"
         );
     }
 

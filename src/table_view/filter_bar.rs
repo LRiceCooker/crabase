@@ -15,11 +15,7 @@ pub fn FilterBar(
         let cols = columns.get();
         if let Some(first_col) = cols.first() {
             filters.update(|f| {
-                let combinator = if f.is_empty() {
-                    "AND".to_string()
-                } else {
-                    "AND".to_string()
-                };
+                let combinator = "AND".to_string();
                 f.push(Filter {
                     column: first_col.name.clone(),
                     operator: "=".to_string(),
@@ -124,6 +120,7 @@ fn FilterChip(
     idx: usize,
     filter: Filter,
     columns: Vec<ColumnInfo>,
+    #[allow(unused_variables)]
     columns_for_ops: Vec<ColumnInfo>,
     filters: RwSignal<Vec<Filter>>,
     on_change: Callback<()>,

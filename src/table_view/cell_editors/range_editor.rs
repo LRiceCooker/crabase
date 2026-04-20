@@ -39,10 +39,10 @@ pub fn RangeEditor(
         }
     };
 
-    let commit_clone = commit.clone();
-    let commit_clone2 = commit.clone();
-    let commit_clone3 = commit.clone();
-    let commit_clone4 = commit.clone();
+    let commit_clone = commit;
+    let commit_clone2 = commit;
+    let commit_clone3 = commit;
+    let commit_clone4 = commit;
     view! {
         <div class="flex items-center gap-0.5 w-full text-xs font-mono">
             <button

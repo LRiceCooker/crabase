@@ -58,7 +58,7 @@ pub fn SavedConnections(
                     <div class="flex flex-col gap-0.5 min-w-0">
                         <span class="text-[13px] font-medium text-gray-900 dark:text-neutral-50 truncate">{display_name}</span>
                         <span class="text-[11px] text-gray-400 dark:text-zinc-500 truncate">
-                            {format!("{}:{} / {}", host, port, dbname)}
+                            {format!("{host}:{port} / {dbname}")}
                         </span>
                     </div>
                     <button

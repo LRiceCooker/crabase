@@ -94,7 +94,7 @@ pub fn SqlResults(
                                     Some(StatementResult::Affected { command, rows_affected, .. }) => {
                                         view! {
                                             <div class="flex items-center justify-center h-full text-[13px] text-gray-500 dark:text-zinc-400">
-                                                <span class="font-mono">{format!("{} — {} row(s) affected", command, rows_affected)}</span>
+                                                <span class="font-mono">{format!("{command} — {rows_affected} row(s) affected")}</span>
                                             </div>
                                         }.into_any()
                                     }
@@ -129,7 +129,7 @@ pub fn SqlResults(
                                             // Badge for result type
                                             let badge = match stmt {
                                                 StatementResult::Rows { rows, .. } => format!("{} rows", rows.len()),
-                                                StatementResult::Affected { rows_affected, .. } => format!("{} affected", rows_affected),
+                                                StatementResult::Affected { rows_affected, .. } => format!("{rows_affected} affected"),
                                                 StatementResult::Error { .. } => "error".to_string(),
                                             };
                                             view! {
@@ -138,7 +138,7 @@ pub fn SqlResults(
                                                     on:click=move |_| set_active_idx.set(i)
                                                 >
                                                     {label}
-                                                    <span class="ml-1 text-[10px] opacity-60">{format!("({})", badge)}</span>
+                                                    <span class="ml-1 text-[10px] opacity-60">{format!("({badge})")}</span>
                                                 </button>
                                             }
                                         }).collect::<Vec<_>>()}

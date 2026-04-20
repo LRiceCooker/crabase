@@ -1,3 +1,10 @@
+// Suppress noisy warnings for a Leptos CSR app
+#![allow(
+    clippy::module_inception,
+    clippy::type_complexity,
+    clippy::empty_line_after_outer_attr
+)]
+
 mod app;
 mod command_palette;
 mod connection;

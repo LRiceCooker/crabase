@@ -33,7 +33,7 @@ pub fn NumberEditor(
         }
     };
 
-    let commit_clone = commit.clone();
+    let commit_clone = commit;
     view! {
         <input
             type="number"

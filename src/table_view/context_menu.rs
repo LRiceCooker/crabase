@@ -25,7 +25,7 @@ pub fn ContextMenu(
         on_close.run(());
     };
 
-    let style = format!("left: {}px; top: {}px;", x, y);
+    let style = format!("left: {x}px; top: {y}px;");
 
     view! {
         // Invisible backdrop to catch clicks outside menu
@@ -43,7 +43,6 @@ pub fn ContextMenu(
         >
             {items.into_iter().map(|item| {
                 let action = item.action;
-                let on_close = on_close.clone();
                 let text_class = if item.danger {
                     "px-4 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 cursor-pointer transition-colors duration-100 select-none"
                 } else {

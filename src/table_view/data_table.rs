@@ -10,6 +10,7 @@ use crate::table_view::json_editor::JsonEditRequest;
 use crate::tauri::{ColumnInfo, SortCol};
 
 /// Info about a right-click event on a row.
+#[allow(dead_code)]
 pub struct RowContextMenuEvent {
     pub row_idx: usize,
     pub x: i32,
@@ -232,8 +233,7 @@ pub fn DataTable(
                             };
                             let global_idx = (page - 1) * page_size + (row_idx as u32) + 1;
                             let index_td_class = format!(
-                                "sticky left-0 z-[5] {} px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono cursor-pointer{}",
-                                index_bg, index_border_l
+                                "sticky left-0 z-[5] {index_bg} px-2 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 dark:border-[#1F1F23] text-[11px] text-gray-400 dark:text-zinc-500 text-right select-none w-10 font-mono cursor-pointer{index_border_l}"
                             );
                             view! {
                                 <tr
@@ -364,16 +364,16 @@ pub fn DataTable(
                                             };
                                             let base = "px-3 py-1.5 border-b border-gray-100 dark:border-[#1F1F23] border-r border-gray-100 truncate max-w-[300px]";
                                             let class = if is_null && cell_modified {
-                                                format!("{} text-gray-300 dark:text-zinc-600 italic {} bg-amber-100/50 dark:bg-amber-900/40{}", base, cursor, find_highlight)
+                                                format!("{base} text-gray-300 dark:text-zinc-600 italic {cursor} bg-amber-100/50 dark:bg-amber-900/40{find_highlight}")
                                             } else if is_null {
-                                                format!("{} text-gray-300 dark:text-zinc-600 italic {}{}", base, cursor, find_highlight)
+                                                format!("{base} text-gray-300 dark:text-zinc-600 italic {cursor}{find_highlight}")
                                             } else if cell_modified {
-                                                format!("{} text-gray-900 dark:text-neutral-50 {} bg-amber-100/50 dark:bg-amber-900/40{}", base, cursor, find_highlight)
+                                                format!("{base} text-gray-900 dark:text-neutral-50 {cursor} bg-amber-100/50 dark:bg-amber-900/40{find_highlight}")
                                             } else {
-                                                format!("{} text-gray-900 dark:text-neutral-50 {}{}", base, cursor, find_highlight)
+                                                format!("{base} text-gray-900 dark:text-neutral-50 {cursor}{find_highlight}")
                                             };
                                             let title = if is_readonly {
-                                                format!("{} (read-only)", text)
+                                                format!("{text} (read-only)")
                                             } else {
                                                 text.clone()
                                             };

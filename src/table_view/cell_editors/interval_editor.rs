@@ -24,7 +24,7 @@ pub fn IntervalEditor(
         }
     };
 
-    let commit_clone = commit.clone();
+    let commit_clone = commit;
     view! {
         <input
             type="text"
