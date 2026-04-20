@@ -26,16 +26,16 @@ async fn connect_db(
 }
 
 #[tauri::command]
-fn disconnect_db(db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.disconnect()?;
+async fn disconnect_db(db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.disconnect().await?;
     Ok("Disconnected successfully".to_string())
 }
 
 #[tauri::command]
-fn get_connection_info(
+async fn get_connection_info(
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<db::ConnectionInfo, String> {
-    db_state.get_connection_info()
+    db_state.get_connection_info().await
 }
 
 #[tauri::command]
@@ -108,7 +108,7 @@ async fn restore_backup(
     app_handle: tauri::AppHandle,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<String, String> {
-    let connection_string = db_state.get_connection_string()?;
+    let connection_string = db_state.get_connection_string().await?;
     // Run blocking I/O (tar extraction + pg_restore subprocess) off the async runtime
     tokio::task::spawn_blocking(move || {
         restore::restore_backup_streaming(&file_path, &connection_string, &app_handle)
@@ -186,72 +186,72 @@ fn set_app_icon(is_dark: bool, app_handle: tauri::AppHandle) -> Result<(), Strin
 }
 
 /// Helper: derive connection key from current DB state.
-fn get_conn_key(db_state: &db::DbState) -> Result<String, String> {
-    let info = db_state.get_connection_info()?;
+async fn get_conn_key(db_state: &db::DbState) -> Result<String, String> {
+    let info = db_state.get_connection_info().await?;
     Ok(saved_queries::connection_key(
         &info.host, info.port, &info.dbname, &info.user,
     ))
 }
 
 #[tauri::command]
-fn cmd_save_query(
+async fn cmd_save_query(
     name: String,
     sql: String,
     db_state: tauri::State<'_, db::DbState>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let key = get_conn_key(&db_state)?;
+    let key = get_conn_key(&db_state).await?;
     saved_queries::save_query(&app_handle, &key, name, sql)
 }
 
 #[tauri::command]
-fn cmd_update_query(
+async fn cmd_update_query(
     name: String,
     sql: String,
     db_state: tauri::State<'_, db::DbState>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let key = get_conn_key(&db_state)?;
+    let key = get_conn_key(&db_state).await?;
     saved_queries::update_query(&app_handle, &key, &name, sql)
 }
 
 #[tauri::command]
-fn cmd_rename_query(
+async fn cmd_rename_query(
     old_name: String,
     new_name: String,
     db_state: tauri::State<'_, db::DbState>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let key = get_conn_key(&db_state)?;
+    let key = get_conn_key(&db_state).await?;
     saved_queries::rename_query(&app_handle, &key, &old_name, new_name)
 }
 
 #[tauri::command]
-fn cmd_delete_query(
+async fn cmd_delete_query(
     name: String,
     db_state: tauri::State<'_, db::DbState>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let key = get_conn_key(&db_state)?;
+    let key = get_conn_key(&db_state).await?;
     saved_queries::delete_query(&app_handle, &key, &name)
 }
 
 #[tauri::command]
-fn cmd_list_queries(
+async fn cmd_list_queries(
     db_state: tauri::State<'_, db::DbState>,
     app_handle: tauri::AppHandle,
 ) -> Result<Vec<saved_queries::SavedQuery>, String> {
-    let key = get_conn_key(&db_state)?;
+    let key = get_conn_key(&db_state).await?;
     saved_queries::list_queries(&app_handle, &key)
 }
 
 #[tauri::command]
-fn cmd_load_query(
+async fn cmd_load_query(
     name: String,
     db_state: tauri::State<'_, db::DbState>,
     app_handle: tauri::AppHandle,
 ) -> Result<saved_queries::SavedQuery, String> {
-    let key = get_conn_key(&db_state)?;
+    let key = get_conn_key(&db_state).await?;
     saved_queries::load_query(&app_handle, &key, &name)
 }
 

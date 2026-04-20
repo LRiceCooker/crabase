@@ -96,12 +96,12 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
         }
 
         "disconnect_db" => {
-            state.db.disconnect()?;
+            state.db.disconnect().await?;
             Ok(serde_json::json!("Disconnected successfully"))
         }
 
         "get_connection_info" => {
-            let info = state.db.get_connection_info()?;
+            let info = state.db.get_connection_info().await?;
             Ok(serde_json::to_value(info).unwrap())
         }
 
@@ -333,7 +333,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             if name.trim().is_empty() {
                 return Err("Query name cannot be empty".to_string());
             }
-            let conn_key = get_conn_key(&state.db)?;
+            let conn_key = get_conn_key(&state.db).await?;
             let mut store = state.queries.write().await;
             let queries = store.entry(conn_key).or_default();
             if queries.iter().any(|q| q.name == name) {
@@ -353,7 +353,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
                 .and_then(|v| v.as_str())
                 .ok_or("Missing sql")?
                 .to_string();
-            let conn_key = get_conn_key(&state.db)?;
+            let conn_key = get_conn_key(&state.db).await?;
             let mut store = state.queries.write().await;
             let queries = store.entry(conn_key).or_default();
             let query = queries
@@ -379,7 +379,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             if new_name.trim().is_empty() {
                 return Err("Query name cannot be empty".to_string());
             }
-            let conn_key = get_conn_key(&state.db)?;
+            let conn_key = get_conn_key(&state.db).await?;
             let mut store = state.queries.write().await;
             let queries = store.entry(conn_key).or_default();
             if queries.iter().any(|q| q.name == new_name) {
@@ -398,7 +398,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
                 .get("name")
                 .and_then(|v| v.as_str())
                 .ok_or("Missing name")?;
-            let conn_key = get_conn_key(&state.db)?;
+            let conn_key = get_conn_key(&state.db).await?;
             let mut store = state.queries.write().await;
             let queries = store.entry(conn_key).or_default();
             let original_len = queries.len();
@@ -410,7 +410,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
         }
 
         "list_queries" => {
-            let conn_key = get_conn_key(&state.db)?;
+            let conn_key = get_conn_key(&state.db).await?;
             let store = state.queries.read().await;
             let queries = store.get(&conn_key).cloned().unwrap_or_default();
             Ok(serde_json::to_value(queries).unwrap())
@@ -421,7 +421,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
                 .get("name")
                 .and_then(|v| v.as_str())
                 .ok_or("Missing name")?;
-            let conn_key = get_conn_key(&state.db)?;
+            let conn_key = get_conn_key(&state.db).await?;
             let store = state.queries.read().await;
             let queries = store
                 .get(&conn_key)
@@ -453,8 +453,8 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
 }
 
 /// Derive connection key from current DB state (mirrors lib.rs logic).
-fn get_conn_key(db: &DbState) -> Result<String, String> {
-    let info = db.get_connection_info()?;
+async fn get_conn_key(db: &DbState) -> Result<String, String> {
+    let info = db.get_connection_info().await?;
     Ok(saved_queries::connection_key(
         &info.host, info.port, &info.dbname, &info.user,
     ))

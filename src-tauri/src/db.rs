@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
 use sqlx::{Column, Executor, Row, TypeInfo};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use tokio::sync::RwLock;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,18 +18,37 @@ pub struct ConnectionInfo {
 }
 
 pub struct DbState {
-    pub pool: Mutex<Option<PgPool>>,
-    pub connection_info: Mutex<Option<ConnectionInfo>>,
-    pub connection_string: Mutex<Option<String>>,
+    pool: RwLock<Option<PgPool>>,
+    connection_info: RwLock<Option<ConnectionInfo>>,
+    connection_string: RwLock<Option<String>>,
 }
 
 impl DbState {
     pub fn new() -> Self {
         Self {
-            pool: Mutex::new(None),
-            connection_info: Mutex::new(None),
-            connection_string: Mutex::new(None),
+            pool: RwLock::new(None),
+            connection_info: RwLock::new(None),
+            connection_string: RwLock::new(None),
         }
+    }
+
+    /// Get a clone of the connection pool, or error if not connected.
+    async fn pool(&self) -> Result<PgPool, String> {
+        self.pool
+            .read()
+            .await
+            .clone()
+            .ok_or_else(|| "Not connected to any database".to_string())
+    }
+
+    /// Get the current schema name.
+    async fn schema(&self) -> String {
+        self.connection_info
+            .read()
+            .await
+            .as_ref()
+            .map(|i| i.schema.clone())
+            .unwrap_or_else(|| "public".to_string())
     }
 
     pub async fn connect(&self, info: ConnectionInfo) -> Result<(), String> {
@@ -45,83 +64,39 @@ impl DbState {
             .await
             .map_err(|e| format!("Connection validation failed: {}", e))?;
 
-        let mut pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-        *pool_guard = Some(pool);
-
-        let mut info_guard = self
-            .connection_info
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        *info_guard = Some(info);
-
-        let mut cs_guard = self
-            .connection_string
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        *cs_guard = Some(connection_string);
+        *self.pool.write().await = Some(pool);
+        *self.connection_info.write().await = Some(info);
+        *self.connection_string.write().await = Some(connection_string);
 
         Ok(())
     }
 
-    pub fn disconnect(&self) -> Result<(), String> {
-        let mut pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-        if let Some(pool) = pool_guard.take() {
-            drop(pool);
-        }
-
-        let mut info_guard = self
-            .connection_info
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        *info_guard = None;
-
-        let mut cs_guard = self
-            .connection_string
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        *cs_guard = None;
-
+    pub async fn disconnect(&self) -> Result<(), String> {
+        *self.pool.write().await = None;
+        *self.connection_info.write().await = None;
+        *self.connection_string.write().await = None;
         Ok(())
     }
 
-    pub fn get_connection_string(&self) -> Result<String, String> {
-        let guard = self
-            .connection_string
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        guard
+    pub async fn get_connection_string(&self) -> Result<String, String> {
+        self.connection_string
+            .read()
+            .await
             .clone()
             .ok_or_else(|| "Not connected to any database".to_string())
     }
 
-    pub fn get_connection_info(&self) -> Result<ConnectionInfo, String> {
-        let guard = self
-            .connection_info
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        guard
+    pub async fn get_connection_info(&self) -> Result<ConnectionInfo, String> {
+        self.connection_info
+            .read()
+            .await
             .clone()
             .ok_or_else(|| "Not connected to any database".to_string())
     }
 
     pub async fn list_tables(&self) -> Result<Vec<String>, String> {
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
-
-        let schema = {
-            let info_guard = self
-                .connection_info
-                .lock()
-                .map_err(|e| format!("Lock error: {}", e))?;
-            info_guard
-                .as_ref()
-                .map(|i| i.schema.clone())
-                .unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
 
         let rows: Vec<(String,)> = sqlx::query_as(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = $1 ORDER BY table_name",
@@ -135,23 +110,8 @@ impl DbState {
     }
 
     pub async fn get_column_info(&self, table_name: &str) -> Result<Vec<ColumnInfo>, String> {
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
-
-        let schema = {
-            let info_guard = self
-                .connection_info
-                .lock()
-                .map_err(|e| format!("Lock error: {}", e))?;
-            info_guard
-                .as_ref()
-                .map(|i| i.schema.clone())
-                .unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
 
         // Extended query: fetch type info, max_length, precision, scale, default, UDT name + schema
         let rows: Vec<(
@@ -306,23 +266,8 @@ impl DbState {
     ) -> Result<TableData, String> {
         let columns = self.get_column_info(table_name).await?;
 
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
-
-        let schema = {
-            let info_guard = self
-                .connection_info
-                .lock()
-                .map_err(|e| format!("Lock error: {}", e))?;
-            info_guard
-                .as_ref()
-                .map(|i| i.schema.clone())
-                .unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
 
         // Use quoted identifiers to prevent SQL injection
         let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
@@ -378,23 +323,8 @@ impl DbState {
     ) -> Result<TableData, String> {
         let columns = self.get_column_info(table_name).await?;
 
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
-
-        let schema = {
-            let info_guard = self
-                .connection_info
-                .lock()
-                .map_err(|e| format!("Lock error: {}", e))?;
-            info_guard
-                .as_ref()
-                .map(|i| i.schema.clone())
-                .unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
 
         let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
         let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
@@ -456,23 +386,8 @@ impl DbState {
         table_name: &str,
         change_set: ChangeSet,
     ) -> Result<String, String> {
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
-
-        let schema = {
-            let info_guard = self
-                .connection_info
-                .lock()
-                .map_err(|e| format!("Lock error: {}", e))?;
-            info_guard
-                .as_ref()
-                .map(|i| i.schema.clone())
-                .unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
 
         let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
         let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
@@ -566,12 +481,7 @@ impl DbState {
     }
 
     pub async fn execute_query(&self, sql: &str) -> Result<QueryResult, String> {
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
+        let pool = self.pool().await?;
 
         // Use raw_sql (simple query protocol) — returns all values as text,
         // avoiding binary protocol issues with enums, arrays, and custom types.
@@ -602,12 +512,7 @@ impl DbState {
 
     /// Get a text representation of ALL schemas in the database for AI context.
     pub async fn get_full_schema_text(&self) -> Result<String, String> {
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
+        let pool = self.pool().await?;
 
         // Get all schemas with their tables and columns
         let rows: Vec<(String, String, String, String, Option<String>)> = sqlx::query_as(
@@ -667,12 +572,7 @@ impl DbState {
     /// Returns a Vec<StatementResult> — one entry per statement.
     /// The simple protocol returns all values as text, avoiding binary issues with enums/arrays.
     pub async fn execute_query_multi(&self, sql: &str) -> Result<Vec<StatementResult>, String> {
-        let pool = {
-            let pool_guard = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            pool_guard
-                .clone()
-                .ok_or_else(|| "Not connected to any database".to_string())?
-        };
+        let pool = self.pool().await?;
 
         use futures::TryStreamExt;
 
@@ -762,14 +662,8 @@ impl DbState {
     }
 
     pub async fn drop_table(&self, table_name: &str) -> Result<String, String> {
-        let pool = {
-            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
-        };
-        let schema = {
-            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
         let sql = format!("DROP TABLE {} CASCADE", qualified);
         sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("DROP TABLE failed: {}", e))?;
@@ -777,14 +671,8 @@ impl DbState {
     }
 
     pub async fn truncate_table(&self, table_name: &str) -> Result<String, String> {
-        let pool = {
-            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
-        };
-        let schema = {
-            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
         let sql = format!("TRUNCATE TABLE {} CASCADE", qualified);
         sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("TRUNCATE failed: {}", e))?;
@@ -792,14 +680,8 @@ impl DbState {
     }
 
     pub async fn export_table_json(&self, table_name: &str) -> Result<String, String> {
-        let pool = {
-            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
-        };
-        let schema = {
-            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
         let query = format!("SELECT row_to_json(t) FROM {} t", qualified);
         let rows: Vec<(serde_json::Value,)> = sqlx::query_as(&query)
@@ -811,14 +693,8 @@ impl DbState {
 
     pub async fn export_table_sql(&self, table_name: &str) -> Result<String, String> {
         let columns = self.get_column_info(table_name).await?;
-        let pool = {
-            let g = self.pool.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.clone().ok_or_else(|| "Not connected to any database".to_string())?
-        };
-        let schema = {
-            let g = self.connection_info.lock().map_err(|e| format!("Lock error: {}", e))?;
-            g.as_ref().map(|i| i.schema.clone()).unwrap_or_else(|| "public".to_string())
-        };
+        let pool = self.pool().await?;
+        let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
         let query = format!("SELECT * FROM {}", qualified);
         let rows = sqlx::query(&query).fetch_all(&pool).await
@@ -1296,19 +1172,19 @@ pub fn build_connection_string(info: &ConnectionInfo) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_db_state_new() {
+    #[tokio::test]
+    async fn test_db_state_new() {
         let state = DbState::new();
-        let pool = state.pool.lock().unwrap();
+        let pool = state.pool.read().await;
         assert!(pool.is_none());
-        let info = state.connection_info.lock().unwrap();
+        let info = state.connection_info.read().await;
         assert!(info.is_none());
     }
 
-    #[test]
-    fn test_get_connection_info_not_connected() {
+    #[tokio::test]
+    async fn test_get_connection_info_not_connected() {
         let state = DbState::new();
-        let result = state.get_connection_info();
+        let result = state.get_connection_info().await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Not connected to any database");
     }
@@ -1391,22 +1267,22 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test]
-    fn test_disconnect_when_not_connected() {
+    #[tokio::test]
+    async fn test_disconnect_when_not_connected() {
         let state = DbState::new();
-        let result = state.disconnect();
+        let result = state.disconnect().await;
         assert!(result.is_ok());
         // State should still be empty
-        assert!(state.pool.lock().unwrap().is_none());
-        assert!(state.connection_info.lock().unwrap().is_none());
+        assert!(state.pool.read().await.is_none());
+        assert!(state.connection_info.read().await.is_none());
     }
 
-    #[test]
-    fn test_disconnect_clears_connection_info() {
+    #[tokio::test]
+    async fn test_disconnect_clears_connection_info() {
         let state = DbState::new();
         // Manually set connection info
         {
-            let mut info_guard = state.connection_info.lock().unwrap();
+            let mut info_guard = state.connection_info.write().await;
             *info_guard = Some(ConnectionInfo {
                 host: "localhost".to_string(),
                 port: 5432,
@@ -1417,11 +1293,11 @@ mod tests {
                 sslmode: "disable".to_string(),
             });
         }
-        assert!(state.get_connection_info().is_ok());
+        assert!(state.get_connection_info().await.is_ok());
 
-        let result = state.disconnect();
+        let result = state.disconnect().await;
         assert!(result.is_ok());
-        assert!(state.get_connection_info().is_err());
+        assert!(state.get_connection_info().await.is_err());
     }
 
     #[tokio::test]
