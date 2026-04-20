@@ -23,3 +23,6 @@ test: test-setup
 
 test-frontend:
     npx vitest run
+
+test-server:
+    cargo run --manifest-path tests/test_server/Cargo.toml

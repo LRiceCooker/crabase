@@ -8,10 +8,7 @@
 (Docker Postgres, seed SQL, setup/teardown scripts — already done, kept as-is)
 
 ### Phase 30 — Test HTTP Server for E2E
-- [ ] Implement `POST /invoke/{command}` route that deserializes the JSON body, calls the corresponding `crabase::db` function, and returns the JSON response. Must handle all commands the frontend uses: `parse_connection_string`, `connect_db`, `disconnect_db`, `get_connection_info`, `list_schemas`, `list_tables`, `get_column_info`, `get_table_data`, `get_table_data_filtered`, `save_changes`, `execute_query`, `execute_query_multi`, `drop_table`, `truncate_table`, `export_table_json`, `export_table_sql`, `get_columns_for_autocomplete`, `get_full_schema_for_chat`, `load_settings`, `save_settings`, `save_connection`, `list_saved_connections`, `delete_saved_connection`, `save_query`, `update_query`, `rename_query`, `delete_query`, `list_queries`, `load_query`, `write_file`.
-- [ ] Add CORS headers allowing `http://localhost:8080`
-- [ ] Serve on port 3001
-- [ ] Add `just test-server` command to start the test server
+(First 3 tasks already completed — test server exists with all routes, CORS, port 3001)
 
 ### Phase 31 — E2E Tests (Playwright + real DB)
 Real E2E tests using Playwright driving a real Chrome browser against the app in dev mode. The Tauri `invoke` bridge is replaced by a `window.__TAURI__` shim (injected via `page.addInitScript()`) that routes calls to a test HTTP server wrapping the real `db.rs` functions. **Zero changes to app code.**
@@ -148,6 +145,8 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Add `just test-server` command to start the test server (`cargo run --manifest-path tests/test_server/Cargo.toml`)
+- [x] Implement `POST /invoke/{command}` route for all commands, CORS for localhost:8080, port 3001
 - [x] Create `tests/test_server/` as a standalone Rust binary (Cargo.toml with crabase path dep, axum, tokio, serde_json, tower-http). Implements `POST /invoke/{command}` for all commands, CORS for localhost:8080, serves on port 3001. File-based commands (settings, connections, queries) use in-memory state.
 - [x] Frontend Vitest tests: codemirror-bridge (11 tests: create/destroy/getContent/setContent/isDirty/markClean/onChange/readOnly/json/multi-editor), markdown-bridge (14 tests: render, headings, code blocks, links, lists, empty string, nested formatting, SQL/JSON code, GFM tables, line breaks). `just test-frontend` command added.
 - [x] Create `vitest.config.ts` with JSDOM environment
