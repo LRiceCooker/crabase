@@ -145,6 +145,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Create `tests/e2e/global-teardown.ts` — kills spawned processes via saved PIDs, runs just test-teardown
 - [x] Create `tests/e2e/global-setup.ts` — starts Docker Postgres, test HTTP server, Trunk dev server, waits for readiness
 - [x] Create `tests/e2e/playwright.config.ts` — Playwright config with baseURL localhost:8080, Chromium, tauri-shim.js injection, global setup/teardown
 - [x] Create `tests/e2e/tauri-shim.js` — defines `window.__TAURI__` shim routing invoke to test HTTP server, event.listen as no-op, dialog.open/save as null
