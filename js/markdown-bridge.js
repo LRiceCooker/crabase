@@ -1,7 +1,8 @@
 // Markdown rendering bridge for WASM interop
-// Exposes window.__markdown.render(text) → HTML string
+// Exposes window.__markdown.render(text) → sanitized HTML string
 
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/core";
 
 // Register only common languages to keep bundle small
@@ -51,10 +52,11 @@ marked.setOptions({
 window.__markdown = {
   render(text) {
     try {
-      return marked.parse(text);
+      const raw = marked.parse(text);
+      return DOMPurify.sanitize(raw);
     } catch (e) {
       console.error("Markdown render error:", e);
-      return text;
+      return DOMPurify.sanitize(text);
     }
   },
 };

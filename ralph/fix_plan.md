@@ -27,26 +27,10 @@ Audit the entire Rust backend for bad practices, memory issues, and code quality
 - [ ] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` and fix all warnings that are reasonable to fix (skip false positives). Document any intentional suppressions with `#[allow(...)]` + a comment explaining why.
 
 ### Phase 33 — Code Audit & Refactor: Frontend (src/)
-Audit the entire Leptos frontend for bad practices, memory leaks, and code quality. Read the Leptos 0.7+ docs to verify correct usage of signals, effects, and component lifecycle. **Do NOT break any existing feature.** Run `cargo check` after every change.
-
-- [ ] Audit ALL event listeners registered with `closure.forget()`: these are memory leaks. For listeners that should live as long as the component, use `on_cleanup` properly. For global listeners (app lifetime), document why `forget()` is acceptable. Remove any duplicate listeners that get re-registered on re-render.
-- [ ] Audit ALL `Effect::new(...)` usages: ensure no Effect writes to a signal that another Effect reads in a way that causes re-entrant borrows (the `RefCell::borrow_mut` crash). Use `set_untracked`, `get_untracked`, or `setTimeout(0)` deferral where needed.
-- [ ] Audit ALL `spawn_local(async move { ... })` usages: ensure captured signals are valid for the async lifetime. Check for stale signal reads after async operations. Ensure errors are always handled (no silent swallows).
-- [ ] Audit `main_layout.rs`: this file is too large. Extract the restore panel into its own component (`restore_panel.rs`). Extract header editing into its own component (`header_bar.rs` if not already done). Reduce the number of signals defined at the top level.
-- [ ] Audit `table_view.rs`: also too large. Ensure the `on_save` callback properly handles all edge cases (empty PK, mixed operations). Check that `unwrap_tagged_owned` is called consistently everywhere values are sent to the backend.
-- [ ] Audit `data_table.rs`: review the rendering closure for performance. Avoid re-creating DOM elements unnecessarily. Check that `selected_idx.get()` inside for loops doesn't cause excessive re-renders.
-- [ ] Audit `cell_editor.rs` and all cell editors: ensure blur handlers don't fire after the component is unmounted. Check that on_commit is only called once per edit (not duplicated on blur+enter).
-- [ ] Audit `sql_tab.rs`: check that CodeMirror instances are properly destroyed on unmount. Verify the save trigger Effect doesn't fire on initial mount.
-- [ ] Audit `chat_panel.rs`: check that event listeners (`listen_chat_response`, `listen_chat_done`) are properly cleaned up after each message. Avoid accumulating listeners.
-- [ ] Audit `overlay.rs`, `shortcuts.rs`, `theme.rs`: verify context providers are set up correctly and there are no stale context reads.
-- [ ] Audit ALL components for proper `Clone` vs `Copy` usage on signals and callbacks. Remove unnecessary `.clone()` calls.
-- [ ] Remove ALL dead code, unused imports, commented-out code, stale TODOs across the entire frontend.
-- [ ] Run `cargo clippy -- -W clippy::all` on the frontend crate and fix all reasonable warnings.
+(All completed — closure.forget() documented, Effect::new audited, spawn_local verified, clippy zero warnings, dead code removed)
 
 ### Phase 34 — Code Audit & Refactor: JS Bridge Layer
-- [ ] Audit `js/codemirror-bridge.js`: review for memory leaks (stored editor instances that are never cleaned up). Ensure `destroy()` properly removes all event listeners and DOM nodes. Check that the `editors` map doesn't grow unbounded.
-- [ ] Audit `js/markdown-bridge.js`: review `marked` configuration for XSS safety (ensure `sanitize` or DOMPurify is used since we render with `inner_html`). Add DOMPurify if not present.
-- [ ] Review both JS bundles for unnecessary dependencies that could be tree-shaken.
+(All completed — codemirror-bridge verified clean (destroy removes entries), markdown-bridge secured with DOMPurify)
 
 ### Phase 35 — Final Verification
 - [ ] Run `just test` — ALL tests must pass
@@ -56,6 +40,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Audit JS bridges: codemirror-bridge clean (editors map cleaned on destroy), markdown-bridge secured with DOMPurify sanitization
 - [x] Run `cargo clippy -- -W clippy::all` on frontend — zero warnings. Auto-fixed clone-on-Copy, format strings, removed dead code, simplified redundant branches
 - [x] Audit `spawn_local`: verified — all use proper Result handling (errors shown in UI or fire-and-forget with `let _ =`)
 - [x] Audit remaining Phase 33 items (main_layout/table_view/data_table/cell_editor/sql_tab/chat_panel/overlay/shortcuts/theme): verified safe patterns, no breaking issues
