@@ -1,6 +1,7 @@
 # Task Plan
 
 ## In Progress
+- [ ] Audit `db.rs`: fix memory leaks from `Mutex<Option<PgPool>>`, remove redundant `.clone()` on PgPool, extract duplicated pool+schema access into helper
 
 ## Backlog
 
@@ -11,96 +12,7 @@
 (First 3 tasks already completed — test server exists with all routes, CORS, port 3001)
 
 ### Phase 31 — E2E Tests (Playwright + real DB)
-Real E2E tests using Playwright driving a real Chrome browser against the app in dev mode. The Tauri `invoke` bridge is replaced by a `window.__TAURI__` shim (injected via `page.addInitScript()`) that routes calls to a test HTTP server wrapping the real `db.rs` functions. **Zero changes to app code.**
-
-Architecture:
-```
-Playwright (headless Chrome)
-  → localhost:8080 (Trunk dev server, serves the app WASM — identical to prod)
-    → window.__TAURI__.core.invoke("cmd", args)
-      → fetch("http://localhost:3001/invoke/cmd", args)  [injected shim]
-        → Test HTTP server (Rust/axum, imports crabase::db)
-          → Docker Postgres (localhost:5433, crabase_test)
-```
-
-Prerequisites: Docker, Node.js, `npx playwright install chromium`.
-
-**Infrastructure:**
-- [ ] Create `tests/test_server/` as a Rust binary (workspace member or standalone). Uses `axum` to expose each `db.rs` function as `POST /invoke/{command}`. Connects to `postgresql://test:test@localhost:5433/crabase_test`. Handles JSON serialization matching what the frontend expects from `invoke`. Add CORS headers for `localhost:8080`. Serve on port 3001.
-- [ ] Create `tests/e2e/tauri-shim.js` — the `addInitScript` content that defines `window.__TAURI__` with `core.invoke` routed to fetch, `event.listen` as no-op returning unlisten function, `dialog.open/save` returning null.
-- [ ] Create `tests/e2e/playwright.config.ts` — configure Playwright: baseURL `http://localhost:8080`, use Chromium, set up `addInitScript` with the tauri shim.
-- [ ] Create `tests/e2e/global-setup.ts` — starts Docker Postgres (`just test-setup`), starts the test HTTP server, starts Trunk dev server (`trunk serve --port 8080`), waits for all to be ready.
-- [ ] Create `tests/e2e/global-teardown.ts` — stops Trunk, test server, Docker (`just test-teardown`).
-- [ ] Install Playwright: `npm install -D @playwright/test`
-- [ ] Add `just test-e2e` command to justfile
-- [ ] Update `just test` to include `just test-e2e`
-
-**E2E test files** (split by feature area, each file = one `test.describe` block):
-
-`tests/e2e/connection.spec.ts`:
-- [ ] Type the test connection string, click "Next", verify connection form appears with parsed fields (host=localhost, port=5433, user=test, db=crabase_test)
-- [ ] On the connection form, click "Connect", verify the main layout appears with the sidebar showing real tables from the DB
-- [ ] Verify the header shows connection info (test@localhost, :5433, crabase_test)
-- [ ] Save a connection with a name, disconnect, verify the saved connection appears on the connection screen, click it, verify it fills the form
-
-`tests/e2e/table-browsing.spec.ts`:
-- [ ] Click "users" in sidebar, verify a tab opens, data table renders with real rows
-- [ ] Verify column headers match the users table schema (id, username, email, role, ...)
-- [ ] Verify pagination shows correct total count (12 rows)
-- [ ] Click page 2, verify different rows appear
-- [ ] Verify enum values display correctly (not raw JSON or type names)
-- [ ] Verify timestamps display as formatted dates (not "Timestamp" literal)
-- [ ] Verify NULL values display as "NULL" in gray italic
-
-`tests/e2e/inline-editing.spec.ts`:
-- [ ] Click on a cell (user's bio), verify it enters edit mode (input appears)
-- [ ] Type a new value, press Enter, verify the cell shows the new value and the dirty bar appears
-- [ ] Click "Discard", verify original value is restored and dirty bar disappears
-- [ ] Edit a cell again, click "Save changes", verify dirty bar disappears (save persisted to real DB)
-- [ ] Refresh the page, navigate back to the same table, verify the saved value persists
-
-`tests/e2e/filters-sort.spec.ts`:
-- [ ] Click "+" on filter bar, select column "role", operator "=", type "admin", verify table shows only 3 rows
-- [ ] Add a second filter with OR combinator, verify results update
-- [ ] Remove a filter, verify results update
-- [ ] Click a column header to sort ascending, verify row order changes
-- [ ] Click again for descending, verify order reverses
-
-`tests/e2e/sql-editor.spec.ts`:
-- [ ] Click "+" to open a new SQL editor tab, verify editor area is visible
-- [ ] Type `SELECT * FROM users WHERE role = 'admin'`, click Run, verify results table shows 3 rows
-- [ ] Type a multi-statement script (SELECT + INSERT), click Run, verify statement selector appears below with 2 entries
-- [ ] Verify INSERT result shows affected rows in console style
-- [ ] Save the query (Cmd+S or Save button), verify it appears in the sidebar "Saved Queries" section
-- [ ] Rename the query by clicking on the tab title, verify the name updates
-
-`tests/e2e/command-palette.spec.ts`:
-- [ ] Press Cmd+Shift+P, verify command palette opens and input is focused
-- [ ] Type "Restore", verify "Restore Backup" appears in filtered results
-- [ ] Press Escape, verify palette closes
-- [ ] Press Cmd+P, verify table finder opens with test tables listed
-- [ ] Type "user", verify "users" is filtered, press Enter, verify users table tab opens
-- [ ] Open Cmd+Shift+P then Cmd+P, verify first overlay closes and second opens (no stuck state)
-
-`tests/e2e/schema-switching.spec.ts`:
-- [ ] Change schema select in header to "test_schema", verify sidebar updates with test_schema tables
-- [ ] Click a table, verify data loads from test_schema
-- [ ] Switch back to "public", verify public tables return
-
-`tests/e2e/theme.spec.ts`:
-- [ ] Open command palette, select "Settings", verify settings view opens
-- [ ] Toggle theme to dark, verify `<html>` element has "dark" class
-- [ ] Toggle back to light, verify "dark" class is removed
-
-`tests/e2e/context-menus.spec.ts`:
-- [ ] Right-click on a table in sidebar, verify context menu appears with Export JSON, Export SQL, Truncate, Drop
-- [ ] Right-click on a saved query in sidebar, verify context menu with Rename, Duplicate, Delete
-- [ ] Right-click on a row in the data table, verify context menu with Delete, Duplicate, Copy as JSON, Copy as SQL INSERT
-
-`tests/e2e/tabs.spec.ts`:
-- [ ] Open multiple table tabs, switch between them, verify correct data each time
-- [ ] Close a tab, verify it's removed and adjacent tab becomes active
-- [ ] Open a SQL editor tab and a table tab, verify switching works correctly
+(All completed — infrastructure + 10 spec files created)
 
 ### Phase 32 — Code Audit & Refactor: Backend (src-tauri/src/)
 Audit the entire Rust backend for bad practices, memory issues, and code quality. For EACH file, read the latest Rust/sqlx/Tauri v2 docs if needed to verify correct usage. **Do NOT break any existing feature or test.** Run `just test` after every refactor to confirm nothing is broken.
