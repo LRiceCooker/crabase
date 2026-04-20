@@ -2,6 +2,7 @@
   "name": "crabase",
   "private": true,
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "daisyui": "^4",
     "jsdom": "^29.0.2",
     "tailwindcss": "^3",
