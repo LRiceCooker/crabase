@@ -5,8 +5,6 @@
 ## Backlog
 
 ### Phase 29 — Test Infrastructure Setup
-- [ ] Add `just test` command to justfile that runs setup, tests, and teardown in sequence
-- [ ] Add `just test-setup` and `just test-teardown` commands for manual use
 
 ### Phase 30 — Rust Backend Integration Tests
 Write integration tests in `src-tauri/tests/` that test every Tauri command against the real Docker Postgres. Each test connects to `postgresql://test:test@localhost:5433/crabase_test`.
@@ -57,6 +55,7 @@ Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since 
 - [ ] Add `just test-frontend` command to justfile
 
 ## Completed
+- [x] Add `just test`, `just test-setup`, and `just test-teardown` commands to justfile
 - [x] Create `tests/seed.sql` with comprehensive test schema (3 tables in public + 1 in test_schema, all Postgres types, 12 rows each, custom enums, arrays)
 - [x] Create `tests/teardown.sh` script (stops and removes Docker container)
 - [x] Create `tests/setup.sh` script (starts Docker, waits for Postgres, runs seed SQL)
