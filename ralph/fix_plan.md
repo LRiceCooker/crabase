@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 29 — Test Infrastructure Setup
-- [ ] Create `tests/seed.sql` with test schema: at least 3 tables covering all Postgres types the app supports, with sample data (10+ rows each). Include a custom enum type and an array column.
 - [ ] Add `just test` command to justfile that runs setup, tests, and teardown in sequence
 - [ ] Add `just test-setup` and `just test-teardown` commands for manual use
 
@@ -58,6 +57,7 @@ Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since 
 - [ ] Add `just test-frontend` command to justfile
 
 ## Completed
+- [x] Create `tests/seed.sql` with comprehensive test schema (3 tables in public + 1 in test_schema, all Postgres types, 12 rows each, custom enums, arrays)
 - [x] Create `tests/teardown.sh` script (stops and removes Docker container)
 - [x] Create `tests/setup.sh` script (starts Docker, waits for Postgres, runs seed SQL)
 - [x] Create `tests/docker-compose.yml` for a test Postgres container
