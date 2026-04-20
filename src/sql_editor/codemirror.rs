@@ -170,6 +170,7 @@ pub fn CodeMirrorEditor(
             }
         });
         cm_on_change(id, change_closure.as_ref().unchecked_ref());
+        // Low-impact leak: closure lives as long as the CM editor; freed by JS on destroy()
         change_closure.forget();
     });
 

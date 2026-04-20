@@ -142,6 +142,6 @@ fn listen_system_theme(system_is_dark: RwSignal<bool>) {
             system_is_dark.set(query_system_dark());
         });
         let _ = mq.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref());
-        closure.forget();
+        closure.forget(); // App-lifetime: theme provider lives for the entire session
     }
 }

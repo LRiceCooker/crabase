@@ -183,6 +183,7 @@ pub fn SqlTab(
         );
         let win = web_sys::window().unwrap();
         win.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref()).unwrap();
+        // Low-impact leak: closure leaks when tab closes, but checks is_sql_tab before acting
         closure.forget();
     }
 
@@ -222,6 +223,7 @@ pub fn SqlTab(
             .unwrap();
         doc.add_event_listener_with_callback("mouseup", on_up.as_ref().unchecked_ref())
             .unwrap();
+        // Low-impact leak: handlers leak on tab close but early-return when not dragging
         on_move.forget();
         on_up.forget();
     }

@@ -152,7 +152,7 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
             .unwrap()
             .add_event_listener_with_callback_and_bool("keydown", closure.as_ref().unchecked_ref(), true)
             .unwrap();
-        closure.forget();
+        closure.forget(); // App-lifetime: MainLayout lives for the entire session
     }
 
     // Fetch connection info, schemas, and tables on mount
