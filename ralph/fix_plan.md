@@ -12,16 +12,8 @@ Write integration tests in `src-tauri/tests/` that test every Tauri command agai
 ### Phase 31 — Frontend Tests with Vitest
 Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since Playwright cannot drive Tauri's WKWebView on macOS, frontend tests use `@tauri-apps/api/mocks` to simulate the backend.
 
-- [ ] Install Vitest and @tauri-apps/api/mocks: `npm install -D vitest @tauri-apps/api jsdom`
-- [ ] Create `vitest.config.ts` with JSDOM environment and the Tauri mock setup
-- [ ] Note: since the frontend is compiled to WASM via Leptos (not JS/TS), the Vitest tests focus on testing the JS bridge layer (`js/codemirror-bridge.js`, `js/markdown-bridge.js`) and any pure JS utilities
-- [ ] Test `js/codemirror-bridge.js`: CodeMirror create/destroy/getContent/setContent/focus lifecycle
-- [ ] Test `js/markdown-bridge.js`: `__markdown.render()` produces correct HTML for markdown input, code blocks have syntax highlighting classes
-- [ ] Test markdown render handles edge cases: empty string, pure code block, nested formatting, SQL code block
-- [ ] Create a simple smoke test that imports each JS bridge and verifies the global objects exist (`window.__codemirror`, `window.__markdown`)
-- [ ] Add `just test-frontend` command to justfile
-
 ## Completed
+- [x] Frontend Vitest tests: codemirror-bridge (11 tests: create/destroy/getContent/setContent/isDirty/markClean/onChange/readOnly/json/multi-editor), markdown-bridge (14 tests: render, headings, code blocks, links, lists, empty string, nested formatting, SQL/JSON code, GFM tables, line breaks). `just test-frontend` command added.
 - [x] Create `vitest.config.ts` with JSDOM environment
 - [x] Install Vitest and jsdom as dev dependencies
 - [x] Create `src-tauri/tests/integration_test.rs` with all Phase 30 tests (connect, disconnect, connection_info, list_schemas, list_tables, get_column_info, get_table_data, pagination, filters, sort, save_changes CRUD, execute_query, execute_query_multi, drop/truncate table, export JSON/SQL, autocomplete, full schema text, enum on non-public schema, timestamp format, NULL handling). Tests for save_connection/save_query/settings lifecycle are already covered by existing unit tests since they require tauri::AppHandle.

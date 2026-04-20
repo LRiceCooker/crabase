@@ -20,3 +20,6 @@ test-teardown:
 
 test: test-setup
     cd src-tauri && cargo test -- --test-threads=1; just test-teardown
+
+test-frontend:
+    npx vitest run
