@@ -145,6 +145,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] `tests/e2e/inline-editing.spec.ts`: edit cell, dirty bar, discard, save, persist after reload
 - [x] `tests/e2e/table-browsing.spec.ts`: click table, column headers, pagination, enum/NULL display
 - [x] `tests/e2e/connection.spec.ts`: parse connection string, connect, verify header, save/load connection
 - [x] Update `just test` to run test-frontend + test-e2e
