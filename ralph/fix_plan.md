@@ -22,6 +22,7 @@ Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since 
 - [ ] Add `just test-frontend` command to justfile
 
 ## Completed
+- [x] Create `vitest.config.ts` with JSDOM environment
 - [x] Install Vitest and jsdom as dev dependencies
 - [x] Create `src-tauri/tests/integration_test.rs` with all Phase 30 tests (connect, disconnect, connection_info, list_schemas, list_tables, get_column_info, get_table_data, pagination, filters, sort, save_changes CRUD, execute_query, execute_query_multi, drop/truncate table, export JSON/SQL, autocomplete, full schema text, enum on non-public schema, timestamp format, NULL handling). Tests for save_connection/save_query/settings lifecycle are already covered by existing unit tests since they require tauri::AppHandle.
 - [x] Add `just test`, `just test-setup`, and `just test-teardown` commands to justfile
