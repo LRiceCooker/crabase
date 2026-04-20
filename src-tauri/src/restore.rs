@@ -51,59 +51,6 @@ fn find_pgsql_file(dir: &Path) -> Result<PathBuf, String> {
     Err("No .pgsql file found in the tar.gz archive".to_string())
 }
 
-/// Runs pg_restore against the given database using the connection string.
-pub fn run_pg_restore(pgsql_path: &Path, connection_string: &str) -> Result<String, String> {
-    let output = Command::new("pg_restore")
-        .arg("--no-owner")
-        .arg("--no-privileges")
-        .arg("--clean")
-        .arg("--if-exists")
-        .arg("-d")
-        .arg(connection_string)
-        .arg(pgsql_path)
-        .output()
-        .map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                "pg_restore not found. Please install PostgreSQL client tools.".to_string()
-            } else {
-                format!("Failed to run pg_restore: {}", e)
-            }
-        })?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-    if output.status.success() {
-        let mut result = "Restore completed successfully.".to_string();
-        if !stderr.is_empty() {
-            result.push_str(&format!("\nWarnings:\n{}", stderr));
-        }
-        Ok(result)
-    } else {
-        Err(format!(
-            "pg_restore failed (exit code: {}):\n{}{}",
-            output
-                .status
-                .code()
-                .map(|c| c.to_string())
-                .unwrap_or_else(|| "unknown".to_string()),
-            stderr,
-            if !stdout.is_empty() {
-                format!("\nstdout:\n{}", stdout)
-            } else {
-                String::new()
-            }
-        ))
-    }
-}
-
-/// Full restore pipeline: extract .tar.gz → find .pgsql → run pg_restore.
-pub fn restore_backup(file_path: &str, connection_string: &str) -> Result<String, String> {
-    let (_tmp_dir, pgsql_path) = extract_pgsql(file_path)?;
-    run_pg_restore(&pgsql_path, connection_string)
-    // _tmp_dir is dropped here, cleaning up the temp directory
-}
-
 /// Runs pg_restore with real-time log streaming via Tauri events.
 pub fn run_pg_restore_streaming(
     pgsql_path: &Path,
@@ -130,7 +77,10 @@ pub fn run_pg_restore_streaming(
         })?;
 
     // Read stderr in a separate thread (pg_restore outputs mostly to stderr)
-    let stderr = child.stderr.take().unwrap();
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Failed to capture pg_restore stderr".to_string())?;
     let app_clone = app_handle.clone();
     let stderr_thread = std::thread::spawn(move || {
         let reader = std::io::BufReader::new(stderr);
@@ -143,7 +93,10 @@ pub fn run_pg_restore_streaming(
     });
 
     // Read stdout in current thread
-    let stdout = child.stdout.take().unwrap();
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Failed to capture pg_restore stdout".to_string())?;
     let reader = std::io::BufReader::new(stdout);
     let mut stdout_lines = Vec::new();
     for line in reader.lines().flatten() {
@@ -297,19 +250,10 @@ mod tests {
     }
 
     #[test]
-    fn test_run_pg_restore_not_found() {
-        // Use a bogus command path to simulate pg_restore not found
-        let tmp = NamedTempFile::new().unwrap();
-        let result = run_pg_restore(tmp.path(), "postgresql://localhost/testdb");
-        // This test depends on whether pg_restore is installed
-        // If not installed, it should return a "not found" error
-        // If installed, it will fail because the connection is invalid
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_restore_backup_file_not_found() {
-        let result = restore_backup("/nonexistent/backup.tar.gz", "postgresql://localhost/testdb");
+    fn test_restore_backup_streaming_file_not_found() {
+        // restore_backup_streaming requires an AppHandle which we can't easily create in tests,
+        // but we can at least verify extract_pgsql catches missing files
+        let result = extract_pgsql("/nonexistent/backup.tar.gz");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("File not found"));
     }

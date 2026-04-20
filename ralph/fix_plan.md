@@ -56,6 +56,8 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Audit `restore.rs`: removed dead run_pg_restore/restore_backup functions, replaced unwrap() on piped streams with proper error handling
+- [x] Audit `pg_value_to_json`: verified — no panics, no dead branches, all types handled with try_get+fallback pattern, NaN/Infinity safely serialized as strings
 - [x] Audit `db.rs` query builders: LIKE metacharacters (%, _) now escaped in contains/starts with/ends with filters; reviewed all builders — parameterized values and identifier-quoting are correct
 - [x] Audit `db.rs`: replaced std::sync::Mutex with tokio::sync::RwLock, added pool()/schema() helpers, eliminated 21 duplicated lock blocks
 - [x] `tests/e2e/tabs.spec.ts`: multiple tabs, switch, close, SQL + table tabs
