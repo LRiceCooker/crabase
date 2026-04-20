@@ -145,6 +145,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] `tests/e2e/theme.spec.ts`: open settings, toggle dark/light, verify html class
 - [x] `tests/e2e/schema-switching.spec.ts`: switch schema, verify sidebar, load data, switch back
 - [x] `tests/e2e/command-palette.spec.ts`: open/close palette, filter commands, table finder, overlay switching
 - [x] `tests/e2e/sql-editor.spec.ts`: open editor, run query, multi-statement, save
