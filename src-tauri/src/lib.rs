@@ -1,8 +1,8 @@
-mod db;
+pub mod db;
 mod restore;
-mod saved_connections;
-mod saved_queries;
-mod settings;
+pub mod saved_connections;
+pub mod saved_queries;
+pub mod settings;
 
 use tauri::Emitter;
 
@@ -255,23 +255,49 @@ fn cmd_load_query(
     saved_queries::load_query(&app_handle, &key, &name)
 }
 
-#[tauri::command]
-fn check_claude_installed() -> bool {
-    std::process::Command::new("which")
-        .arg("claude")
+/// Get the user's default shell, falling back to /bin/zsh.
+fn user_shell() -> String {
+    std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
+}
+
+/// Check if claude is available via user's login shell.
+/// Uses -l (login) AND -i (interactive) to ensure ~/.zshrc is sourced,
+/// which is where tools like mise/nvm/volta configure PATH.
+fn check_claude_via_shell() -> bool {
+    let shell = user_shell();
+    std::process::Command::new(&shell)
+        .args(["-l", "-i", "-c", "command -v claude"])
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
 #[tauri::command]
+fn check_claude_installed() -> bool {
+    check_claude_via_shell()
+}
+
+#[tauri::command]
 async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), String> {
+    if !check_claude_via_shell() {
+        return Err("Claude Code not found. Install it from claude.ai/code".to_string());
+    }
+
     // Run the blocking subprocess on a background thread
+    // Use login shell so claude is in PATH with all user env (nvm, mise, volta, etc.)
     tokio::task::spawn_blocking(move || {
         use std::io::BufRead;
 
-        let mut child = std::process::Command::new("claude")
-            .args(["--print", "-p", &prompt, "--dangerously-skip-permissions"])
+        // Escape single quotes in the prompt for shell
+        let escaped_prompt = prompt.replace('\'', "'\\''");
+        let shell_cmd = format!("claude --print -p '{}' --dangerously-skip-permissions", escaped_prompt);
+        let shell = user_shell();
+
+        let mut child = std::process::Command::new(&shell)
+            .args(["-l", "-i", "-c", &shell_cmd])
+            .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()

@@ -9,39 +9,6 @@
 ### Phase 30 — Rust Backend Integration Tests
 Write integration tests in `src-tauri/tests/` that test every Tauri command against the real Docker Postgres. Each test connects to `postgresql://test:test@localhost:5433/crabase_test`.
 
-- [ ] Create `src-tauri/tests/integration_test.rs` as the main integration test file
-- [ ] Test `connect_db` with valid and invalid connection strings
-- [ ] Test `disconnect_db` after a successful connection
-- [ ] Test `get_connection_info` returns correct host, port, user, dbname
-- [ ] Test `list_schemas` returns at least "public" schema
-- [ ] Test `list_tables` returns the seeded test tables
-- [ ] Test `get_column_info` returns correct column names, types, nullable, primary key, is_enum, enum_values for each test table
-- [ ] Test `get_table_data` returns correct paginated rows with proper tagged value format for all column types (text, integer, boolean, timestamp, date, uuid, json, jsonb, enum, array)
-- [ ] Test `get_table_data` pagination: page 1 vs page 2 return different rows, total_count is correct
-- [ ] Test `get_table_data_filtered` with various filter operators: =, !=, <, >, LIKE, IS NULL, IS NOT NULL, contains
-- [ ] Test `get_table_data_filtered` with AND/OR combinators between multiple filters
-- [ ] Test `get_table_data_filtered` with sort columns (asc, desc)
-- [ ] Test `save_changes` with updates: modify a cell value, verify it persists by re-fetching
-- [ ] Test `save_changes` with inserts: add a new row, verify it appears in get_table_data
-- [ ] Test `save_changes` with deletes: delete a row by PK, verify it's gone
-- [ ] Test `save_changes` with mixed operations: insert + update + delete in a single transaction
-- [ ] Test `execute_query` with a simple SELECT returns correct columns and rows
-- [ ] Test `execute_query_multi` with multiple statements (SELECT + INSERT + SELECT) returns correct Vec<StatementResult>
-- [ ] Test `execute_query_multi` with a failing statement returns an Error result
-- [ ] Test `drop_table` actually drops the table (then recreate it for other tests)
-- [ ] Test `truncate_table` empties the table (then re-seed it)
-- [ ] Test `export_table_json` returns valid JSON with all rows
-- [ ] Test `export_table_sql` returns valid INSERT statements
-- [ ] Test `get_columns_for_autocomplete` returns table→columns map
-- [ ] Test `get_full_schema_text` returns a non-empty string containing table and column names
-- [ ] Test `save_connection`, `list_saved_connections`, `delete_saved_connection` lifecycle
-- [ ] Test `save_query`, `list_queries`, `load_query`, `rename_query`, `delete_query` lifecycle
-- [ ] Test `load_settings` and `save_settings` round-trip
-- [ ] Test enum columns on non-public schemas: create a schema `test_schema`, create an enum + table in it, verify `get_column_info` returns `is_enum=true` with correct `enum_values`
-- [ ] Test timestamp/date columns return properly formatted ISO strings (not "Timestamp" literal)
-- [ ] Test NULL handling: a row with NULL values returns `serde_json::Value::Null` (untagged)
-- [ ] Ensure all tests are independent (each can run in any order) — use transactions or re-seed between tests if needed
-
 ### Phase 31 — Frontend Tests with Vitest
 Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since Playwright cannot drive Tauri's WKWebView on macOS, frontend tests use `@tauri-apps/api/mocks` to simulate the backend.
 
@@ -55,6 +22,7 @@ Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since 
 - [ ] Add `just test-frontend` command to justfile
 
 ## Completed
+- [x] Create `src-tauri/tests/integration_test.rs` with all Phase 30 tests (connect, disconnect, connection_info, list_schemas, list_tables, get_column_info, get_table_data, pagination, filters, sort, save_changes CRUD, execute_query, execute_query_multi, drop/truncate table, export JSON/SQL, autocomplete, full schema text, enum on non-public schema, timestamp format, NULL handling). Tests for save_connection/save_query/settings lifecycle are already covered by existing unit tests since they require tauri::AppHandle.
 - [x] Add `just test`, `just test-setup`, and `just test-teardown` commands to justfile
 - [x] Create `tests/seed.sql` with comprehensive test schema (3 tables in public + 1 in test_schema, all Postgres types, 12 rows each, custom enums, arrays)
 - [x] Create `tests/teardown.sh` script (stops and removes Docker container)
