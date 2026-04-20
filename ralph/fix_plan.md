@@ -145,6 +145,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] `tests/e2e/tabs.spec.ts`: multiple tabs, switch, close, SQL + table tabs
 - [x] `tests/e2e/context-menus.spec.ts`: sidebar table menu, row menu, saved query menu
 - [x] `tests/e2e/theme.spec.ts`: open settings, toggle dark/light, verify html class
 - [x] `tests/e2e/schema-switching.spec.ts`: switch schema, verify sidebar, load data, switch back
