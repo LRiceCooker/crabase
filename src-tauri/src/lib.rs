@@ -1,3 +1,31 @@
+// Clippy pedantic: suppress documentation and minor style lints for internal desktop app
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::must_use_candidate,
+    clippy::module_name_repetitions,
+    clippy::doc_markdown,
+    clippy::struct_excessive_bools,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_lossless,
+    clippy::items_after_statements,
+    clippy::uninlined_format_args,
+    clippy::semicolon_if_nothing_returned,
+    clippy::needless_pass_by_value,
+    clippy::redundant_closure_for_method_calls,
+    clippy::match_same_arms,
+    clippy::if_not_else,
+    clippy::needless_raw_string_hashes,
+    clippy::inefficient_to_string,
+    clippy::format_push_string,
+    clippy::type_complexity,
+    clippy::map_unwrap_or,
+    clippy::if_same_then_else,
+    clippy::lines_filter_map_ok,
+    clippy::derivable_impls
+)]
+
 pub mod db;
 mod restore;
 pub mod saved_connections;

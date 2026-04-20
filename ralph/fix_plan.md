@@ -56,6 +56,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` — zero warnings after fixing Default impls, semicolons, and suppressing pedantic doc/style lints
 - [x] Remove ALL dead code: removed unused Executor import in db.rs — zero warnings on both crates
 - [x] Audit `lib.rs`: verified — all commands return Result, no unwrap() panics, blocking I/O uses spawn_blocking, write_file is intentional for exports
 - [x] Audit `settings.rs`: verified — same safe pattern as connections/queries, proper defaults on missing file

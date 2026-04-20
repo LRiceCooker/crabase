@@ -3,32 +3,19 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
+    #[default]
     Light,
     Dark,
     System,
 }
 
-impl Default for Theme {
-    fn default() -> Self {
-        Theme::Light
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default)]
     pub theme: Theme,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            theme: Theme::default(),
-        }
-    }
 }
 
 fn settings_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {

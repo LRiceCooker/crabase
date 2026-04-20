@@ -23,13 +23,19 @@ pub struct DbState {
     connection_string: RwLock<Option<String>>,
 }
 
-impl DbState {
-    pub fn new() -> Self {
+impl Default for DbState {
+    fn default() -> Self {
         Self {
             pool: RwLock::new(None),
             connection_info: RwLock::new(None),
             connection_string: RwLock::new(None),
         }
+    }
+}
+
+impl DbState {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Get a clone of the connection pool, or error if not connected.
