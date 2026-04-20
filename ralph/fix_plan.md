@@ -145,6 +145,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Create `tests/e2e/tauri-shim.js` — defines `window.__TAURI__` shim routing invoke to test HTTP server, event.listen as no-op, dialog.open/save as null
 - [x] Add `just test-server` command to start the test server (`cargo run --manifest-path tests/test_server/Cargo.toml`)
 - [x] Implement `POST /invoke/{command}` route for all commands, CORS for localhost:8080, port 3001
 - [x] Create `tests/test_server/` as a standalone Rust binary (Cargo.toml with crabase path dep, axum, tokio, serde_json, tower-http). Implements `POST /invoke/{command}` for all commands, CORS for localhost:8080, serves on port 3001. File-based commands (settings, connections, queries) use in-memory state.
