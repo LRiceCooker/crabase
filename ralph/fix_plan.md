@@ -56,6 +56,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Audit `db.rs` query builders: LIKE metacharacters (%, _) now escaped in contains/starts with/ends with filters; reviewed all builders — parameterized values and identifier-quoting are correct
 - [x] Audit `db.rs`: replaced std::sync::Mutex with tokio::sync::RwLock, added pool()/schema() helpers, eliminated 21 duplicated lock blocks
 - [x] `tests/e2e/tabs.spec.ts`: multiple tabs, switch, close, SQL + table tabs
 - [x] `tests/e2e/context-menus.spec.ts`: sidebar table menu, row menu, saved query menu

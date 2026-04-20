@@ -792,7 +792,8 @@ fn bind_json_value<'q>(
 }
 
 /// Build a WHERE clause from user-defined filters. Values are embedded as literals
-/// with proper quoting to prevent SQL injection via column names.
+/// with single-quote doubling (safe for PostgreSQL with standard_conforming_strings=on).
+/// Column names are identifier-quoted. LIKE patterns escape metacharacters.
 fn build_filter_where_clause(filters: &[Filter]) -> String {
     if filters.is_empty() {
         return String::new();
@@ -801,6 +802,8 @@ fn build_filter_where_clause(filters: &[Filter]) -> String {
     for (i, f) in filters.iter().enumerate() {
         let quoted_col = format!("\"{}\"", f.column.replace('"', "\"\""));
         let escaped_val = f.value.replace('\'', "''");
+        // For LIKE patterns, also escape % and _ metacharacters
+        let like_escaped = escaped_val.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
         let condition = match f.operator.as_str() {
             "=" => format!("{} = '{}'", quoted_col, escaped_val),
             "!=" => format!("{} != '{}'", quoted_col, escaped_val),
@@ -829,9 +832,9 @@ fn build_filter_where_clause(filters: &[Filter]) -> String {
             }
             "IS NULL" => format!("{} IS NULL", quoted_col),
             "IS NOT NULL" => format!("{} IS NOT NULL", quoted_col),
-            "contains" => format!("{} ILIKE '%{}%'", quoted_col, escaped_val),
-            "starts with" => format!("{} ILIKE '{}%'", quoted_col, escaped_val),
-            "ends with" => format!("{} ILIKE '%{}'", quoted_col, escaped_val),
+            "contains" => format!("{} ILIKE '%{}%' ESCAPE '\\'", quoted_col, like_escaped),
+            "starts with" => format!("{} ILIKE '{}%' ESCAPE '\\'", quoted_col, like_escaped),
+            "ends with" => format!("{} ILIKE '%{}' ESCAPE '\\'", quoted_col, like_escaped),
             _ => format!("{} = '{}'", quoted_col, escaped_val),
         };
         if i == 0 {
