@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 29 — Test Infrastructure Setup
-- [ ] Create `tests/docker-compose.yml` for a test Postgres container: image `postgres:16-alpine`, user `test`, password `test`, db `crabase_test`, port `5433`
 - [ ] Create `tests/setup.sh` script that: starts the Docker container, waits for Postgres to be ready (`pg_isready`), runs seed SQL to create test tables with various column types (text, integer, boolean, timestamp, timestamptz, date, uuid, json, jsonb, enum, array, etc.)
 - [ ] Create `tests/teardown.sh` script that stops and removes the Docker container
 - [ ] Create `tests/seed.sql` with test schema: at least 3 tables covering all Postgres types the app supports, with sample data (10+ rows each). Include a custom enum type and an array column.
@@ -61,6 +60,7 @@ Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since 
 - [ ] Add `just test-frontend` command to justfile
 
 ## Completed
+- [x] Create `tests/docker-compose.yml` for a test Postgres container
 - [x] Create a `tests/` directory at project root for the test infrastructure
 - [x] Inline AI Chat Panel (Cmd+I): backend check_claude_installed, chat_with_claude (streaming), get_full_schema_for_chat; frontend chat_panel.rs side panel with message bubbles, auto-injected DB context, Claude not-installed message, fresh conversation per open
 - [x] Multi-statement SQL execution: backend execute_query_multi returns Vec<StatementResult> (Rows/Affected/Error), frontend shows multi-statement navigator below results, statement selector with previews
