@@ -5,18 +5,154 @@
 ## Backlog
 
 ### Phase 29 — Test Infrastructure Setup
+(Docker Postgres, seed SQL, setup/teardown scripts — already done, kept as-is)
 
-### Phase 30 — Rust Backend Integration Tests
-Write integration tests in `src-tauri/tests/` that test every Tauri command against the real Docker Postgres. Each test connects to `postgresql://test:test@localhost:5433/crabase_test`.
+### Phase 30 — Test HTTP Server for E2E
+- [ ] Implement `POST /invoke/{command}` route that deserializes the JSON body, calls the corresponding `crabase::db` function, and returns the JSON response. Must handle all commands the frontend uses: `parse_connection_string`, `connect_db`, `disconnect_db`, `get_connection_info`, `list_schemas`, `list_tables`, `get_column_info`, `get_table_data`, `get_table_data_filtered`, `save_changes`, `execute_query`, `execute_query_multi`, `drop_table`, `truncate_table`, `export_table_json`, `export_table_sql`, `get_columns_for_autocomplete`, `get_full_schema_for_chat`, `load_settings`, `save_settings`, `save_connection`, `list_saved_connections`, `delete_saved_connection`, `save_query`, `update_query`, `rename_query`, `delete_query`, `list_queries`, `load_query`, `write_file`.
+- [ ] Add CORS headers allowing `http://localhost:8080`
+- [ ] Serve on port 3001
+- [ ] Add `just test-server` command to start the test server
 
-### Phase 31 — Frontend Tests with Vitest
-Set up Vitest for testing the Leptos/WASM frontend with mocked Tauri IPC. Since Playwright cannot drive Tauri's WKWebView on macOS, frontend tests use `@tauri-apps/api/mocks` to simulate the backend.
+### Phase 31 — E2E Tests (Playwright + real DB)
+Real E2E tests using Playwright driving a real Chrome browser against the app in dev mode. The Tauri `invoke` bridge is replaced by a `window.__TAURI__` shim (injected via `page.addInitScript()`) that routes calls to a test HTTP server wrapping the real `db.rs` functions. **Zero changes to app code.**
+
+Architecture:
+```
+Playwright (headless Chrome)
+  → localhost:8080 (Trunk dev server, serves the app WASM — identical to prod)
+    → window.__TAURI__.core.invoke("cmd", args)
+      → fetch("http://localhost:3001/invoke/cmd", args)  [injected shim]
+        → Test HTTP server (Rust/axum, imports crabase::db)
+          → Docker Postgres (localhost:5433, crabase_test)
+```
+
+Prerequisites: Docker, Node.js, `npx playwright install chromium`.
+
+**Infrastructure:**
+- [ ] Create `tests/test_server/` as a Rust binary (workspace member or standalone). Uses `axum` to expose each `db.rs` function as `POST /invoke/{command}`. Connects to `postgresql://test:test@localhost:5433/crabase_test`. Handles JSON serialization matching what the frontend expects from `invoke`. Add CORS headers for `localhost:8080`. Serve on port 3001.
+- [ ] Create `tests/e2e/tauri-shim.js` — the `addInitScript` content that defines `window.__TAURI__` with `core.invoke` routed to fetch, `event.listen` as no-op returning unlisten function, `dialog.open/save` returning null.
+- [ ] Create `tests/e2e/playwright.config.ts` — configure Playwright: baseURL `http://localhost:8080`, use Chromium, set up `addInitScript` with the tauri shim.
+- [ ] Create `tests/e2e/global-setup.ts` — starts Docker Postgres (`just test-setup`), starts the test HTTP server, starts Trunk dev server (`trunk serve --port 8080`), waits for all to be ready.
+- [ ] Create `tests/e2e/global-teardown.ts` — stops Trunk, test server, Docker (`just test-teardown`).
+- [ ] Install Playwright: `npm install -D @playwright/test`
+- [ ] Add `just test-e2e` command to justfile
+- [ ] Update `just test` to include `just test-e2e`
+
+**E2E test files** (split by feature area, each file = one `test.describe` block):
+
+`tests/e2e/connection.spec.ts`:
+- [ ] Type the test connection string, click "Next", verify connection form appears with parsed fields (host=localhost, port=5433, user=test, db=crabase_test)
+- [ ] On the connection form, click "Connect", verify the main layout appears with the sidebar showing real tables from the DB
+- [ ] Verify the header shows connection info (test@localhost, :5433, crabase_test)
+- [ ] Save a connection with a name, disconnect, verify the saved connection appears on the connection screen, click it, verify it fills the form
+
+`tests/e2e/table-browsing.spec.ts`:
+- [ ] Click "users" in sidebar, verify a tab opens, data table renders with real rows
+- [ ] Verify column headers match the users table schema (id, username, email, role, ...)
+- [ ] Verify pagination shows correct total count (12 rows)
+- [ ] Click page 2, verify different rows appear
+- [ ] Verify enum values display correctly (not raw JSON or type names)
+- [ ] Verify timestamps display as formatted dates (not "Timestamp" literal)
+- [ ] Verify NULL values display as "NULL" in gray italic
+
+`tests/e2e/inline-editing.spec.ts`:
+- [ ] Click on a cell (user's bio), verify it enters edit mode (input appears)
+- [ ] Type a new value, press Enter, verify the cell shows the new value and the dirty bar appears
+- [ ] Click "Discard", verify original value is restored and dirty bar disappears
+- [ ] Edit a cell again, click "Save changes", verify dirty bar disappears (save persisted to real DB)
+- [ ] Refresh the page, navigate back to the same table, verify the saved value persists
+
+`tests/e2e/filters-sort.spec.ts`:
+- [ ] Click "+" on filter bar, select column "role", operator "=", type "admin", verify table shows only 3 rows
+- [ ] Add a second filter with OR combinator, verify results update
+- [ ] Remove a filter, verify results update
+- [ ] Click a column header to sort ascending, verify row order changes
+- [ ] Click again for descending, verify order reverses
+
+`tests/e2e/sql-editor.spec.ts`:
+- [ ] Click "+" to open a new SQL editor tab, verify editor area is visible
+- [ ] Type `SELECT * FROM users WHERE role = 'admin'`, click Run, verify results table shows 3 rows
+- [ ] Type a multi-statement script (SELECT + INSERT), click Run, verify statement selector appears below with 2 entries
+- [ ] Verify INSERT result shows affected rows in console style
+- [ ] Save the query (Cmd+S or Save button), verify it appears in the sidebar "Saved Queries" section
+- [ ] Rename the query by clicking on the tab title, verify the name updates
+
+`tests/e2e/command-palette.spec.ts`:
+- [ ] Press Cmd+Shift+P, verify command palette opens and input is focused
+- [ ] Type "Restore", verify "Restore Backup" appears in filtered results
+- [ ] Press Escape, verify palette closes
+- [ ] Press Cmd+P, verify table finder opens with test tables listed
+- [ ] Type "user", verify "users" is filtered, press Enter, verify users table tab opens
+- [ ] Open Cmd+Shift+P then Cmd+P, verify first overlay closes and second opens (no stuck state)
+
+`tests/e2e/schema-switching.spec.ts`:
+- [ ] Change schema select in header to "test_schema", verify sidebar updates with test_schema tables
+- [ ] Click a table, verify data loads from test_schema
+- [ ] Switch back to "public", verify public tables return
+
+`tests/e2e/theme.spec.ts`:
+- [ ] Open command palette, select "Settings", verify settings view opens
+- [ ] Toggle theme to dark, verify `<html>` element has "dark" class
+- [ ] Toggle back to light, verify "dark" class is removed
+
+`tests/e2e/context-menus.spec.ts`:
+- [ ] Right-click on a table in sidebar, verify context menu appears with Export JSON, Export SQL, Truncate, Drop
+- [ ] Right-click on a saved query in sidebar, verify context menu with Rename, Duplicate, Delete
+- [ ] Right-click on a row in the data table, verify context menu with Delete, Duplicate, Copy as JSON, Copy as SQL INSERT
+
+`tests/e2e/tabs.spec.ts`:
+- [ ] Open multiple table tabs, switch between them, verify correct data each time
+- [ ] Close a tab, verify it's removed and adjacent tab becomes active
+- [ ] Open a SQL editor tab and a table tab, verify switching works correctly
+
+### Phase 32 — Code Audit & Refactor: Backend (src-tauri/src/)
+Audit the entire Rust backend for bad practices, memory issues, and code quality. For EACH file, read the latest Rust/sqlx/Tauri v2 docs if needed to verify correct usage. **Do NOT break any existing feature or test.** Run `just test` after every refactor to confirm nothing is broken.
+
+- [ ] Audit `db.rs`: fix any memory leaks from `Mutex<Option<PgPool>>` (consider using `tokio::sync::RwLock` instead of `std::sync::Mutex` for async code). Remove `.clone()` on `PgPool` if unnecessary (PgPool is already `Arc` internally). Eliminate redundant `.lock()` calls. Extract duplicated pool+schema access into a helper method.
+- [ ] Audit `db.rs` query builders: review `build_where_clause`, `build_set_clause`, `build_filter_where_clause`, `build_select_columns` for SQL injection edge cases. Ensure all user-provided values are parameterized (never interpolated into SQL strings).
+- [ ] Audit `pg_value_to_json`: remove dead branches, simplify the match, ensure every type is handled without panic. Check for unwrap() calls that should be handled gracefully.
+- [ ] Audit `restore.rs`: check for resource leaks (temp dirs, child processes). Ensure child processes are always waited on. Fix any unused functions (dead code warnings).
+- [ ] Audit `saved_connections.rs` and `saved_queries.rs`: check for file system race conditions, proper error handling on read/write, validate file paths (path traversal prevention).
+- [ ] Audit `settings.rs`: same as above — safe file I/O, proper defaults if file doesn't exist.
+- [ ] Audit `lib.rs`: review every `#[tauri::command]` for proper error handling. Remove any `unwrap()` that could panic in production. Ensure all async commands use `spawn_blocking` for blocking I/O (file reads, subprocess spawns).
+- [ ] Remove ALL dead code: unused functions, unused imports, commented-out code, stale TODOs. Address every compiler warning.
+- [ ] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` and fix all warnings that are reasonable to fix (skip false positives). Document any intentional suppressions with `#[allow(...)]` + a comment explaining why.
+
+### Phase 33 — Code Audit & Refactor: Frontend (src/)
+Audit the entire Leptos frontend for bad practices, memory leaks, and code quality. Read the Leptos 0.7+ docs to verify correct usage of signals, effects, and component lifecycle. **Do NOT break any existing feature.** Run `cargo check` after every change.
+
+- [ ] Audit ALL event listeners registered with `closure.forget()`: these are memory leaks. For listeners that should live as long as the component, use `on_cleanup` properly. For global listeners (app lifetime), document why `forget()` is acceptable. Remove any duplicate listeners that get re-registered on re-render.
+- [ ] Audit ALL `Effect::new(...)` usages: ensure no Effect writes to a signal that another Effect reads in a way that causes re-entrant borrows (the `RefCell::borrow_mut` crash). Use `set_untracked`, `get_untracked`, or `setTimeout(0)` deferral where needed.
+- [ ] Audit ALL `spawn_local(async move { ... })` usages: ensure captured signals are valid for the async lifetime. Check for stale signal reads after async operations. Ensure errors are always handled (no silent swallows).
+- [ ] Audit `main_layout.rs`: this file is too large. Extract the restore panel into its own component (`restore_panel.rs`). Extract header editing into its own component (`header_bar.rs` if not already done). Reduce the number of signals defined at the top level.
+- [ ] Audit `table_view.rs`: also too large. Ensure the `on_save` callback properly handles all edge cases (empty PK, mixed operations). Check that `unwrap_tagged_owned` is called consistently everywhere values are sent to the backend.
+- [ ] Audit `data_table.rs`: review the rendering closure for performance. Avoid re-creating DOM elements unnecessarily. Check that `selected_idx.get()` inside for loops doesn't cause excessive re-renders.
+- [ ] Audit `cell_editor.rs` and all cell editors: ensure blur handlers don't fire after the component is unmounted. Check that on_commit is only called once per edit (not duplicated on blur+enter).
+- [ ] Audit `sql_tab.rs`: check that CodeMirror instances are properly destroyed on unmount. Verify the save trigger Effect doesn't fire on initial mount.
+- [ ] Audit `chat_panel.rs`: check that event listeners (`listen_chat_response`, `listen_chat_done`) are properly cleaned up after each message. Avoid accumulating listeners.
+- [ ] Audit `overlay.rs`, `shortcuts.rs`, `theme.rs`: verify context providers are set up correctly and there are no stale context reads.
+- [ ] Audit ALL components for proper `Clone` vs `Copy` usage on signals and callbacks. Remove unnecessary `.clone()` calls.
+- [ ] Remove ALL dead code, unused imports, commented-out code, stale TODOs across the entire frontend.
+- [ ] Run `cargo clippy -- -W clippy::all` on the frontend crate and fix all reasonable warnings.
+
+### Phase 34 — Code Audit & Refactor: JS Bridge Layer
+- [ ] Audit `js/codemirror-bridge.js`: review for memory leaks (stored editor instances that are never cleaned up). Ensure `destroy()` properly removes all event listeners and DOM nodes. Check that the `editors` map doesn't grow unbounded.
+- [ ] Audit `js/markdown-bridge.js`: review `marked` configuration for XSS safety (ensure `sanitize` or DOMPurify is used since we render with `inner_html`). Add DOMPurify if not present.
+- [ ] Review both JS bundles for unnecessary dependencies that could be tree-shaken.
+
+### Phase 35 — Final Verification
+- [ ] Run `just test` — ALL tests must pass
+- [ ] Run `cargo clippy -- -W clippy::all` on both crates — zero warnings (or all intentionally suppressed with comments)
+- [ ] Run `cargo check` on both crates — zero errors
+- [ ] Run `just dev` and manually verify: connection flow, table browsing, inline editing + save, SQL editor + run, command palette, table finder, theme toggle, restore backup, AI chat (if Claude installed). Nothing should be broken.
+- [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Create `tests/test_server/` as a standalone Rust binary (Cargo.toml with crabase path dep, axum, tokio, serde_json, tower-http). Implements `POST /invoke/{command}` for all commands, CORS for localhost:8080, serves on port 3001. File-based commands (settings, connections, queries) use in-memory state.
 - [x] Frontend Vitest tests: codemirror-bridge (11 tests: create/destroy/getContent/setContent/isDirty/markClean/onChange/readOnly/json/multi-editor), markdown-bridge (14 tests: render, headings, code blocks, links, lists, empty string, nested formatting, SQL/JSON code, GFM tables, line breaks). `just test-frontend` command added.
 - [x] Create `vitest.config.ts` with JSDOM environment
 - [x] Install Vitest and jsdom as dev dependencies
-- [x] Create `src-tauri/tests/integration_test.rs` with all Phase 30 tests (connect, disconnect, connection_info, list_schemas, list_tables, get_column_info, get_table_data, pagination, filters, sort, save_changes CRUD, execute_query, execute_query_multi, drop/truncate table, export JSON/SQL, autocomplete, full schema text, enum on non-public schema, timestamp format, NULL handling). Tests for save_connection/save_query/settings lifecycle are already covered by existing unit tests since they require tauri::AppHandle.
+- [x] (Removed) Backend integration tests replaced by Playwright E2E tests
 - [x] Add `just test`, `just test-setup`, and `just test-teardown` commands to justfile
 - [x] Create `tests/seed.sql` with comprehensive test schema (3 tables in public + 1 in test_schema, all Postgres types, 12 rows each, custom enums, arrays)
 - [x] Create `tests/teardown.sh` script (stops and removes Docker container)
