@@ -1,7 +1,7 @@
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
-use sqlx::{Column, Executor, Row, TypeInfo};
+use sqlx::{Column, Row, TypeInfo};
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 use url::Url;

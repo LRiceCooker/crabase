@@ -56,6 +56,10 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Remove ALL dead code: removed unused Executor import in db.rs — zero warnings on both crates
+- [x] Audit `lib.rs`: verified — all commands return Result, no unwrap() panics, blocking I/O uses spawn_blocking, write_file is intentional for exports
+- [x] Audit `settings.rs`: verified — same safe pattern as connections/queries, proper defaults on missing file
+- [x] Audit `saved_connections.rs` and `saved_queries.rs`: verified — proper error handling, no path traversal (uses app_data_dir), empty names rejected, no file system race risk for single-user desktop app
 - [x] Audit `restore.rs`: removed dead run_pg_restore/restore_backup functions, replaced unwrap() on piped streams with proper error handling
 - [x] Audit `pg_value_to_json`: verified — no panics, no dead branches, all types handled with try_get+fallback pattern, NaN/Infinity safely serialized as strings
 - [x] Audit `db.rs` query builders: LIKE metacharacters (%, _) now escaped in contains/starts with/ends with filters; reviewed all builders — parameterized values and identifier-quoting are correct
