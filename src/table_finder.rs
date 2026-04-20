@@ -59,6 +59,7 @@ pub fn TableFinder(
     });
 
     // Reset selection when query changes
+    // Safe: nothing reads selected_idx and writes back to query
     Effect::new(move |_| {
         let _ = query.get();
         set_selected_idx.set(0);

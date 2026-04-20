@@ -56,6 +56,7 @@ Audit the entire Leptos frontend for bad practices, memory leaks, and code quali
 - [ ] Commit all changes with a clear message
 
 ## Completed
+- [x] Audit `Effect::new()`: verified all 17 usages — no re-entrant borrow cycles found, all writes either deferred via spawn_local/setTimeout or safe (no circular dependencies)
 - [x] Audit `closure.forget()`: documented app-lifetime (main_layout, theme, sidebar) and low-impact component-scoped leaks (sql_tab, codemirror) — no breaking refactor needed for desktop app
 - [x] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` — zero warnings after fixing Default impls, semicolons, and suppressing pedantic doc/style lints
 - [x] Remove ALL dead code: removed unused Executor import in db.rs — zero warnings on both crates
