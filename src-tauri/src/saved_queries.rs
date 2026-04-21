@@ -19,6 +19,11 @@ pub fn connection_key(host: &str, port: u16, dbname: &str, user: &str) -> String
     format!("{}:{}:{}:{}", host, port, dbname, user)
 }
 
+/// Build a connection key from a `ConnectionInfo` struct.
+pub fn connection_key_from_info(info: &crate::db::ConnectionInfo) -> String {
+    connection_key(&info.host, info.port, &info.dbname, &info.user)
+}
+
 fn queries_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let data_dir = app_handle
         .path()

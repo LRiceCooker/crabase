@@ -26,13 +26,13 @@
     clippy::derivable_impls
 )]
 
+mod app_icon;
+mod claude;
 pub mod db;
 mod restore;
 pub mod saved_connections;
 pub mod saved_queries;
 pub mod settings;
-
-use tauri::Emitter;
 
 #[tauri::command]
 fn parse_connection_string(connection_string: String) -> Result<db::ConnectionInfo, String> {
@@ -189,36 +189,13 @@ fn save_settings(
 
 #[tauri::command]
 fn set_app_icon(is_dark: bool, app_handle: tauri::AppHandle) -> Result<(), String> {
-    use tauri::Manager;
-
-    let png_bytes: &[u8] = if is_dark {
-        include_bytes!("../icons/dark/icon.png")
-    } else {
-        include_bytes!("../icons/light/icon.png")
-    };
-
-    // Decode PNG to RGBA using the png crate
-    let decoder = png::Decoder::new(std::io::Cursor::new(png_bytes));
-    let mut reader = decoder.read_info().map_err(|e| format!("PNG decode error: {}", e))?;
-    let info = reader.info().clone();
-    let mut buf = vec![0u8; info.raw_bytes()];
-    reader.next_frame(&mut buf).map_err(|e| format!("PNG frame error: {}", e))?;
-
-    let icon = tauri::image::Image::new_owned(buf, info.width, info.height);
-
-    // Set icon on the main window
-    if let Some(window) = app_handle.get_webview_window("main") {
-        let _ = window.set_icon(icon);
-    }
-    Ok(())
+    app_icon::set_icon(is_dark, &app_handle)
 }
 
 /// Helper: derive connection key from current DB state.
 async fn get_conn_key(db_state: &db::DbState) -> Result<String, String> {
     let info = db_state.get_connection_info().await?;
-    Ok(saved_queries::connection_key(
-        &info.host, info.port, &info.dbname, &info.user,
-    ))
+    Ok(saved_queries::connection_key_from_info(&info))
 }
 
 #[tauri::command]
@@ -283,69 +260,20 @@ async fn cmd_load_query(
     saved_queries::load_query(&app_handle, &key, &name)
 }
 
-/// Get the user's default shell, falling back to /bin/zsh.
-fn user_shell() -> String {
-    std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
-}
-
-/// Check if claude is available via user's login shell.
-/// Uses -l (login) AND -i (interactive) to ensure ~/.zshrc is sourced,
-/// which is where tools like mise/nvm/volta configure PATH.
-fn check_claude_via_shell() -> bool {
-    let shell = user_shell();
-    std::process::Command::new(&shell)
-        .args(["-l", "-i", "-c", "command -v claude"])
-        .stdin(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
 #[tauri::command]
 fn check_claude_installed() -> bool {
-    check_claude_via_shell()
+    claude::is_installed()
 }
 
 #[tauri::command]
 async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), String> {
-    if !check_claude_via_shell() {
+    if !claude::is_installed() {
         return Err("Claude Code not found. Install it from claude.ai/code".to_string());
     }
 
-    // Run the blocking subprocess on a background thread
-    // Use login shell so claude is in PATH with all user env (nvm, mise, volta, etc.)
-    tokio::task::spawn_blocking(move || {
-        use std::io::BufRead;
-
-        // Escape single quotes in the prompt for shell
-        let escaped_prompt = prompt.replace('\'', "'\\''");
-        let shell_cmd = format!("claude --print -p '{}' --dangerously-skip-permissions", escaped_prompt);
-        let shell = user_shell();
-
-        let mut child = std::process::Command::new(&shell)
-            .args(["-l", "-i", "-c", &shell_cmd])
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("Failed to spawn claude: {}", e))?;
-
-        if let Some(stdout) = child.stdout.take() {
-            let reader = std::io::BufReader::new(stdout);
-            for line in reader.lines() {
-                let Ok(line) = line else { continue };
-                // --print outputs plain text, stream line by line
-                let _ = app.emit("chat-response", format!("{}\n", line));
-            }
-        }
-
-        let _ = child.wait();
-        let _ = app.emit("chat-done", ());
-        Ok::<(), String>(())
-    })
-    .await
-    .map_err(|e| format!("Task failed: {}", e))?
+    tokio::task::spawn_blocking(move || claude::run_streaming(&prompt, &app))
+        .await
+        .map_err(|e| format!("Task failed: {}", e))?
 }
 
 #[tauri::command]

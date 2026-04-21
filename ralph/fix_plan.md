@@ -72,6 +72,9 @@
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
+### Phase 38 (partial)
+- [x] `lib.rs` should be ONLY Tauri command handlers (thin wrappers). Move all business logic to `db/` modules. — Extracted claude chat logic to `claude.rs`, app icon logic to `app_icon.rs`, connection key helper to `saved_queries.rs`.
+
 ### Phase 37
 - [x] Search the official Rust API Guidelines for module organization, naming, and re-export conventions. Added to `ralph/reference.md` with source URLs.
 - [x] Create `src-tauri/src/db/` directory with `mod.rs` that re-exports everything (public API stays identical)
