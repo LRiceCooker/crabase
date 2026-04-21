@@ -7,6 +7,7 @@ use crate::table_view::cell_editors::array_editor_modal::ArrayEditRequest;
 use crate::table_view::cell_editors::xml_editor_modal::XmlEditRequest;
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::json_editor::JsonEditRequest;
+use crate::table_view::selection;
 use crate::tauri::{ColumnInfo, SortCol};
 
 /// Info about a right-click event on a row.
@@ -240,15 +241,11 @@ pub fn DataTable(
                                     class=row_class
                                     on:contextmenu=move |ev: web_sys::MouseEvent| {
                                         ev.prevent_default();
-                                        // If right-clicked row is already in selection, keep selection;
-                                        // otherwise select just this row.
-                                        let sel = selected_rows.get();
-                                        if !sel.contains(&row_idx) {
-                                            let mut new_set = HashSet::new();
-                                            new_set.insert(row_idx);
-                                            selected_rows.set(new_set);
-                                            selection_anchor.set(Some(row_idx));
-                                        }
+                                        selection::handle_context_menu_selection(
+                                            row_idx,
+                                            selected_rows,
+                                            selection_anchor,
+                                        );
                                         on_row_context_menu.run(RowContextMenuEvent {
                                             row_idx,
                                             x: ev.client_x(),
@@ -259,39 +256,12 @@ pub fn DataTable(
                                     <td
                                         class=index_td_class
                                         on:click=move |ev: web_sys::MouseEvent| {
-                                            if ev.shift_key() {
-                                                // Shift+click: range select from anchor to clicked row
-                                                let anchor = selection_anchor.get().unwrap_or(row_idx);
-                                                let start = anchor.min(row_idx);
-                                                let end = anchor.max(row_idx);
-                                                let mut set = if ev.meta_key() || ev.ctrl_key() {
-                                                    // Shift+Cmd: add range to existing selection
-                                                    selected_rows.get()
-                                                } else {
-                                                    HashSet::new()
-                                                };
-                                                for i in start..=end {
-                                                    set.insert(i);
-                                                }
-                                                selected_rows.set(set);
-                                                // Don't update anchor on shift+click
-                                            } else if ev.meta_key() || ev.ctrl_key() {
-                                                // Cmd+click: toggle row in selection
-                                                let mut set = selected_rows.get();
-                                                if set.contains(&row_idx) {
-                                                    set.remove(&row_idx);
-                                                } else {
-                                                    set.insert(row_idx);
-                                                }
-                                                selected_rows.set(set);
-                                                selection_anchor.set(Some(row_idx));
-                                            } else {
-                                                // Plain click: select single row
-                                                let mut new_set = HashSet::new();
-                                                new_set.insert(row_idx);
-                                                selected_rows.set(new_set);
-                                                selection_anchor.set(Some(row_idx));
-                                            }
+                                            selection::handle_row_click(
+                                                &ev,
+                                                row_idx,
+                                                selected_rows,
+                                                selection_anchor,
+                                            );
                                         }
                                     >
                                         {global_idx}
