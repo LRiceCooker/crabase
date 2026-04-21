@@ -319,7 +319,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             Ok(Value::Null)
         }
 
-        "save_query" => {
+        "save_query" | "cmd_save_query" => {
             let name = body
                 .get("name")
                 .and_then(|v| v.as_str())
@@ -343,7 +343,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             Ok(Value::Null)
         }
 
-        "update_query" => {
+        "update_query" | "cmd_update_query" => {
             let name = body
                 .get("name")
                 .and_then(|v| v.as_str())
@@ -364,7 +364,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             Ok(Value::Null)
         }
 
-        "rename_query" => {
+        "rename_query" | "cmd_rename_query" => {
             let old_name = body
                 .get("oldName")
                 .or_else(|| body.get("old_name"))
@@ -393,7 +393,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             Ok(Value::Null)
         }
 
-        "delete_query" => {
+        "delete_query" | "cmd_delete_query" => {
             let name = body
                 .get("name")
                 .and_then(|v| v.as_str())
@@ -409,14 +409,14 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             Ok(Value::Null)
         }
 
-        "list_queries" => {
+        "list_queries" | "cmd_list_queries" => {
             let conn_key = get_conn_key(&state.db).await?;
             let store = state.queries.read().await;
             let queries = store.get(&conn_key).cloned().unwrap_or_default();
             Ok(serde_json::to_value(queries).unwrap())
         }
 
-        "load_query" => {
+        "load_query" | "cmd_load_query" => {
             let name = body
                 .get("name")
                 .and_then(|v| v.as_str())

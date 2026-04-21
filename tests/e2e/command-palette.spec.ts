@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -63,9 +63,9 @@ test.describe("Command palette", () => {
     );
     await expect(input).toBeVisible();
 
-    // Verify tables are listed
-    await expect(page.locator("text=users")).toBeVisible();
-    await expect(page.locator("text=products")).toBeVisible();
+    // Verify tables are listed (use .first() to avoid matching sidebar duplicates)
+    await expect(page.getByText("users").first()).toBeVisible();
+    await expect(page.getByText("products").first()).toBeVisible();
   });
 
   test("Table finder: type to filter, Enter opens table", async ({ page }) => {
@@ -76,8 +76,8 @@ test.describe("Command palette", () => {
     );
     await input.fill("user");
 
-    // Verify "users" is filtered
-    await expect(page.locator("text=users")).toBeVisible();
+    // Verify "users" is filtered (use .first() to avoid sidebar match)
+    await expect(page.getByText("users").first()).toBeVisible();
 
     // Press Enter to open
     await page.keyboard.press("Enter");

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -61,8 +61,9 @@ test.describe("Context menus", () => {
     await page.locator('button:has-text("Save")').click();
     await page.waitForTimeout(1000);
 
-    // Find the saved query in sidebar and right-click
-    const savedQuery = page.locator("text=Untitled").first();
+    // Find the saved query in sidebar (named "Untitled-1") and right-click
+    const savedQuery = page.getByText(/Untitled-\d+/).first();
+    await expect(savedQuery).toBeVisible({ timeout: 5000 });
     await savedQuery.click({ button: "right" });
 
     // Verify query context menu

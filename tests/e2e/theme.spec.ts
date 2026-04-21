@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -61,7 +61,7 @@ test.describe("Theme switching", () => {
     // Switch to light
     await page.locator('button:has-text("Light")').click();
 
-    // Verify "dark" class is removed
-    await expect(page.locator("html")).not.toHaveClass(/dark/);
+    // Check data-theme attribute instead of class (Tailwind "dark:" prefixed classes always present)
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 });

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -14,6 +14,14 @@ async function connectToDb(page) {
   await expect(page.locator("text=users")).toBeVisible({ timeout: 15000 });
 }
 
+// Helper: find a tab in the tab bar by its title text
+function tabByName(page, name: string) {
+  // Tab bar is identified by overflow-x-auto (unique to tab bar)
+  return page
+    .locator(".overflow-x-auto.h-10 div:has-text('" + name + "')")
+    .first();
+}
+
 test.describe("Tabs", () => {
   test.beforeEach(async ({ page }) => {
     await connectToDb(page);
@@ -23,7 +31,9 @@ test.describe("Tabs", () => {
     // Open users tab
     await page.locator("text=users").click();
     await expect(page.locator("table")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("td:has-text('alice')")).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible();
 
     // Open products tab
     await page.locator("text=products").click();
@@ -31,9 +41,11 @@ test.describe("Tabs", () => {
       timeout: 10000,
     });
 
-    // Switch back to users tab (click tab header)
-    await page.locator('[role="tab"]:has-text("users")').click();
-    await expect(page.locator("td:has-text('alice')")).toBeVisible();
+    // Switch back to users tab (click tab header in tab bar)
+    await tabByName(page, "users").click();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible();
   });
 
   test("Close a tab, verify adjacent tab becomes active", async ({ page }) => {
@@ -46,13 +58,14 @@ test.describe("Tabs", () => {
       timeout: 10000,
     });
 
-    // Close the products tab (find the close button on that tab)
-    const productsTab = page.locator('[role="tab"]:has-text("products")');
-    const closeBtn = productsTab.locator("button, svg").last();
-    await closeBtn.click();
+    // Close the products tab — find the close button (the button inside the tab div)
+    const productsTab = tabByName(page, "products");
+    await productsTab.locator("button").click();
 
     // Users tab should now be active
-    await expect(page.locator("td:has-text('alice')")).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible({ timeout: 5000 });
   });
 
   test("Open SQL editor tab and table tab, switch correctly", async ({
@@ -67,11 +80,13 @@ test.describe("Tabs", () => {
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 5000 });
 
     // Switch back to users tab
-    await page.locator('[role="tab"]:has-text("users")').click();
-    await expect(page.locator("td:has-text('alice')")).toBeVisible();
+    await tabByName(page, "users").click();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible();
 
-    // Switch to SQL tab
-    await page.locator('[role="tab"]:has-text("Untitled")').click();
-    await expect(page.locator(".cm-editor")).toBeVisible();
+    // Switch to SQL tab — click the icon (not the title, which starts rename mode)
+    await tabByName(page, "Untitled").locator("svg").first().click();
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 10000 });
   });
 });
