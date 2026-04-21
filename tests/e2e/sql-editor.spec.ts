@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -43,9 +43,15 @@ test.describe("SQL Editor", () => {
     await expect(page.locator("table").last()).toBeVisible({ timeout: 10000 });
 
     // Verify 3 admin rows (alice, diana, heidi)
-    await expect(page.locator("text=alice")).toBeVisible();
-    await expect(page.locator("text=diana")).toBeVisible();
-    await expect(page.locator("text=heidi")).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "diana", exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "heidi", exact: true })
+    ).toBeVisible();
   });
 
   test("Run multi-statement query, verify statement selector", async ({
@@ -67,9 +73,9 @@ test.describe("SQL Editor", () => {
     // Wait for results
     await page.waitForTimeout(2000);
 
-    // Verify statement selector appears (showing multiple statements)
-    // The multi-statement navigator shows statement entries
-    await expect(page.locator("text=/Statement/i").first()).toBeVisible();
+    // Verify multi-statement navigator appears (shows "#1 SELECT..." and "#2 SELECT..." buttons)
+    await expect(page.locator("text=/#1/").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=/#2/").first()).toBeVisible();
   });
 
   test("Save query, verify it appears in sidebar", async ({ page }) => {
