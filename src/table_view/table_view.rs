@@ -12,6 +12,7 @@ use crate::table_view::cell_editors::xml_editor_modal::{XmlEditRequest, XmlEdito
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::context_menu::{ContextMenu, ContextMenuItem};
 use crate::table_view::data_table::{unwrap_tagged_owned, DataTable, RowContextMenuEvent};
+use crate::table_view::save_handler;
 use crate::table_view::filter_bar::FilterBar;
 use crate::table_view::find_overlay::FindOverlay;
 use crate::table_view::dirty_bar::DirtyBar;
@@ -281,121 +282,12 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
     });
 
     let on_save = Callback::new(move |_: ()| {
-        let table = match loaded_table.get() {
-            Some(name) => name,
-            None => return,
-        };
-
-        // Build the change set from tracked changes
-        let modified = changes.modified_cells.get();
-        let added_set = changes.added_rows.get();
-        let deleted_set = changes.deleted_rows.get();
-        let current_rows = rows.get();
-        let cols = columns.get();
-
-        // Find primary key columns
-        let pk_cols: Vec<(usize, String)> = cols
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| c.is_primary_key)
-            .map(|(i, c)| (i, c.name.clone()))
-            .collect();
-
-        // Build updates: group modified cells by row, exclude added/deleted rows
-        let mut update_rows: std::collections::HashMap<usize, std::collections::HashMap<String, serde_json::Value>> =
-            std::collections::HashMap::new();
-        for (row_idx, col_idx) in modified.keys() {
-            if added_set.contains(row_idx) || deleted_set.contains(row_idx) {
-                continue;
-            }
-            if let Some(row) = current_rows.get(*row_idx) {
-                if let Some(col) = cols.get(*col_idx) {
-                    if let Some(val) = row.get(*col_idx) {
-                        update_rows
-                            .entry(*row_idx)
-                            .or_default()
-                            .insert(col.name.clone(), val.clone());
-                    }
-                }
-            }
-        }
-
-        let updates: Vec<tauri::RowUpdate> = update_rows
-            .into_iter()
-            .filter_map(|(row_idx, change_map)| {
-                let row = current_rows.get(row_idx)?;
-                let mut pk_values = std::collections::HashMap::new();
-                for (pk_idx, pk_name) in &pk_cols {
-                    // Unwrap tagged values for PK — backend expects raw values
-                    let raw = crate::table_view::data_table::unwrap_tagged_owned(row.get(*pk_idx)?);
-                    pk_values.insert(pk_name.clone(), raw);
-                }
-                // Unwrap tagged values for changes too
-                let unwrapped_changes: std::collections::HashMap<String, serde_json::Value> = change_map
-                    .into_iter()
-                    .map(|(k, v)| (k, crate::table_view::data_table::unwrap_tagged_owned(&v)))
-                    .collect();
-                Some(tauri::RowUpdate {
-                    pk_values,
-                    changes: unwrapped_changes,
-                })
-            })
-            .collect();
-
-        // Build inserts
-        let inserts: Vec<tauri::RowInsert> = added_set
-            .iter()
-            .filter_map(|row_idx| {
-                let row = current_rows.get(*row_idx)?;
-                let mut values = std::collections::HashMap::new();
-                for (i, col) in cols.iter().enumerate() {
-                    if let Some(val) = row.get(i) {
-                        let raw = crate::table_view::data_table::unwrap_tagged_owned(val);
-                        if !raw.is_null() {
-                            values.insert(col.name.clone(), raw);
-                        }
-                    }
-                }
-                Some(tauri::RowInsert { values })
-            })
-            .collect();
-
-        // Build deletes
-        let deletes: Vec<tauri::RowDelete> = deleted_set
-            .iter()
-            .filter_map(|row_idx| {
-                let row = current_rows.get(*row_idx)?;
-                let mut pk_values = std::collections::HashMap::new();
-                for (pk_idx, pk_name) in &pk_cols {
-                    let raw = crate::table_view::data_table::unwrap_tagged_owned(row.get(*pk_idx)?);
-                    pk_values.insert(pk_name.clone(), raw);
-                }
-                Some(tauri::RowDelete { pk_values })
-            })
-            .collect();
-
-        let change_set = tauri::ChangeSet {
-            updates,
-            inserts,
-            deletes,
-        };
-
-        let refetch_name = loaded_table.get();
-        let refetch_page = page.get();
-        let refetch_page_size = page_size.get();
-        spawn_local(async move {
-            match tauri::save_changes(&table, &change_set).await {
-                Ok(_) => {
-                    // Re-fetch data to show committed state
-                    if let Some(name) = refetch_name {
-                        fetch_data(name, refetch_page, refetch_page_size);
-                    }
-                }
-                Err(e) => {
-                    web_sys::console::error_1(&format!("Save failed: {e}").into());
-                }
+        let refetch = Callback::new(move |_: ()| {
+            if let Some(name) = loaded_table.get() {
+                fetch_data(name, page.get(), page_size.get());
             }
         });
+        save_handler::execute_save(loaded_table, changes, rows, columns, refetch);
     });
 
     // Listen for global save trigger (Cmd+S)

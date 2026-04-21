@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 40 — Deep Refactor: Frontend `table_view.rs` (724 lines → split)
-- [ ] Extract the save logic (`on_save` callback with ChangeSet building) into `table_view/save_handler.rs`
 - [ ] Extract row selection logic (click, cmd+click, shift+click) into `table_view/selection.rs`
 - [ ] Extract context menu actions (delete, duplicate, copy as JSON, copy as SQL) into `table_view/row_actions.rs`
 - [ ] The remaining `table_view.rs` should be the component shell composing subcomponents — under 250 lines
@@ -56,6 +55,9 @@
 
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
+
+### Phase 40 (partial)
+- [x] Extract the save logic (`on_save` callback with ChangeSet building) into `table_view/save_handler.rs`
 
 ### Phase 39
 - [x] Search the official Leptos docs for component best practices, signal types, and component splitting patterns. Added to `ralph/reference.md`.
