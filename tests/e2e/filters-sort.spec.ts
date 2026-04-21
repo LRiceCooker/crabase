@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -27,28 +27,30 @@ test.describe("Filters and sorting", () => {
     // Click add filter button
     await page.locator('button[title="Add filter"]').click();
 
-    // Select column "role"
-    const columnSelect = page.locator("select").nth(-3);
+    // The filter chip appears with column select, operator select, and value input
+    const valueInput = page.locator('input[placeholder="value"]');
+    await expect(valueInput).toBeVisible({ timeout: 3000 });
+    const chipSpan = valueInput.locator("..");
+    const columnSelect = chipSpan.locator("select").first();
+
+    // Select column "role" (triggers an intermediate refetch with empty value that may error)
     await columnSelect.selectOption("role");
-
-    // Select operator "="
-    const operatorSelect = page.locator("select").nth(-2);
-    await operatorSelect.selectOption("=");
-
-    // Type value "admin"
-    const valueInput = page.locator(
-      'input[placeholder*="value"], input[type="text"]'
-    ).last();
+    // Wait for the intermediate fetch to settle before committing the value
+    await page.waitForTimeout(1500);
+    // Fill value and press Enter → triggers refetch with complete filter
     await valueInput.fill("admin");
     await valueInput.press("Enter");
 
     // Wait for filtered results
-    await page.waitForTimeout(1000);
-
-    // Verify only admin rows are shown (alice, diana, heidi = 3 admins)
-    await expect(page.locator("td:has-text('alice')")).toBeVisible();
-    await expect(page.locator("td:has-text('diana')")).toBeVisible();
-    await expect(page.locator("td:has-text('heidi')")).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("cell", { name: "diana", exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "heidi", exact: true })
+    ).toBeVisible();
   });
 
   test("Click column header to sort ascending", async ({ page }) => {
