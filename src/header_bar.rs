@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+use crate::header_edit_form::HeaderEditForm;
 use crate::icons::{
     IconAlertTriangle, IconDatabase, IconEdit, IconLogOut, IconPlus,
 };
@@ -23,55 +24,20 @@ pub fn HeaderBar(
     /// Called when the user clicks the "+" button to open a new SQL editor.
     on_new_sql_editor: Callback<()>,
 ) -> impl IntoView {
-    // Header editing state (internal)
     let (editing, set_editing) = signal(false);
-    let (edit_host, set_edit_host) = signal(String::new());
-    let (edit_port, set_edit_port) = signal(String::new());
-    let (edit_user, set_edit_user) = signal(String::new());
-    let (edit_dbname, set_edit_dbname) = signal(String::new());
-    let (edit_password, set_edit_password) = signal(String::new());
-    let (edit_schema, set_edit_schema) = signal(String::new());
-    let (edit_ssl, set_edit_ssl) = signal(false);
     let (reconnecting, set_reconnecting) = signal(false);
     let (header_error, set_header_error) = signal(Option::<String>::None);
 
-    // Enter edit mode: populate fields from current connection info
+    // Enter edit mode
     let on_edit = move |_| {
-        if let Some(info) = connection_info.get() {
-            set_edit_host.set(info.host.clone());
-            set_edit_port.set(info.port.to_string());
-            set_edit_user.set(info.user.clone());
-            set_edit_dbname.set(info.dbname.clone());
-            set_edit_password.set(info.password.clone());
-            set_edit_schema.set(info.schema.clone());
-            set_edit_ssl.set(info.sslmode == "require");
+        if connection_info.get().is_some() {
             set_header_error.set(None);
             set_editing.set(true);
         }
     };
 
-    // Cancel edit mode
-    let on_cancel = move |_| {
-        set_editing.set(false);
-        set_header_error.set(None);
-    };
-
-    // Reconnect with edited fields
-    let on_reconnect = move |_| {
-        let info = tauri::ConnectionInfo {
-            host: edit_host.get(),
-            port: edit_port.get().parse().unwrap_or(5432),
-            user: edit_user.get(),
-            password: edit_password.get(),
-            dbname: edit_dbname.get(),
-            schema: edit_schema.get(),
-            sslmode: if edit_ssl.get() {
-                "require".to_string()
-            } else {
-                "disable".to_string()
-            },
-        };
-
+    // Handle reconnect submission from the edit form
+    let on_form_submit = Callback::new(move |info: tauri::ConnectionInfo| {
         set_reconnecting.set(true);
         set_header_error.set(None);
 
@@ -94,9 +60,12 @@ pub fn HeaderBar(
             }
             set_reconnecting.set(false);
         });
-    };
+    });
 
-    let header_input_class = "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-md px-2 py-1 text-[13px] text-gray-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/60 focus:border-indigo-500 transition-colors duration-100";
+    let on_form_cancel = Callback::new(move |_: ()| {
+        set_editing.set(false);
+        set_header_error.set(None);
+    });
 
     view! {
         <header class="h-10 flex items-center justify-between px-4 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-neutral-950 shrink-0">
@@ -114,66 +83,23 @@ pub fn HeaderBar(
             <div class="flex items-center gap-2 text-[13px]">
                 {move || {
                     if editing.get() {
-                        // Edit mode: input fields
+                        // Edit mode: show the edit form
+                        let info = connection_info.get().unwrap_or(tauri::ConnectionInfo {
+                            host: String::new(),
+                            port: 5432,
+                            user: String::new(),
+                            password: String::new(),
+                            dbname: String::new(),
+                            schema: String::new(),
+                            sslmode: "disable".to_string(),
+                        });
                         view! {
-                            <div class="flex items-center gap-1.5">
-                                <input
-                                    type="text"
-                                    placeholder="user"
-                                    class=format!("{} w-20", header_input_class)
-                                    prop:value=move || edit_user.get()
-                                    on:input=move |ev| set_edit_user.set(event_target_value(&ev))
-                                />
-                                <span class="text-gray-400 dark:text-zinc-500">"@"</span>
-                                <input
-                                    type="text"
-                                    placeholder="host"
-                                    class=format!("{} w-28", header_input_class)
-                                    prop:value=move || edit_host.get()
-                                    on:input=move |ev| set_edit_host.set(event_target_value(&ev))
-                                />
-                                <span class="text-gray-400 dark:text-zinc-500">":"</span>
-                                <input
-                                    type="text"
-                                    placeholder="port"
-                                    class=format!("{} w-14", header_input_class)
-                                    prop:value=move || edit_port.get()
-                                    on:input=move |ev| set_edit_port.set(event_target_value(&ev))
-                                />
-                                <span class="text-gray-400 dark:text-zinc-500">"/"</span>
-                                <input
-                                    type="text"
-                                    placeholder="dbname"
-                                    class=format!("{} w-20", header_input_class)
-                                    prop:value=move || edit_dbname.get()
-                                    on:input=move |ev| set_edit_dbname.set(event_target_value(&ev))
-                                />
-                                <input
-                                    type="password"
-                                    placeholder="password"
-                                    class=format!("{} w-20", header_input_class)
-                                    prop:value=move || edit_password.get()
-                                    on:input=move |ev| set_edit_password.set(event_target_value(&ev))
-                                />
-                                <button
-                                    class="bg-indigo-500 hover:bg-indigo-600 dark:hover:bg-indigo-400 text-white text-[13px] font-medium px-2 py-1 rounded-md transition-colors duration-100 disabled:opacity-50"
-                                    disabled=move || reconnecting.get()
-                                    on:click=on_reconnect
-                                >
-                                    {move || if reconnecting.get() {
-                                        "Reconnecting..."
-                                    } else {
-                                        "Reconnect"
-                                    }}
-                                </button>
-                                <button
-                                    class="text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-neutral-50 px-2 py-1 rounded-md text-[13px] transition-colors duration-100"
-                                    disabled=move || reconnecting.get()
-                                    on:click=on_cancel
-                                >
-                                    "Cancel"
-                                </button>
-                            </div>
+                            <HeaderEditForm
+                                initial_info=info
+                                reconnecting=reconnecting
+                                on_submit=on_form_submit
+                                on_cancel=on_form_cancel
+                            />
                         }.into_any()
                     } else {
                         // Read-only mode: badges + schema select + edit button
