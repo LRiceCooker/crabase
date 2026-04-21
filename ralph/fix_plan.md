@@ -4,231 +4,88 @@
 
 ## Backlog
 
-### Phase 29 — Test Infrastructure Setup
-(Docker Postgres, seed SQL, setup/teardown scripts — already done, kept as-is)
+### Phase 37 — Deep Refactor: Backend `db.rs` (1380 lines → split into modules)
+This file is a god-file. Split it into focused modules. Run `just test-e2e` after each step.
+- [ ] Create `src-tauri/src/db/` directory with `mod.rs` that re-exports everything (public API stays identical)
+- [ ] Extract `ConnectionInfo`, `DbState`, `connect`, `disconnect`, `get_connection_info`, `get_connection_string` into `db/connection.rs`
+- [ ] Extract `list_tables`, `get_column_info`, `get_columns_for_autocomplete`, `ColumnInfo` into `db/schema.rs`
+- [ ] Extract `get_table_data`, `get_table_data_filtered`, `TableData`, `Filter`, `SortCol`, `build_select_columns`, `build_filter_where_clause`, `build_order_clause`, `default_order_clause` into `db/query.rs`
+- [ ] Extract `save_changes`, `ChangeSet`, `RowUpdate`, `RowInsert`, `RowDelete`, `build_where_clause`, `build_set_clause`, `bind_json_value` into `db/mutations.rs`
+- [ ] Extract `execute_query`, `execute_query_multi`, `QueryResult`, `StatementResult` into `db/execute.rs`
+- [ ] Extract `drop_table`, `truncate_table`, `export_table_json`, `export_table_sql` into `db/table_ops.rs`
+- [ ] Extract `get_full_schema_text` into `db/introspection.rs`
+- [ ] Extract `pg_value_to_json`, `tagged`, `tagged_unknown`, `normalize_pg_type` into `db/types.rs`
+- [ ] Extract `parse_connection_string`, `build_connection_string`, `list_schemas` into `db/connection.rs` (or a separate `db/parsing.rs`)
+- [ ] Move all `#[cfg(test)]` unit tests to their respective module files
+- [ ] Verify: `cargo check`, `cargo test`, `just test-e2e` — all pass, zero regressions
 
-### Phase 30 — Test HTTP Server for E2E
-(First 3 tasks already completed — test server exists with all routes, CORS, port 3001)
+### Phase 38 — Deep Refactor: Backend `lib.rs` (418 lines → thin command layer)
+- [ ] `lib.rs` should be ONLY Tauri command handlers (thin wrappers). Move all business logic to `db/` modules.
+- [ ] Group related commands using `impl` blocks or separate modules if needed
+- [ ] Replace any remaining `unwrap()` with proper `?` or `.map_err()`
+- [ ] Add doc comments (`///`) to every public Tauri command explaining what it does, its params, and its return type
+- [ ] Verify: `cargo check`, `just test-e2e`
 
-### Phase 31 — E2E Tests (Playwright + real DB)
-(All completed — infrastructure + 10 spec files created)
+### Phase 39 — Deep Refactor: Frontend `main_layout.rs` (709 lines → split)
+- [ ] Search the official Leptos docs (https://book.leptos.dev/) for component best practices, signal types, and component splitting patterns. Add findings to `ralph/reference.md` with source URLs.
+- [ ] Extract the restore backup panel into `src/restore_panel.rs` as a standalone `<RestorePanel />` component
+- [ ] Extract the header bar (connection info badges, schema select, edit mode, disconnect) into `src/header_bar.rs` as `<HeaderBar />`
+- [ ] Extract the header edit form (host/port/user/password/dbname editing) into `src/header_edit_form.rs`
+- [ ] `main_layout.rs` should only compose: `<HeaderBar />`, `<Sidebar />`, `<TabBar />`, `<ContentArea />` — under 200 lines
+- [ ] Verify: `cargo check`, `just test-e2e`
 
-### Phase 32 — Code Audit & Refactor: Backend (src-tauri/src/)
-(All completed — RwLock migration, query builder LIKE escaping, restore.rs cleanup, clippy pedantic zero warnings)
+### Phase 40 — Deep Refactor: Frontend `table_view.rs` (724 lines → split)
+- [ ] Extract the save logic (`on_save` callback with ChangeSet building) into `table_view/save_handler.rs`
+- [ ] Extract row selection logic (click, cmd+click, shift+click) into `table_view/selection.rs`
+- [ ] Extract context menu actions (delete, duplicate, copy as JSON, copy as SQL) into `table_view/row_actions.rs`
+- [ ] The remaining `table_view.rs` should be the component shell composing subcomponents — under 250 lines
+- [ ] Verify: `cargo check`, `just test-e2e`
 
-### Phase 33 — Code Audit & Refactor: Frontend (src/)
-(All completed — closure.forget() documented, Effect::new audited, spawn_local verified, clippy zero warnings, dead code removed)
+### Phase 41 — Deep Refactor: Frontend `tauri.rs` (773 lines → split by domain)
+- [ ] Split into: `tauri/connection.rs`, `tauri/tables.rs`, `tauri/queries.rs`, `tauri/settings.rs`, `tauri/files.rs`, `tauri/chat.rs`
+- [ ] Create `tauri/mod.rs` that re-exports everything (public API unchanged)
+- [ ] Remove all `#[allow(dead_code)]` — delete truly dead code, make used code public
+- [ ] Verify: `cargo check`, `just test-e2e`
 
-### Phase 34 — Code Audit & Refactor: JS Bridge Layer
-(All completed — codemirror-bridge verified clean (destroy removes entries), markdown-bridge secured with DOMPurify)
+### Phase 42 — Clean Code Pass: Rust Idioms
+- [ ] Search the Rust Reference and Clippy lint docs for each idiom below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
+- [ ] Replace all `format!("...: {}", e)` with `format!("...: {e}")`
+- [ ] Replace `match` with `if let` / `map` / `unwrap_or` where cleaner
+- [ ] Replace manual `HashMap` building with `.collect()` from iterators
+- [ ] Use `&str` instead of `String` for function params that don't need ownership
+- [ ] Replace `Vec::new()` + loop + push with `.iter().map().collect()`
+- [ ] Use `thiserror` for custom error types instead of `String` errors in the backend
+- [ ] Add `#[must_use]` where appropriate
+- [ ] Verify: `cargo check`, `cargo clippy`, `just test-e2e`
 
-### Phase 36 — Fix E2E Tests Until All Pass
-The E2E tests (Playwright + test HTTP server + Docker Postgres) are set up and running but many tests timeout or fail. The agent must iterate on them until ALL 40 tests pass.
+### Phase 43 — Clean Code Pass: Leptos Best Practices
+- [ ] Search the official Leptos docs for each pattern below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
+- [ ] Use `ReadSignal` in props instead of `RwSignal` when the child doesn't write
+- [ ] Use `Memo` for derived computations instead of `Effect` writing to another signal
+- [ ] Replace manual conditional rendering with `Show` component where appropriate
+- [ ] Use `For` component instead of `.into_iter().map().collect::<Vec<_>>()` for reactive lists
+- [ ] Replace `.get()` with `.with(|v| ...)` where you only need a reference
+- [ ] Add `///` doc comments to every component
+- [ ] Ensure every component follows SRP — one responsibility, under 150 lines ideally
+- [ ] Verify: `cargo check`, `just test-e2e`
 
-Architecture reminder:
-- Trunk serves the app at localhost:8080 (same WASM as prod)
-- `tests/e2e/tauri-shim.js` is injected via `page.addInitScript()` (in `tests/e2e/fixtures.ts`) to provide `window.__TAURI__`
-- The shim routes `invoke()` to `fetch("http://localhost:3001/invoke/{cmd}")`
-- `tests/test_server/` (Rust/axum on port 3001) wraps `crabase::db` functions against Docker Postgres
+### Phase 44 — Clean Code Pass: Error Handling & Logging
+- [ ] Search official `thiserror` docs and `tracing` docs for correct usage patterns. Add to `ralph/reference.md` with source URLs.
+- [ ] Backend: replace all `String` error returns with a proper `AppError` enum using `thiserror`
+- [ ] Backend: add `tracing` crate for structured logging, replace `println!`/`eprintln!` with `tracing::info!`/`tracing::error!`
+- [ ] Frontend: replace all `web_sys::console::error_1(...)` with a unified `log_error(msg)` helper
+- [ ] Frontend: ensure all `spawn_local` closures handle errors visibly, never silently swallow
+- [ ] Verify: `cargo check`, `just test-e2e`
 
-Workflow:
-1. Run `just test-e2e` to see which tests fail
-2. For each failing test, diagnose WHY it fails:
-   - Is it a test selector issue? (wrong CSS selector, element not found)
-   - Is it a timing issue? (need to `await page.waitForSelector()` or increase timeout)
-   - Is it a shim issue? (invoke returning wrong format, missing command in test server)
-   - Is it an app bug? (the app itself doesn't work correctly via the shim)
-3. Fix the test OR the app/shim/test-server code as needed
-4. Re-run `just test-e2e` to verify the fix
-5. Repeat until ALL tests pass
-
-Rules:
-- Run `just test-e2e` after EVERY fix to verify progress
-- Do NOT skip or delete failing tests — fix them
-- If a test is flaky (passes sometimes, fails sometimes), add proper `waitForSelector`/`waitForTimeout` to make it reliable
-- If the test server doesn't handle a command correctly, fix the test server
-- If the tauri shim doesn't return the right format, fix the shim
-- If the app CSS/DOM doesn't match what the test expects, update the test selectors to match the actual app
-- Use `npx playwright test --config tests/e2e/playwright.config.ts --headed tests/e2e/connection.spec.ts` to debug individual tests visually
-- Commit after each batch of fixes (group related fixes together)
-
-Tasks:
-- [x] Run `just test-e2e`, collect the full list of failing tests and their error messages (17/40 failing)
-- [x] Fix all failing tests in `connection.spec.ts`
-- [x] Fix all failing tests in `table-browsing.spec.ts`
-- [x] Fix all failing tests in `inline-editing.spec.ts`
-- [x] Fix all failing tests in `filters-sort.spec.ts`
-- [x] Fix all failing tests in `sql-editor.spec.ts`
-- [x] Fix all failing tests in `command-palette.spec.ts`
-- [x] Fix all failing tests in `schema-switching.spec.ts`
-- [x] Fix all failing tests in `theme.spec.ts`
-- [x] Fix all failing tests in `context-menus.spec.ts`
-- [x] Fix all failing tests in `tabs.spec.ts`
-- [x] Run `just test-e2e` one final time — ALL 40 tests must pass with zero failures
+### Phase 45 — Final Verification
+- [ ] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` on both crates — zero warnings
+- [ ] Run `just test-e2e` — ALL 40 tests pass
+- [ ] Run `just test-frontend` — all JS bridge tests pass
+- [ ] Verify no file exceeds 300 lines (except generated code/icons)
+- [ ] Verify every public function and component has a doc comment
 
 ## Completed
-- [x] Phase 35 Final Verification: cargo check zero errors, clippy zero warnings (both crates), 43 backend + 25 frontend tests pass
-- [x] Audit JS bridges: codemirror-bridge clean (editors map cleaned on destroy), markdown-bridge secured with DOMPurify sanitization
-- [x] Run `cargo clippy -- -W clippy::all` on frontend — zero warnings. Auto-fixed clone-on-Copy, format strings, removed dead code, simplified redundant branches
-- [x] Audit `spawn_local`: verified — all use proper Result handling (errors shown in UI or fire-and-forget with `let _ =`)
-- [x] Audit remaining Phase 33 items (main_layout/table_view/data_table/cell_editor/sql_tab/chat_panel/overlay/shortcuts/theme): verified safe patterns, no breaking issues
-- [x] Audit `Effect::new()`: verified all 17 usages — no re-entrant borrow cycles found, all writes either deferred via spawn_local/setTimeout or safe (no circular dependencies)
-- [x] Audit `closure.forget()`: documented app-lifetime (main_layout, theme, sidebar) and low-impact component-scoped leaks (sql_tab, codemirror) — no breaking refactor needed for desktop app
-- [x] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` — zero warnings after fixing Default impls, semicolons, and suppressing pedantic doc/style lints
-- [x] Remove ALL dead code: removed unused Executor import in db.rs — zero warnings on both crates
-- [x] Audit `lib.rs`: verified — all commands return Result, no unwrap() panics, blocking I/O uses spawn_blocking, write_file is intentional for exports
-- [x] Audit `settings.rs`: verified — same safe pattern as connections/queries, proper defaults on missing file
-- [x] Audit `saved_connections.rs` and `saved_queries.rs`: verified — proper error handling, no path traversal (uses app_data_dir), empty names rejected, no file system race risk for single-user desktop app
-- [x] Audit `restore.rs`: removed dead run_pg_restore/restore_backup functions, replaced unwrap() on piped streams with proper error handling
-- [x] Audit `pg_value_to_json`: verified — no panics, no dead branches, all types handled with try_get+fallback pattern, NaN/Infinity safely serialized as strings
-- [x] Audit `db.rs` query builders: LIKE metacharacters (%, _) now escaped in contains/starts with/ends with filters; reviewed all builders — parameterized values and identifier-quoting are correct
-- [x] Audit `db.rs`: replaced std::sync::Mutex with tokio::sync::RwLock, added pool()/schema() helpers, eliminated 21 duplicated lock blocks
-- [x] `tests/e2e/tabs.spec.ts`: multiple tabs, switch, close, SQL + table tabs
-- [x] `tests/e2e/context-menus.spec.ts`: sidebar table menu, row menu, saved query menu
-- [x] `tests/e2e/theme.spec.ts`: open settings, toggle dark/light, verify html class
-- [x] `tests/e2e/schema-switching.spec.ts`: switch schema, verify sidebar, load data, switch back
-- [x] `tests/e2e/command-palette.spec.ts`: open/close palette, filter commands, table finder, overlay switching
-- [x] `tests/e2e/sql-editor.spec.ts`: open editor, run query, multi-statement, save
-- [x] `tests/e2e/filters-sort.spec.ts`: add filter, sort asc/desc
-- [x] `tests/e2e/inline-editing.spec.ts`: edit cell, dirty bar, discard, save, persist after reload
-- [x] `tests/e2e/table-browsing.spec.ts`: click table, column headers, pagination, enum/NULL display
-- [x] `tests/e2e/connection.spec.ts`: parse connection string, connect, verify header, save/load connection
-- [x] Update `just test` to run test-frontend + test-e2e
-- [x] Add `just test-e2e` command to justfile (`npx playwright test --config tests/e2e/playwright.config.ts`)
-- [x] Install Playwright (`@playwright/test` as devDependency)
-- [x] Create `tests/e2e/global-teardown.ts` — kills spawned processes via saved PIDs, runs just test-teardown
-- [x] Create `tests/e2e/global-setup.ts` — starts Docker Postgres, test HTTP server, Trunk dev server, waits for readiness
-- [x] Create `tests/e2e/playwright.config.ts` — Playwright config with baseURL localhost:8080, Chromium, tauri-shim.js injection, global setup/teardown
-- [x] Create `tests/e2e/tauri-shim.js` — defines `window.__TAURI__` shim routing invoke to test HTTP server, event.listen as no-op, dialog.open/save as null
-- [x] Add `just test-server` command to start the test server (`cargo run --manifest-path tests/test_server/Cargo.toml`)
-- [x] Implement `POST /invoke/{command}` route for all commands, CORS for localhost:8080, port 3001
-- [x] Create `tests/test_server/` as a standalone Rust binary (Cargo.toml with crabase path dep, axum, tokio, serde_json, tower-http). Implements `POST /invoke/{command}` for all commands, CORS for localhost:8080, serves on port 3001. File-based commands (settings, connections, queries) use in-memory state.
-- [x] Frontend Vitest tests: codemirror-bridge (11 tests: create/destroy/getContent/setContent/isDirty/markClean/onChange/readOnly/json/multi-editor), markdown-bridge (14 tests: render, headings, code blocks, links, lists, empty string, nested formatting, SQL/JSON code, GFM tables, line breaks). `just test-frontend` command added.
-- [x] Create `vitest.config.ts` with JSDOM environment
-- [x] Install Vitest and jsdom as dev dependencies
-- [x] (Removed) Backend integration tests replaced by Playwright E2E tests
-- [x] Add `just test`, `just test-setup`, and `just test-teardown` commands to justfile
-- [x] Create `tests/seed.sql` with comprehensive test schema (3 tables in public + 1 in test_schema, all Postgres types, 12 rows each, custom enums, arrays)
-- [x] Create `tests/teardown.sh` script (stops and removes Docker container)
-- [x] Create `tests/setup.sh` script (starts Docker, waits for Postgres, runs seed SQL)
-- [x] Create `tests/docker-compose.yml` for a test Postgres container
-- [x] Create a `tests/` directory at project root for the test infrastructure
-- [x] Inline AI Chat Panel (Cmd+I): backend check_claude_installed, chat_with_claude (streaming), get_full_schema_for_chat; frontend chat_panel.rs side panel with message bubbles, auto-injected DB context, Claude not-installed message, fresh conversation per open
-- [x] Multi-statement SQL execution: backend execute_query_multi returns Vec<StatementResult> (Rows/Affected/Error), frontend shows multi-statement navigator below results, statement selector with previews
-- [x] Schema-aware SQL autocomplete: table names prefixed with schema when not on public, columns returned for correct tables
-- [x] Full VS Code keybindings in CodeMirror (toggle comment, block comment, copy line, move line, delete line, find, find & replace, select next occurrence, go to line, indent/outdent) + registered in shortcuts.rs under Editor category
-- [x] SQL Editor: tab title rename changed from double-click to single-click; Save button, Cmd+S, and dirty indicator verified working
-- [x] SQL Editor: auto-focus on tab open/activation, click-to-focus everywhere (full-height editor), full-height CodeMirror via CSS height:100%, draggable resize handle between editor and results
-- [x] JSON cell editor modal: CodeMirror 6 with @codemirror/lang-json (already implemented), scroll fixed, syntax highlighting working, read-only mode added, custom dark theme applied
-- [x] SQL editor read-only result table: same cell formatting as editable table (boolean checkmarks, JSON clickable to read-only modal, arrays expanded, dates formatted)
-- [x] **Bug fix**: timestamp/date columns now properly serialized via chrono with Postgres-compatible formatting; date picker output reformatted
-- [x] **Bug fix**: schema-prefixed enums — fetch udt_schema for correct enum value lookup across schemas
-- [x] **Bug fix**: when not on `public` schema, query results currently show each cell as the raw tagged-JSON object — frontend now always extracts the inner value via unwrap_tagged
-- [x] Refactor overlay state management so only ONE overlay can be open at a time (Command Palette, Table Finder, Find Bar, Restore, Settings, Chat)
-- [x] Opening any overlay must close any currently-open overlay first
-- [x] Cmd+Shift+P → Command Palette closes Table Finder if open
-- [x] Cmd+P → Table Finder closes Command Palette if open
-- [x] Escape always closes the active overlay
-- [x] Verify no "stuck" state where the user can't escape an overlay
-- [x] Verify dark mode contrast across the entire app — find any remaining unreadable text (sql results table, JSON modal, settings inputs, etc.) and fix
-- [x] Build a custom CodeMirror theme matching design.md exactly: editor background `#0A0A0A`, gutter background `#0A0A0A`, gutter text `text-zinc-600`, active line highlight `bg-white/[0.03]`, selection `bg-indigo-500/25`, cursor `text-neutral-50`. Replace the default `one-dark` theme with this custom theme.
-- [x] Audit ALL table cell text styles: ensure every `text-gray-*` has a `dark:text-zinc-*` (target `dark:text-zinc-200`) so cell text is readable in dark mode
-- [x] Tauri window background: set `backgroundColor` in `tauri.conf.json` to dark color (`#0A0A0A`) and ensure `<html>`/`<body>` use `bg-white dark:bg-neutral-950` so the white window edges no longer bleed through in dark mode
-- [x] Verify that both windows share the same config files (settings, saved connections, queries)
-- [x] Cmd+Shift+N opens a new app window (independent instance, starts at connection screen)
-- [x] Backend: `open_new_window` command using Tauri WebviewWindowBuilder
-- [x] Escape closes the overlay
-- [x] Navigation with Enter (next) / Shift+Enter (prev), or N/Prev buttons
-- [x] Highlights matching cells
-- [x] Fuzzy search across all visible cell values
-- [x] Cmd+F triggers the find overlay when a table tab is active
-- [x] table_view/find_overlay.rs: floating bar at top of table view (browser-style)
-- [x] Click table header to cycle sort direction (asc → desc → none)
-- [x] Default sort behavior: created_at desc if exists, else PK asc, else first column with smart fallback
-- [x] Sort: column + direction, can chain multiple sort columns
-- [x] "+" button to add a new filter
-- [x] table_view/filter_chip.rs: column select + operator select + value input + delete button + combinator selector
-- [x] table_view/filter_bar.rs: inline bar below toolbar, always visible
-- [x] SortCol struct: column, direction (asc/desc)
-- [x] Filter struct: column, operator (=, !=, <, >, <=, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL, contains, starts with, ends with), value, combinator (AND/OR/XOR for the previous filter)
-- [x] Backend: `get_table_data_filtered(table_name, page, page_size, filters, sort)` extending get_table_data
-- [x] Option: **Copy as SQL INSERT** — copies row(s) to clipboard as SQL INSERT statements
-- [x] Option: **Copy as JSON** — copies row(s) to clipboard as JSON
-- [x] Option: **Duplicate** — duplicates row(s) as new rows (green highlight, persists on save)
-- [x] Option: **Delete** — marks row(s) for deletion (red highlight, persists on save)
-- [x] Right-click on a row opens menu; right-click on a row that is part of a multi-selection keeps the selection and shows the same menu
-- [x] context_menu.rs: right-click context menu component with options
-- [x] Remove the inline delete button column from each row (deletion now via context menu)
-- [x] Selected row visual: `bg-indigo-50 dark:bg-indigo-500/25`
-- [x] Shift+click on index → range select (inclusive) between current and clicked row
-- [x] Cmd+click on index → toggle row in selection (multi-select)
-- [x] Click on index → select single row
-- [x] Index column is sticky on horizontal scroll (CSS `sticky left-0`)
-- [x] data_table.rs: add leftmost index column (no header label) showing global row index across pages (page 2 with 50 rows starts at 51)
-- [x] Frontend: read-only mode for primary keys and auto-increment columns when editing existing rows
-- [x] Frontend: NULL handling in editors — show a clear "Set NULL" / "×" affordance for nullable columns
-- [x] Frontend: implement specialized editors per type (number, text, boolean, date, time, datetime, interval, uuid, enum, array modal, inet/cidr/macaddr, bit, range, bytea, xml modal, unknown)
-- [x] Frontend: cell display formatting matches the type (boolean as checkmark icon, JSON/array truncated, array as `[a, b, c, ...]`)
-- [x] All editors support both light and dark themes per specs/design.md
-- [x] Frontend: refactor cell_editor.rs to dispatch to the correct specialized editor based on the column type from the new tagged value
-- [x] Backend: extend `get_column_info` to return resolved type info: base_type, is_array, is_enum, enum_values (if applicable), is_nullable, is_primary_key, is_auto_increment, max_length, precision, scale.
-- [x] Backend: for enum columns (USER-DEFINED with typcategory='E'), query `pg_enum` joined with `pg_type` to fetch allowed values. Cache per (schema, enum_name).
-- [x] Backend: never return a non-NULL value as NULL because the type is unknown. Fall back to `{ "type": "unknown", "raw": "<text repr>" }`.
-- [x] Backend: extend `pg_value_to_json` (or rewrite as a tagged serializer) to handle ALL common Postgres types per the mapping table. Output values as `{ "type": "<pg_type>", "value": ..., extras }` so the frontend knows the type.
-- [x] Update table_finder.rs to fuzzy search across BOTH tables AND saved queries of current connection
-- [x] Group results by type with subtle headers ("Tables", "Queries")
-- [x] Selecting a query opens it in a new tab (same as sidebar click)
-- [x] Click on saved query in sidebar opens it in a new tab (or focuses existing tab)
-- [x] sidebar/saved_queries_list.rs: scrollable section above tables list, shows saved queries for current connection. Hidden if empty.
-- [x] Default name: `Untitled-1`, `Untitled-2`, etc. (incremented globally per app instance)
-- [x] tab_title.rs: clicking the file name on a SQL editor tab transforms it into an inline rename input. Save on blur or Enter, revert on Escape, calls `rename_query`
-- [x] Dirty indicator (filled vs hollow dot) near the file name in tab title and toolbar
-- [x] Cmd+S contextual: save SQL query in SQL editor tabs, save table changes in dirty table tabs
-- [x] sql_editor/sql_toolbar.rs: add Save button (left of Run) with dirty state tracking and disabled state
-- [x] Save query name conflict returns an error to display to the user
-- [x] Backend commands: `save_query`, `update_query`, `rename_query`, `delete_query`, `list_queries`, `load_query`
-- [x] Backend: saved_queries.rs module with CRUD scoped per connection hash (host:port:dbname:user)
-- [x] JSON cell editor modal: use CodeMirror with @codemirror/lang-json for syntax-highlighted editing
-- [x] SQL autocomplete: register a custom completion source with SQL keywords + tables of current schema + columns of those tables (fetched on editor mount)
-- [x] Backend: `get_columns_for_autocomplete(table_names)` command — returns table → columns map
-- [x] CodeMirror theme: switch between light theme and dark theme (one-dark) based on app theme
-- [x] Auto-focus the editor when SQL editor tab is opened or activated
-- [x] Replace existing SQL editor with CodeMirror integration. Verify VS Code shortcuts work natively (Cmd+Z, Cmd+Shift+Z, Cmd+F, Cmd+D, Cmd+/, Cmd+A)
-- [x] Initialize Tauri v2 + Leptos (CSR) + Tailwind + DaisyUI
-- [x] Configure sqlx with PostgreSQL connection pool
-- [x] Tauri commands: connect_db, get_connection_info, list_tables, disconnect_db
-- [x] Connection screen + form (host, port, user, pwd, db, schema, ssl)
-- [x] Schema selector (connection form + header)
-- [x] Saved connections (save, list, delete + UI)
-- [x] Main layout: header + sidebar + tab bar + content area
-- [x] Sidebar: list of tables, scrollable independently
-- [x] Tab system (open, close, switch)
-- [x] Table data viewer: columns, rows, pagination, refresh
-- [x] Inline cell editing with specialized editors per type
-- [x] Dirty state bar with save/discard
-- [x] Backend save_changes (transactional inserts/updates/deletes)
-- [x] SQL editor (basic textarea, run button, results display)
-- [x] Command palette (Cmd+Shift+P) with fuzzy search
-- [x] Table finder (Cmd+P) with fuzzy search on tables
-- [x] Restore backup with streaming logs
-- [x] Light theme applied per design.md
-- [x] Component file structure refactor
-- [x] Lucide icons imported
-- [x] Inter + JetBrains Mono fonts
-- [x] All UI text in English
-- [x] Non-fatal pg_restore errors treated as success
-- [x] pg_restore --clean --if-exists for idempotent restores
-- [x] Add `dark` class strategy to Tailwind config and update Trunk build
-- [x] Apply dark theme palette from specs/design.md to ALL existing components (use `dark:` variants)
-- [x] Backend: `load_settings` and `save_settings` commands (read/write `app_data_dir/settings.json`)
-- [x] Frontend: theme.rs provider that reads settings, applies `dark` class to `<html>`, exposes a toggle
-- [x] Add "Disconnect" button in header that closes connection and returns to connection screen
-- [x] Create settings/settings_view.rs that opens like the Restore Backup panel (special view in content area)
-- [x] Add "Settings" command in the command palette (Cmd+Shift+P)
-- [x] settings/theme_setting.rs: Light / Dark / System toggle that persists to settings.json and applies immediately
-- [x] shortcuts.rs: keyboard shortcuts registry (default bindings + dispatcher)
-- [x] settings/shortcut_input.rs: clickable shortcut input that listens for key combinations to bind
-- [x] settings/shortcuts_settings.rs: list of all configurable shortcuts grouped by category, with click-to-rebind, "Reset to defaults" button
-- [x] All existing shortcuts (Cmd+Shift+P, Cmd+P, Cmd+S, Cmd+/, Cmd+Z, Cmd+F, etc.) registered through shortcuts.rs and customizable
-- [x] Add CodeMirror 6 dependencies via npm (@codemirror/state, @codemirror/view, @codemirror/lang-sql, @codemirror/lang-json, @codemirror/commands, @codemirror/autocomplete, @codemirror/search, @codemirror/theme-one-dark)
-- [x] Create sql_editor/codemirror.rs: Leptos wrapper around CodeMirror 6 instance via JS interop (mount, unmount, get/set content, dirty tracking)
+(All prior phases 29-36 completed — tests, audit, E2E fixes)
+
+### Phase 37
+- [x] Search the official Rust API Guidelines for module organization, naming, and re-export conventions. Added to `ralph/reference.md` with source URLs.
