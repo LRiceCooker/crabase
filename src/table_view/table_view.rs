@@ -380,22 +380,22 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             deletes,
         };
 
+        let refetch_name = loaded_table.get();
+        let refetch_page = page.get();
+        let refetch_page_size = page_size.get();
         spawn_local(async move {
             match tauri::save_changes(&table, &change_set).await {
                 Ok(_) => {
                     // Re-fetch data to show committed state
-                    // (signals are Copy, so fetch_data closure works here)
+                    if let Some(name) = refetch_name {
+                        fetch_data(name, refetch_page, refetch_page_size);
+                    }
                 }
                 Err(e) => {
                     web_sys::console::error_1(&format!("Save failed: {e}").into());
                 }
             }
         });
-
-        // Re-fetch after save to show committed state
-        if let Some(name) = loaded_table.get() {
-            fetch_data(name, page.get(), page_size.get());
-        }
     });
 
     // Listen for global save trigger (Cmd+S)

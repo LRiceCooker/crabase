@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -77,15 +77,13 @@ test.describe("Inline editing", () => {
     // Save
     await page.locator("text=Save changes").click();
 
-    // Dirty bar should disappear
-    await expect(page.locator("text=Save changes")).not.toBeVisible({
-      timeout: 5000,
-    });
+    // Wait for save + refetch: table reloads (loading spinner then table reappears)
+    await expect(page.locator("table")).toBeVisible({ timeout: 15000 });
 
     // Verify the new value is displayed
     await expect(
       page.locator("td:has-text('Senior content writer')")
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5000 });
   });
 
   test("Saved value persists after page reload", async ({ page }) => {
@@ -98,17 +96,23 @@ test.describe("Inline editing", () => {
     await editor.press("Enter");
 
     await page.locator("text=Save changes").click();
+
+    // Wait for save + refetch: dirty bar disappears, then table reappears with new value
     await expect(page.locator("text=Save changes")).not.toBeVisible({
-      timeout: 5000,
+      timeout: 15000,
     });
+    // Wait for save + refetch to complete: new value appears in table
+    await expect(
+      page.locator("td:has-text('Lead designer')")
+    ).toBeVisible({ timeout: 15000 });
 
-    // Reload and navigate back
+    // Reload — app restarts at connection screen, so reconnect
     await page.reload();
-    await expect(page.locator("text=users")).toBeVisible({ timeout: 15000 });
-    await page.locator("text=users").click();
-    await expect(page.locator("table")).toBeVisible({ timeout: 10000 });
+    await connectAndOpenUsers(page);
 
-    // Verify the saved value persists
-    await expect(page.locator("td:has-text('Lead designer')")).toBeVisible();
+    // Verify the saved value persists in the DB
+    await expect(
+      page.locator("td:has-text('Lead designer')")
+    ).toBeVisible({ timeout: 5000 });
   });
 });
