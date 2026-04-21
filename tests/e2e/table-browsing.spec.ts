@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -27,15 +27,17 @@ test.describe("Table browsing", () => {
     // Verify a tab opened and data table renders
     await expect(page.locator("table")).toBeVisible({ timeout: 10000 });
     // Verify real row data is present (alice is the first user)
-    await expect(page.locator("text=alice")).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "alice", exact: true })
+    ).toBeVisible();
   });
 
   test("Verify column headers match users table schema", async ({ page }) => {
     await page.locator("text=users").click();
     await expect(page.locator("table")).toBeVisible({ timeout: 10000 });
 
-    // Check key column headers
-    await expect(page.locator("th:has-text('id')")).toBeVisible();
+    // Check key column headers ('id' matches 'uuid' too via substring, so use .first())
+    await expect(page.locator("th:has-text('id')").first()).toBeVisible();
     await expect(page.locator("th:has-text('username')")).toBeVisible();
     await expect(page.locator("th:has-text('email')")).toBeVisible();
     await expect(page.locator("th:has-text('role')")).toBeVisible();
@@ -47,8 +49,8 @@ test.describe("Table browsing", () => {
     await page.locator("text=users").click();
     await expect(page.locator("table")).toBeVisible({ timeout: 10000 });
 
-    // Check pagination shows 12 total
-    await expect(page.locator("text=/12/")).toBeVisible();
+    // Check pagination shows 12 total (use specific text to avoid matching cell data)
+    await expect(page.getByText("12 rows").first()).toBeVisible();
   });
 
   test("Click page 2, verify different rows appear", async ({ page }) => {
@@ -71,7 +73,9 @@ test.describe("Table browsing", () => {
     await expect(page.locator("table")).toBeVisible({ timeout: 10000 });
 
     // Enum values should display as readable text (admin, editor, viewer)
-    await expect(page.locator("td:has-text('admin')")).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "admin" }).first()
+    ).toBeVisible();
   });
 
   test("Verify NULL values display correctly", async ({ page }) => {
