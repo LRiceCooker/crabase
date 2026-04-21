@@ -74,6 +74,7 @@
 
 ### Phase 38 (partial)
 - [x] `lib.rs` should be ONLY Tauri command handlers (thin wrappers). Move all business logic to `db/` modules. — Extracted claude chat logic to `claude.rs`, app icon logic to `app_icon.rs`, connection key helper to `saved_queries.rs`.
+- [x] Group related commands using `impl` blocks or separate modules if needed — Organized commands into logical sections with section comments; grouped `generate_handler!` by domain.
 
 ### Phase 37
 - [x] Search the official Rust API Guidelines for module organization, naming, and re-export conventions. Added to `ralph/reference.md` with source URLs.

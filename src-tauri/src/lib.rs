@@ -34,6 +34,8 @@ pub mod saved_connections;
 pub mod saved_queries;
 pub mod settings;
 
+// ── Connection commands ─────────────────────────────────────────────
+
 #[tauri::command]
 fn parse_connection_string(connection_string: String) -> Result<db::ConnectionInfo, String> {
     db::parse_connection_string(&connection_string)
@@ -66,6 +68,8 @@ async fn get_connection_info(
     db_state.get_connection_info().await
 }
 
+// ── Schema & column commands ────────────────────────────────────────
+
 #[tauri::command]
 async fn list_tables(
     db_state: tauri::State<'_, db::DbState>,
@@ -80,6 +84,23 @@ async fn get_column_info(
 ) -> Result<Vec<db::ColumnInfo>, String> {
     db_state.get_column_info(&table_name).await
 }
+
+#[tauri::command]
+async fn get_columns_for_autocomplete(
+    table_names: Vec<String>,
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    db_state.get_columns_for_autocomplete(&table_names).await
+}
+
+#[tauri::command]
+async fn get_full_schema_for_chat(
+    db_state: tauri::State<'_, db::DbState>,
+) -> Result<String, String> {
+    db_state.get_full_schema_text().await
+}
+
+// ── Table data & query commands ─────────────────────────────────────
 
 #[tauri::command]
 async fn get_table_data(
@@ -130,6 +151,30 @@ async fn save_changes(
     db_state.save_changes(&table_name, changes).await
 }
 
+// ── Table operations (drop, truncate, export) ───────────────────────
+
+#[tauri::command]
+async fn drop_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.drop_table(&table_name).await
+}
+
+#[tauri::command]
+async fn truncate_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.truncate_table(&table_name).await
+}
+
+#[tauri::command]
+async fn export_table_json(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.export_table_json(&table_name).await
+}
+
+#[tauri::command]
+async fn export_table_sql(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
+    db_state.export_table_sql(&table_name).await
+}
+
+// ── Backup restore ──────────────────────────────────────────────────
+
 #[tauri::command]
 async fn restore_backup(
     file_path: String,
@@ -137,13 +182,14 @@ async fn restore_backup(
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<String, String> {
     let connection_string = db_state.get_connection_string().await?;
-    // Run blocking I/O (tar extraction + pg_restore subprocess) off the async runtime
     tokio::task::spawn_blocking(move || {
         restore::restore_backup_streaming(&file_path, &connection_string, &app_handle)
     })
     .await
     .map_err(|e| format!("Task failed: {}", e))?
 }
+
+// ── Saved connections ───────────────────────────────────────────────
 
 #[tauri::command]
 fn save_connection(
@@ -166,33 +212,8 @@ fn delete_saved_connection(name: String, app_handle: tauri::AppHandle) -> Result
     saved_connections::delete_saved_connection(&app_handle, name)
 }
 
-#[tauri::command]
-fn load_settings(app_handle: tauri::AppHandle) -> Result<settings::Settings, String> {
-    settings::load_settings(&app_handle)
-}
+// ── Saved queries ───────────────────────────────────────────────────
 
-#[tauri::command]
-async fn get_columns_for_autocomplete(
-    table_names: Vec<String>,
-    db_state: tauri::State<'_, db::DbState>,
-) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
-    db_state.get_columns_for_autocomplete(&table_names).await
-}
-
-#[tauri::command]
-fn save_settings(
-    settings: settings::Settings,
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
-    settings::save_settings(&app_handle, &settings)
-}
-
-#[tauri::command]
-fn set_app_icon(is_dark: bool, app_handle: tauri::AppHandle) -> Result<(), String> {
-    app_icon::set_icon(is_dark, &app_handle)
-}
-
-/// Helper: derive connection key from current DB state.
 async fn get_conn_key(db_state: &db::DbState) -> Result<String, String> {
     let info = db_state.get_connection_info().await?;
     Ok(saved_queries::connection_key_from_info(&info))
@@ -260,6 +281,23 @@ async fn cmd_load_query(
     saved_queries::load_query(&app_handle, &key, &name)
 }
 
+// ── Settings ────────────────────────────────────────────────────────
+
+#[tauri::command]
+fn load_settings(app_handle: tauri::AppHandle) -> Result<settings::Settings, String> {
+    settings::load_settings(&app_handle)
+}
+
+#[tauri::command]
+fn save_settings(
+    settings: settings::Settings,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    settings::save_settings(&app_handle, &settings)
+}
+
+// ── Claude AI chat ──────────────────────────────────────────────────
+
 #[tauri::command]
 fn check_claude_installed() -> bool {
     claude::is_installed()
@@ -276,11 +314,11 @@ async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), S
         .map_err(|e| format!("Task failed: {}", e))?
 }
 
+// ── Window & file commands ──────────────────────────────────────────
+
 #[tauri::command]
-async fn get_full_schema_for_chat(
-    db_state: tauri::State<'_, db::DbState>,
-) -> Result<String, String> {
-    db_state.get_full_schema_text().await
+fn set_app_icon(is_dark: bool, app_handle: tauri::AppHandle) -> Result<(), String> {
+    app_icon::set_icon(is_dark, &app_handle)
 }
 
 #[tauri::command]
@@ -303,31 +341,34 @@ fn write_file(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, &content).map_err(|e| format!("Failed to write file: {}", e))
 }
 
-#[tauri::command]
-async fn drop_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.drop_table(&table_name).await
-}
-
-#[tauri::command]
-async fn truncate_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.truncate_table(&table_name).await
-}
-
-#[tauri::command]
-async fn export_table_json(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.export_table_json(&table_name).await
-}
-
-#[tauri::command]
-async fn export_table_sql(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.export_table_sql(&table_name).await
-}
+// ── App entry point ─────────────────────────────────────────────────
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(db::DbState::new())
-        .invoke_handler(tauri::generate_handler![parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info, list_tables, get_column_info, get_columns_for_autocomplete, get_table_data, get_table_data_filtered, execute_query, execute_query_multi, save_changes, restore_backup, save_connection, list_saved_connections, delete_saved_connection, load_settings, save_settings, cmd_save_query, cmd_update_query, cmd_rename_query, cmd_delete_query, cmd_list_queries, cmd_load_query, open_new_window, check_claude_installed, chat_with_claude, get_full_schema_for_chat, drop_table, truncate_table, export_table_json, export_table_sql, write_file, set_app_icon])
+        .invoke_handler(tauri::generate_handler![
+            // Connection
+            parse_connection_string, list_schemas, connect_db, disconnect_db, get_connection_info,
+            // Schema & columns
+            list_tables, get_column_info, get_columns_for_autocomplete, get_full_schema_for_chat,
+            // Table data & queries
+            get_table_data, get_table_data_filtered, execute_query, execute_query_multi, save_changes,
+            // Table operations
+            drop_table, truncate_table, export_table_json, export_table_sql,
+            // Backup restore
+            restore_backup,
+            // Saved connections
+            save_connection, list_saved_connections, delete_saved_connection,
+            // Saved queries
+            cmd_save_query, cmd_update_query, cmd_rename_query, cmd_delete_query, cmd_list_queries, cmd_load_query,
+            // Settings
+            load_settings, save_settings,
+            // Claude AI
+            check_claude_installed, chat_with_claude,
+            // Window & file
+            set_app_icon, open_new_window, write_file,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
