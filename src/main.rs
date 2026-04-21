@@ -8,6 +8,8 @@
 mod app;
 mod command_palette;
 mod connection;
+mod content_area;
+mod global_shortcuts;
 mod header_bar;
 mod header_edit_form;
 pub mod icons;

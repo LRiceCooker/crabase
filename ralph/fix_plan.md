@@ -9,7 +9,7 @@
 - [x] Extract the restore backup panel into `src/restore_panel.rs` as a standalone `<RestorePanel />` component
 - [x] Extract the header bar (connection info badges, schema select, edit mode, disconnect) into `src/header_bar.rs` as `<HeaderBar />`
 - [x] Extract the header edit form (host/port/user/password/dbname editing) into `src/header_edit_form.rs`
-- [ ] `main_layout.rs` should only compose: `<HeaderBar />`, `<Sidebar />`, `<TabBar />`, `<ContentArea />` — under 200 lines
+- [x] `main_layout.rs` should only compose: `<HeaderBar />`, `<Sidebar />`, `<TabBar />`, `<ContentArea />` — under 200 lines
 - [ ] Verify: `cargo check`, `just test-e2e`
 
 ### Phase 40 — Deep Refactor: Frontend `table_view.rs` (724 lines → split)
