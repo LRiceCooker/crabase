@@ -6,7 +6,6 @@
 
 ### Phase 37 — Deep Refactor: Backend `db.rs` (1380 lines → split into modules)
 This file is a god-file. Split it into focused modules. Run `just test-e2e` after each step.
-- [ ] Extract `drop_table`, `truncate_table`, `export_table_json`, `export_table_sql` into `db/table_ops.rs`
 - [ ] Extract `get_full_schema_text` into `db/introspection.rs`
 - [ ] Extract `pg_value_to_json`, `tagged`, `tagged_unknown`, `normalize_pg_type` into `db/types.rs`
 - [ ] Extract `parse_connection_string`, `build_connection_string`, `list_schemas` into `db/connection.rs` (or a separate `db/parsing.rs`)
@@ -89,3 +88,4 @@ This file is a god-file. Split it into focused modules. Run `just test-e2e` afte
 - [x] Extract `get_table_data`, `get_table_data_filtered`, `TableData`, `Filter`, `SortCol`, query builders into `db/query.rs`
 - [x] Extract `save_changes`, `ChangeSet`, `RowUpdate`, `RowInsert`, `RowDelete`, mutation helpers into `db/mutations.rs`
 - [x] Extract `execute_query`, `execute_query_multi`, `QueryResult`, `StatementResult` into `db/execute.rs`
+- [x] Extract `drop_table`, `truncate_table`, `export_table_json`, `export_table_sql` into `db/table_ops.rs`
