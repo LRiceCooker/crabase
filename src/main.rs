@@ -11,6 +11,7 @@ mod connection;
 pub mod icons;
 mod main_layout;
 pub mod overlay;
+mod restore_panel;
 mod settings;
 pub mod shortcuts;
 mod sidebar;
