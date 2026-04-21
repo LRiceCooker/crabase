@@ -8,6 +8,7 @@ pub mod find_overlay;
 pub mod dirty_bar;
 pub mod json_editor;
 pub mod pagination;
+pub mod row_actions;
 pub mod save_handler;
 pub mod selection;
 pub mod table_view;
