@@ -2,15 +2,7 @@
 
 ## In Progress
 
-### Phase 39 — Deep Refactor: Frontend `main_layout.rs` (709 lines → split)
-- [x] Search the official Leptos docs (https://book.leptos.dev/) for component best practices, signal types, and component splitting patterns. Add findings to `ralph/reference.md` with source URLs.
-
 ## Backlog
-- [x] Extract the restore backup panel into `src/restore_panel.rs` as a standalone `<RestorePanel />` component
-- [x] Extract the header bar (connection info badges, schema select, edit mode, disconnect) into `src/header_bar.rs` as `<HeaderBar />`
-- [x] Extract the header edit form (host/port/user/password/dbname editing) into `src/header_edit_form.rs`
-- [x] `main_layout.rs` should only compose: `<HeaderBar />`, `<Sidebar />`, `<TabBar />`, `<ContentArea />` — under 200 lines
-- [ ] Verify: `cargo check`, `just test-e2e`
 
 ### Phase 40 — Deep Refactor: Frontend `table_view.rs` (724 lines → split)
 - [ ] Extract the save logic (`on_save` callback with ChangeSet building) into `table_view/save_handler.rs`
@@ -64,6 +56,15 @@
 
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
+
+### Phase 39
+- [x] Search the official Leptos docs for component best practices, signal types, and component splitting patterns. Added to `ralph/reference.md`.
+- [x] Extract the restore backup panel into `src/restore_panel.rs` as `<RestorePanel />`
+- [x] Extract the header bar into `src/header_bar.rs` as `<HeaderBar />`
+- [x] Extract the header edit form into `src/header_edit_form.rs` as `<HeaderEditForm />`
+- [x] Extract content area into `src/content_area.rs` as `<ContentArea />`, keyboard shortcuts into `src/global_shortcuts.rs`
+- [x] `main_layout.rs` reduced to 190 lines (under 200 target), composing HeaderBar, Sidebar, TabBar, ContentArea
+- [x] Verify: `cargo check` (both crates), `just test-e2e` — all 40 E2E tests pass
 
 ### Phase 38 (partial)
 - [x] `lib.rs` should be ONLY Tauri command handlers (thin wrappers). Move all business logic to `db/` modules. — Extracted claude chat logic to `claude.rs`, app icon logic to `app_icon.rs`, connection key helper to `saved_queries.rs`.
