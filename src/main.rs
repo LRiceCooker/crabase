@@ -8,6 +8,7 @@
 mod app;
 mod command_palette;
 mod connection;
+mod header_bar;
 pub mod icons;
 mod main_layout;
 pub mod overlay;
