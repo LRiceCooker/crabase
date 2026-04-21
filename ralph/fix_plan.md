@@ -4,13 +4,6 @@
 
 ## Backlog
 
-### Phase 38 — Deep Refactor: Backend `lib.rs` (418 lines → thin command layer)
-- [ ] `lib.rs` should be ONLY Tauri command handlers (thin wrappers). Move all business logic to `db/` modules.
-- [ ] Group related commands using `impl` blocks or separate modules if needed
-- [ ] Replace any remaining `unwrap()` with proper `?` or `.map_err()`
-- [ ] Add doc comments (`///`) to every public Tauri command explaining what it does, its params, and its return type
-- [ ] Verify: `cargo check`, `just test-e2e`
-
 ### Phase 39 — Deep Refactor: Frontend `main_layout.rs` (709 lines → split)
 - [ ] Search the official Leptos docs (https://book.leptos.dev/) for component best practices, signal types, and component splitting patterns. Add findings to `ralph/reference.md` with source URLs.
 - [ ] Extract the restore backup panel into `src/restore_panel.rs` as a standalone `<RestorePanel />` component
@@ -77,6 +70,7 @@
 - [x] Group related commands using `impl` blocks or separate modules if needed — Organized commands into logical sections with section comments; grouped `generate_handler!` by domain.
 - [x] Replace any remaining `unwrap()` with proper `?` or `.map_err()` — Verified: zero `unwrap()` in production code; all are in test functions.
 - [x] Add doc comments (`///`) to every public Tauri command explaining what it does, its params, and its return type
+- [x] Verify: `cargo check`, `just test-e2e` — all 43 unit tests + 40 E2E tests pass
 
 ### Phase 37
 - [x] Search the official Rust API Guidelines for module organization, naming, and re-export conventions. Added to `ralph/reference.md` with source URLs.
