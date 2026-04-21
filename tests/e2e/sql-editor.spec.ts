@@ -14,27 +14,30 @@ async function connectToDb(page) {
   await expect(page.locator("text=users")).toBeVisible({ timeout: 15000 });
 }
 
+/** Open a new SQL editor, clear any pre-loaded content, and type SQL */
+async function typeInNewEditor(page, sql: string) {
+  await page.locator('button[title="New SQL Editor"]').click();
+  await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 5000 });
+
+  const editor = page.locator(".cm-content");
+  await editor.click();
+  // Select all to clear any pre-loaded content (e.g. from a saved query with same name)
+  await page.keyboard.press("Meta+A");
+  await page.keyboard.type(sql);
+}
+
 test.describe("SQL Editor", () => {
   test.beforeEach(async ({ page }) => {
     await connectToDb(page);
   });
 
   test("Open new SQL editor tab, verify editor visible", async ({ page }) => {
-    // Click "+" button to open new SQL editor
     await page.locator('button[title="New SQL Editor"]').click();
-
-    // Verify CodeMirror editor area is visible
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 5000 });
   });
 
   test("Type and run a SELECT query, verify results", async ({ page }) => {
-    await page.locator('button[title="New SQL Editor"]').click();
-    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 5000 });
-
-    // Type SQL into CodeMirror
-    const editor = page.locator(".cm-content");
-    await editor.click();
-    await page.keyboard.type("SELECT * FROM users WHERE role = 'admin'");
+    await typeInNewEditor(page, "SELECT * FROM users WHERE role = 'admin'");
 
     // Click Run
     await page.locator('button:has-text("Run")').click();
@@ -57,35 +60,23 @@ test.describe("SQL Editor", () => {
   test("Run multi-statement query, verify statement selector", async ({
     page,
   }) => {
-    await page.locator('button[title="New SQL Editor"]').click();
-    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 5000 });
-
-    // Type multi-statement SQL
-    const editor = page.locator(".cm-content");
-    await editor.click();
-    await page.keyboard.type(
+    await typeInNewEditor(
+      page,
       "SELECT * FROM users WHERE role = 'admin'; SELECT * FROM products LIMIT 3"
     );
 
     // Click Run
     await page.locator('button:has-text("Run")').click();
 
-    // Wait for results
-    await page.waitForTimeout(2000);
-
     // Verify multi-statement navigator appears (shows "#1 SELECT..." and "#2 SELECT..." buttons)
-    await expect(page.locator("text=/#1/").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=/#1/").first()).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.locator("text=/#2/").first()).toBeVisible();
   });
 
   test("Save query, verify it appears in sidebar", async ({ page }) => {
-    await page.locator('button[title="New SQL Editor"]').click();
-    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 5000 });
-
-    // Type SQL
-    const editor = page.locator(".cm-content");
-    await editor.click();
-    await page.keyboard.type("SELECT 1");
+    await typeInNewEditor(page, "SELECT 1");
 
     // Save via button
     await page.locator('button:has-text("Save")').click();
@@ -94,6 +85,6 @@ test.describe("SQL Editor", () => {
     await page.waitForTimeout(1000);
 
     // The query should appear in the sidebar saved queries section
-    await expect(page.locator("text=Untitled")).toBeVisible();
+    await expect(page.getByText(/Untitled-\d+/).first()).toBeVisible();
   });
 });
