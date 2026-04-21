@@ -4,10 +4,6 @@
 
 ## Backlog
 
-### Phase 40 — Deep Refactor: Frontend `table_view.rs` (724 lines → split)
-- [ ] The remaining `table_view.rs` should be the component shell composing subcomponents — under 250 lines
-- [ ] Verify: `cargo check`, `just test-e2e`
-
 ### Phase 41 — Deep Refactor: Frontend `tauri.rs` (773 lines → split by domain)
 - [ ] Split into: `tauri/connection.rs`, `tauri/tables.rs`, `tauri/queries.rs`, `tauri/settings.rs`, `tauri/files.rs`, `tauri/chat.rs`
 - [ ] Create `tauri/mod.rs` that re-exports everything (public API unchanged)
@@ -54,10 +50,13 @@
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
-### Phase 40 (partial)
+### Phase 40
 - [x] Extract the save logic (`on_save` callback with ChangeSet building) into `table_view/save_handler.rs`
 - [x] Extract row selection logic (click, cmd+click, shift+click) into `table_view/selection.rs`
 - [x] Extract context menu actions (delete, duplicate, copy as JSON, copy as SQL) into `table_view/row_actions.rs`
+- [x] Extract toolbar into `table_view/toolbar.rs`, modal editors into `table_view/modal_editors.rs`, data fetching into `table_view/data_fetcher.rs`, find state into `table_view/find_state.rs`
+- [x] `table_view.rs` reduced to 240 lines (under 250 target), composing all subcomponents
+- [x] Verify: `cargo check` (both crates), `cargo test` — all 43 tests pass
 
 ### Phase 39
 - [x] Search the official Leptos docs for component best practices, signal types, and component splitting patterns. Added to `ralph/reference.md`.
