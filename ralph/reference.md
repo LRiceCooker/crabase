@@ -146,3 +146,209 @@ use std::{cmp::Ordering, io};
 
 Source: https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html
 
+## Leptos Component Best Practices
+
+### Component definition with `#[component]`
+Every component is a function decorated with `#[component]` that takes zero or more arguments (props) and returns `impl IntoView`. The function runs **once** to set up the UI — reactivity comes from signals, not re-running the component.
+
+```rust
+#[component]
+fn MyComponent(
+    /// The label to display.
+    #[prop(into)]
+    label: Signal<String>,
+) -> impl IntoView {
+    view! { <span>{label}</span> }
+}
+```
+
+Source: https://book.leptos.dev/view/01_basic_component.html
+
+### Props: ReadSignal vs Signal vs RwSignal
+- Use `ReadSignal<T>` when the child only reads the value.
+- Use `Signal<T>` with `#[prop(into)]` for maximum flexibility — it accepts `ReadSignal`, `RwSignal`, `Memo`, and closures.
+- Use `Callback<T>` for event handlers (child → parent communication).
+- Only pass `RwSignal<T>` when the child **must** write to the signal.
+
+```rust
+#[component]
+fn ProgressBar(
+    #[prop(default = 100)]
+    max: u16,
+    #[prop(into)]
+    progress: Signal<i32>,  // accepts ReadSignal, RwSignal, Memo, or closure
+) -> impl IntoView {
+    view! { <progress max=max value=progress /> }
+}
+```
+
+Source: https://book.leptos.dev/view/03_components.html
+
+### Optional and default props
+- `#[prop(optional)]` — defaults to `Default::default()`
+- `#[prop(default = value)]` — custom default
+- `#[prop(into)]` — auto-calls `.into()` on the passed value
+
+```rust
+#[component]
+fn Badge(
+    #[prop(optional)]
+    variant: &'static str,
+    #[prop(default = false)]
+    active: bool,
+    #[prop(into)]
+    label: Signal<String>,
+) -> impl IntoView { /* ... */ }
+```
+
+Source: https://book.leptos.dev/view/03_components.html
+
+### Document components and props
+Use `///` doc comments on the component function and on each prop parameter. These render in IDE tooltips.
+
+```rust
+/// Shows progress toward a goal.
+#[component]
+fn ProgressBar(
+    /// The maximum value of the progress bar.
+    #[prop(default = 100)]
+    max: u16,
+    /// How much progress should be displayed.
+    #[prop(into)]
+    progress: Signal<i32>,
+) -> impl IntoView { /* ... */ }
+```
+
+Source: https://book.leptos.dev/view/03_components.html
+
+## Leptos Signal Types
+
+### ReadSignal, WriteSignal, and RwSignal
+`signal()` returns a `(ReadSignal<T>, WriteSignal<T>)` pair. `RwSignal::new()` creates a single reference supporting both read and write.
+
+**Reading:** `.get()` clones the value, `.with(|v| ...)` borrows it (avoids clone), `.read()` returns a read guard.
+**Writing:** `.set(val)` replaces, `.update(|v| ...)` mutates in place, `.write()` returns a mutable guard.
+
+```rust
+let (names, set_names) = signal(Vec::new());
+// Prefer .with() when you only need a reference (avoids cloning)
+if names.with(|n| n.is_empty()) {
+    set_names.write().push("Alice".to_string());
+}
+```
+
+Source: https://book.leptos.dev/reactivity/working_with_signals.html
+
+### Memo for derived computations
+Use `Memo` when a derived value is expensive to compute or read by multiple consumers. It caches the result and only recomputes when dependencies change.
+
+```rust
+let (count, set_count) = signal(1);
+// Simple derived signal (closure) — recomputes on every read
+let doubled = move || count.get() * 2;
+// Memo — caches result, only recomputes when count changes
+let doubled_memo = Memo::new(move |_| count.get() * 2);
+```
+
+Source: https://book.leptos.dev/reactivity/working_with_signals.html
+
+### Avoid effects writing to signals
+Effects that write to signals create inefficient reactive graphs and risk infinite loops. Prefer `Memo` for derived state instead of `Effect` + signal pairs.
+
+Source: https://book.leptos.dev/reactivity/working_with_signals.html
+
+## Leptos Control Flow
+
+### Conditional rendering with `if/else` and `.into_any()`
+Use standard Rust `if/else` or `match` in views. When branches return different HTML element types, call `.into_any()` to erase the type.
+
+```rust
+{move || match is_odd() {
+    true => view! { <pre>"Odd"</pre> }.into_any(),
+    false => view! { <p>"Even"</p> }.into_any(),
+}}
+```
+
+Source: https://book.leptos.dev/view/06_control_flow.html
+
+### The `<Show/>` component
+Memoizes the `when` condition so it only renders/destroys children when the boolean changes. Use for expensive components; use direct `if` for lightweight text changes.
+
+```rust
+<Show
+    when=move || { value.get() > 5 }
+    fallback=|| view! { <Small/> }
+>
+    <Big/>
+</Show>
+```
+
+Source: https://book.leptos.dev/view/06_control_flow.html
+
+### Option<T> for conditional display
+`Option<T>` implements `IntoView` — `Some(view)` renders, `None` renders nothing.
+
+```rust
+let message = move || is_odd().then(|| "Ding ding ding!");
+view! { <p>{message}</p> }
+```
+
+Source: https://book.leptos.dev/view/06_control_flow.html
+
+## Leptos Dynamic Lists
+
+### The `<For/>` component
+Keyed dynamic list renderer for lists that grow, shrink, or reorder. More efficient than `.iter().map().collect()` for dynamic data.
+
+```rust
+<For
+    each=move || counters.get()
+    key=|counter| counter.0   // stable unique ID — never use index
+    children=move |(id, count)| {
+        view! { <li><button on:click=move |_| *count.write() += 1>{count}</button></li> }
+    }
+/>
+```
+
+**When to use:** Dynamic lists where items are added/removed/reordered.
+**When `.iter().map().collect()` is fine:** Static or rarely-changing lists.
+
+Source: https://book.leptos.dev/view/04_iteration.html
+
+## Leptos Component Composition
+
+### Children prop
+Use `Children` (= `Box<dyn FnOnce() -> AnyView>`) to accept child elements. Use `ChildrenFn` if children need to be called multiple times.
+
+```rust
+#[component]
+fn Card(children: Children) -> impl IntoView {
+    view! {
+        <div class="card">
+            {children()}
+        </div>
+    }
+}
+```
+
+Source: https://book.leptos.dev/view/09_component_children.html
+
+### Render props
+Pass rendering functions as regular props for named slots:
+
+```rust
+#[component]
+fn Layout<F, IV>(header: F, children: Children) -> impl IntoView
+where
+    F: Fn() -> IV,
+    IV: IntoView,
+{
+    view! {
+        <header>{header()}</header>
+        <main>{children()}</main>
+    }
+}
+```
+
+Source: https://book.leptos.dev/view/09_component_children.html
+
