@@ -6,7 +6,6 @@
 
 ### Phase 37 — Deep Refactor: Backend `db.rs` (1380 lines → split into modules)
 This file is a god-file. Split it into focused modules. Run `just test-e2e` after each step.
-- [ ] Extract `ConnectionInfo`, `DbState`, `connect`, `disconnect`, `get_connection_info`, `get_connection_string` into `db/connection.rs`
 - [ ] Extract `list_tables`, `get_column_info`, `get_columns_for_autocomplete`, `ColumnInfo` into `db/schema.rs`
 - [ ] Extract `get_table_data`, `get_table_data_filtered`, `TableData`, `Filter`, `SortCol`, `build_select_columns`, `build_filter_where_clause`, `build_order_clause`, `default_order_clause` into `db/query.rs`
 - [ ] Extract `save_changes`, `ChangeSet`, `RowUpdate`, `RowInsert`, `RowDelete`, `build_where_clause`, `build_set_clause`, `bind_json_value` into `db/mutations.rs`
@@ -89,3 +88,4 @@ This file is a god-file. Split it into focused modules. Run `just test-e2e` afte
 ### Phase 37
 - [x] Search the official Rust API Guidelines for module organization, naming, and re-export conventions. Added to `ralph/reference.md` with source URLs.
 - [x] Create `src-tauri/src/db/` directory with `mod.rs` that re-exports everything (public API stays identical)
+- [x] Extract `ConnectionInfo`, `DbState`, `connect`, `disconnect`, `get_connection_info`, `get_connection_string` into `db/connection.rs`
