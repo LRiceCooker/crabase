@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 
@@ -88,8 +88,12 @@ test.describe("Connection flow", () => {
     await page.locator('button:has-text("Next")').click();
     await expect(page.locator('text=Connection details')).toBeVisible();
 
-    // Check "Save connection" and set name
-    await page.locator("text=Save connection").click();
+    // Check "Save connection" checkbox (label not linked via for/id, click checkbox directly)
+    await page
+      .locator("label:has-text('Save connection')")
+      .locator("..")
+      .locator('input[type="checkbox"]')
+      .click();
     const nameInput = page.locator('input[placeholder="e.g. Production DB"]');
     await nameInput.fill("Test DB");
 
