@@ -22,8 +22,49 @@
 ### Phase 34 — Code Audit & Refactor: JS Bridge Layer
 (All completed — codemirror-bridge verified clean (destroy removes entries), markdown-bridge secured with DOMPurify)
 
-### Phase 35 — Final Verification
-(Completed — cargo check zero errors, clippy zero warnings on both crates, 43 backend + 25 frontend tests pass)
+### Phase 36 — Fix E2E Tests Until All Pass
+The E2E tests (Playwright + test HTTP server + Docker Postgres) are set up and running but many tests timeout or fail. The agent must iterate on them until ALL 40 tests pass.
+
+Architecture reminder:
+- Trunk serves the app at localhost:8080 (same WASM as prod)
+- `tests/e2e/tauri-shim.js` is injected via `page.addInitScript()` (in `tests/e2e/fixtures.ts`) to provide `window.__TAURI__`
+- The shim routes `invoke()` to `fetch("http://localhost:3001/invoke/{cmd}")`
+- `tests/test_server/` (Rust/axum on port 3001) wraps `crabase::db` functions against Docker Postgres
+
+Workflow:
+1. Run `just test-e2e` to see which tests fail
+2. For each failing test, diagnose WHY it fails:
+   - Is it a test selector issue? (wrong CSS selector, element not found)
+   - Is it a timing issue? (need to `await page.waitForSelector()` or increase timeout)
+   - Is it a shim issue? (invoke returning wrong format, missing command in test server)
+   - Is it an app bug? (the app itself doesn't work correctly via the shim)
+3. Fix the test OR the app/shim/test-server code as needed
+4. Re-run `just test-e2e` to verify the fix
+5. Repeat until ALL tests pass
+
+Rules:
+- Run `just test-e2e` after EVERY fix to verify progress
+- Do NOT skip or delete failing tests — fix them
+- If a test is flaky (passes sometimes, fails sometimes), add proper `waitForSelector`/`waitForTimeout` to make it reliable
+- If the test server doesn't handle a command correctly, fix the test server
+- If the tauri shim doesn't return the right format, fix the shim
+- If the app CSS/DOM doesn't match what the test expects, update the test selectors to match the actual app
+- Use `npx playwright test --config tests/e2e/playwright.config.ts --headed tests/e2e/connection.spec.ts` to debug individual tests visually
+- Commit after each batch of fixes (group related fixes together)
+
+Tasks:
+- [x] Run `just test-e2e`, collect the full list of failing tests and their error messages (17/40 failing)
+- [x] Fix all failing tests in `connection.spec.ts`
+- [x] Fix all failing tests in `table-browsing.spec.ts`
+- [x] Fix all failing tests in `inline-editing.spec.ts`
+- [x] Fix all failing tests in `filters-sort.spec.ts`
+- [x] Fix all failing tests in `sql-editor.spec.ts`
+- [x] Fix all failing tests in `command-palette.spec.ts`
+- [x] Fix all failing tests in `schema-switching.spec.ts`
+- [x] Fix all failing tests in `theme.spec.ts`
+- [x] Fix all failing tests in `context-menus.spec.ts`
+- [x] Fix all failing tests in `tabs.spec.ts`
+- [x] Run `just test-e2e` one final time — ALL 40 tests must pass with zero failures
 
 ## Completed
 - [x] Phase 35 Final Verification: cargo check zero errors, clippy zero warnings (both crates), 43 backend + 25 frontend tests pass
