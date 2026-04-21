@@ -4,10 +4,6 @@
 
 ## Backlog
 
-### Phase 37 — Deep Refactor: Backend `db.rs` (1380 lines → split into modules)
-This file is a god-file. Split it into focused modules. Run `just test-e2e` after each step.
-- [ ] Verify: `cargo check`, `cargo test`, `just test-e2e` — all pass, zero regressions
-
 ### Phase 38 — Deep Refactor: Backend `lib.rs` (418 lines → thin command layer)
 - [ ] `lib.rs` should be ONLY Tauri command handlers (thin wrappers). Move all business logic to `db/` modules.
 - [ ] Group related commands using `impl` blocks or separate modules if needed
@@ -89,3 +85,4 @@ This file is a god-file. Split it into focused modules. Run `just test-e2e` afte
 - [x] Extract `pg_value_to_json`, `tagged`, `tagged_unknown`, `normalize_pg_type` into `db/types.rs`
 - [x] Extract `parse_connection_string`, `build_connection_string`, `list_schemas` into `db/connection.rs` (already done in connection extraction step)
 - [x] Move all `#[cfg(test)]` unit tests to their respective module files
+- [x] Verify: `cargo check`, `cargo test` — all pass, zero regressions
