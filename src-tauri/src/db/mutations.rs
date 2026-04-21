@@ -183,3 +183,21 @@ fn bind_json_value<'q>(
         _ => query.bind(value),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_save_changes_not_connected() {
+        let state = DbState::new();
+        let cs = ChangeSet {
+            updates: vec![],
+            inserts: vec![],
+            deletes: vec![],
+        };
+        let result = state.save_changes("some_table", cs).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+}

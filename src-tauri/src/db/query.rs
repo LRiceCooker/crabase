@@ -270,3 +270,16 @@ fn default_order_clause(columns: &[ColumnInfo]) -> String {
     }
     String::new()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_table_data_not_connected() {
+        let state = DbState::new();
+        let result = state.get_table_data("some_table", 1, 25).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+}

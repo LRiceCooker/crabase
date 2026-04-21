@@ -60,3 +60,15 @@ impl DbState {
         Ok(format!("{}{}", header, inserts.join("\n")))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_drop_table_not_connected() {
+        let state = DbState::new();
+        let result = state.drop_table("test").await;
+        assert!(result.is_err());
+    }
+}

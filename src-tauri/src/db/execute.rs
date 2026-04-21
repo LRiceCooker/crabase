@@ -140,3 +140,16 @@ impl DbState {
         Ok(results)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_execute_query_not_connected() {
+        let state = DbState::new();
+        let result = state.execute_query("SELECT 1").await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+}

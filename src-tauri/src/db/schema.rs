@@ -191,3 +191,24 @@ impl DbState {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_list_tables_not_connected() {
+        let state = DbState::new();
+        let result = state.list_tables().await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+
+    #[tokio::test]
+    async fn test_get_column_info_not_connected() {
+        let state = DbState::new();
+        let result = state.get_column_info("some_table").await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Not connected to any database");
+    }
+}
