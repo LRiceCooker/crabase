@@ -54,6 +54,24 @@ fn normalize_pg_type(type_name: &str) -> &str {
     }
 }
 
+/// Try to decode a column value as `Option<T>`, returning tagged JSON on success,
+/// `Null` for SQL NULL, or a tagged-unknown fallback on decode error.
+fn try_decode<T>(
+    row: &sqlx::postgres::PgRow,
+    idx: usize,
+    canonical: &str,
+    type_name: &str,
+    f: impl FnOnce(T) -> serde_json::Value,
+) -> serde_json::Value
+where
+    T: sqlx::Type<sqlx::Postgres> + for<'r> sqlx::Decode<'r, sqlx::Postgres>,
+{
+    row.try_get::<Option<T>, _>(idx).map_or_else(
+        |_| tagged_unknown(type_name),
+        |opt| opt.map_or(serde_json::Value::Null, |v| tagged(canonical, f(v))),
+    )
+}
+
 /// Convert a PostgreSQL column value to a tagged JSON value.
 /// Output format: `{ "type": "<pg_type>", "value": <json_val> }`.
 /// NULL values are returned as `serde_json::Value::Null` (untagged).
@@ -62,81 +80,34 @@ pub(crate) fn pg_value_to_json(row: &sqlx::postgres::PgRow, idx: usize) -> serde
     let type_name = col.type_info().name();
     let canonical = normalize_pg_type(type_name);
 
-    // Check for NULL first via a raw decode attempt
     match type_name {
-        "BOOL" => match row.try_get::<Option<bool>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::Bool(v)),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "INT2" => match row.try_get::<Option<i16>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::Number(v.into())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "INT4" | "OID" => match row.try_get::<Option<i32>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::Number(v.into())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "INT8" => match row.try_get::<Option<i64>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::Number(v.into())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "FLOAT4" => match row.try_get::<Option<f32>, _>(idx) {
-            Ok(Some(v)) => {
-                let n = serde_json::Number::from_f64(v as f64)
-                    .map(serde_json::Value::Number)
-                    .unwrap_or(serde_json::Value::String(v.to_string()));
-                tagged(canonical, n)
-            }
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "FLOAT8" => match row.try_get::<Option<f64>, _>(idx) {
-            Ok(Some(v)) => {
-                let n = serde_json::Number::from_f64(v)
-                    .map(serde_json::Value::Number)
-                    .unwrap_or(serde_json::Value::String(v.to_string()));
-                tagged(canonical, n)
-            }
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "JSON" | "JSONB" => match row.try_get::<Option<serde_json::Value>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, v),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "TIMESTAMP" => match row.try_get::<Option<NaiveDateTime>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%Y-%m-%d %H:%M:%S").to_string())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "TIMESTAMPTZ" => match row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%Y-%m-%dT%H:%M:%SZ").to_string())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "DATE" => match row.try_get::<Option<NaiveDate>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%Y-%m-%d").to_string())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        "TIME" | "TIMETZ" => match row.try_get::<Option<NaiveTime>, _>(idx) {
-            Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v.format("%H:%M:%S").to_string())),
-            Ok(None) => serde_json::Value::Null,
-            Err(_) => tagged_unknown(type_name),
-        },
-        _ => {
-            // For all other types, try as String first — covers text, varchar,
-            // uuid, inet, cidr, macaddr, interval, xml, numeric, money, bit, range, etc.
-            match row.try_get::<Option<String>, _>(idx) {
-                Ok(Some(v)) => tagged(canonical, serde_json::Value::String(v)),
-                Ok(None) => serde_json::Value::Null,
-                Err(_) => tagged_unknown(type_name),
-            }
-        }
+        "BOOL" => try_decode::<bool>(row, idx, canonical, type_name, serde_json::Value::Bool),
+        "INT2" => try_decode::<i16>(row, idx, canonical, type_name, |v| serde_json::Value::Number(v.into())),
+        "INT4" | "OID" => try_decode::<i32>(row, idx, canonical, type_name, |v| serde_json::Value::Number(v.into())),
+        "INT8" => try_decode::<i64>(row, idx, canonical, type_name, |v| serde_json::Value::Number(v.into())),
+        "FLOAT4" => try_decode::<f32>(row, idx, canonical, type_name, |v| {
+            serde_json::Number::from_f64(f64::from(v))
+                .map_or_else(|| serde_json::Value::String(v.to_string()), serde_json::Value::Number)
+        }),
+        "FLOAT8" => try_decode::<f64>(row, idx, canonical, type_name, |v| {
+            serde_json::Number::from_f64(v)
+                .map_or_else(|| serde_json::Value::String(v.to_string()), serde_json::Value::Number)
+        }),
+        "JSON" | "JSONB" => try_decode::<serde_json::Value>(row, idx, canonical, type_name, |v| v),
+        "TIMESTAMP" => try_decode::<NaiveDateTime>(row, idx, canonical, type_name, |v| {
+            serde_json::Value::String(v.format("%Y-%m-%d %H:%M:%S").to_string())
+        }),
+        "TIMESTAMPTZ" => try_decode::<chrono::DateTime<chrono::Utc>>(row, idx, canonical, type_name, |v| {
+            serde_json::Value::String(v.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+        }),
+        "DATE" => try_decode::<NaiveDate>(row, idx, canonical, type_name, |v| {
+            serde_json::Value::String(v.format("%Y-%m-%d").to_string())
+        }),
+        "TIME" | "TIMETZ" => try_decode::<NaiveTime>(row, idx, canonical, type_name, |v| {
+            serde_json::Value::String(v.format("%H:%M:%S").to_string())
+        }),
+        // For all other types, try as String — covers text, varchar,
+        // uuid, inet, cidr, macaddr, interval, xml, numeric, money, bit, range, etc.
+        _ => try_decode::<String>(row, idx, canonical, type_name, serde_json::Value::String),
     }
 }

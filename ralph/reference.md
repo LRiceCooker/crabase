@@ -25,7 +25,7 @@ let msg = format!("Error: {e}");
 Source: https://doc.rust-lang.org/std/fmt/index.html (captured identifiers section)
 
 ### `if let` vs `match`
-Use `if let` when you only care about one specific pattern and want to ignore all other cases. Eliminates boilerplate `_ => ()` arms. Use `match` when you need exhaustive checking or handle multiple variants.
+Use `if let` when you only care about one specific pattern and want to ignore all other cases. Eliminates boilerplate `_ => ()` arms. Also use when multiple arms are empty (`Ok(None) => {}, Err(_) => {}`). Use `match` when you need exhaustive checking or handle multiple variants.
 
 ```rust
 // Before (avoid) - verbose match for a single pattern
@@ -38,9 +38,38 @@ match config_max {
 if let Some(max) = config_max {
     println!("Max is {max}");
 }
+
+// Also applies to nested patterns with empty arms
+// Before
+match result.await {
+    Ok(Some(path)) => use_path(path),
+    Ok(None) => {}
+    Err(_) => {}
+}
+// After
+if let Ok(Some(path)) = result.await {
+    use_path(path);
+}
 ```
 
 Source: https://doc.rust-lang.org/book/ch06-03-if-let.html
+
+### `map_or` and `map_or_else` on Option/Result
+Use `map_or` to provide a default when the value is `None`/`Err`, and `map_or_else` when the default is computed (closure for both cases). Replaces verbose `match` on `Ok`/`Some` + `Err`/`None`.
+
+```rust
+// Option::map_or — default value for None
+let len = opt_str.map_or(0, |s| s.len());
+
+// Result::map_or_else — closures for both branches
+let value = result.map_or_else(
+    |_err| fallback_value(),
+    |ok_val| transform(ok_val),
+);
+```
+
+Source: https://doc.rust-lang.org/std/option/enum.Option.html#method.map_or
+Source: https://doc.rust-lang.org/std/result/enum.Result.html#method.map_or_else
 
 ### Iterator `.collect()` for HashMap
 Build HashMaps from iterators by collecting tuples `(K, V)`. Use `.zip()` to combine key/value iterators, then `.collect()`.

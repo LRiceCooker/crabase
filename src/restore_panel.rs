@@ -22,10 +22,8 @@ pub fn RestorePanel(
     let on_pick_file = move |_| {
         set_restore_picking.set(true);
         spawn_local(async move {
-            match tauri::pick_backup_file().await {
-                Ok(Some(path)) => set_restore_file.set(Some(path)),
-                Ok(None) => {} // User cancelled
-                Err(_) => {}
+            if let Ok(Some(path)) = tauri::pick_backup_file().await {
+                set_restore_file.set(Some(path));
             }
             set_restore_picking.set(false);
         });

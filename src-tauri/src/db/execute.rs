@@ -30,19 +30,16 @@ impl DbState {
         let mut rows: Vec<Vec<serde_json::Value>> = Vec::new();
 
         while let Some(either) = stream.try_next().await.map_err(|e| format!("{e}"))? {
-            match either {
-                sqlx::Either::Right(row) => {
-                    if columns.is_empty() {
-                        columns = (0..row.len())
-                            .map(|i| row.column(i).name().to_string())
-                            .collect();
-                    }
-                    let row_values: Vec<serde_json::Value> = (0..row.len())
-                        .map(|i| pg_value_to_json(&row, i))
+            if let sqlx::Either::Right(row) = either {
+                if columns.is_empty() {
+                    columns = (0..row.len())
+                        .map(|i| row.column(i).name().to_string())
                         .collect();
-                    rows.push(row_values);
                 }
-                sqlx::Either::Left(_) => {}
+                let row_values: Vec<serde_json::Value> = (0..row.len())
+                    .map(|i| pg_value_to_json(&row, i))
+                    .collect();
+                rows.push(row_values);
             }
         }
 
