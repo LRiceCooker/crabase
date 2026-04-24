@@ -3,7 +3,6 @@
 ## In Progress
 
 ## Backlog
-- [ ] Verify: `cargo check`, `cargo clippy`, `just test-e2e`
 
 ### Phase 43 — Clean Code Pass: Leptos Best Practices
 - [ ] Search the official Leptos docs for each pattern below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
@@ -35,6 +34,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Verify: `cargo check`, `cargo clippy`, `just test-e2e` — zero warnings, 40/40 E2E pass
 - [x] Add `#[must_use]` where appropriate
 - [x] Use `thiserror` for custom error types instead of `String` errors in the backend
 - [x] Replace `Vec::new()` + loop + push with `.iter().map().collect()`
