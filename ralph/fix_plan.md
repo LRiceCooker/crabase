@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 44 — Clean Code Pass: Error Handling & Logging
-- [ ] Verify: `cargo check`, `just test-e2e`
-
 ### Phase 45 — Final Verification
 - [ ] Run `cargo clippy -- -W clippy::all -W clippy::pedantic` on both crates — zero warnings
 - [ ] Run `just test-e2e` — ALL 40 tests pass
@@ -18,6 +15,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Verify: `cargo check`, `just test-e2e` — zero warnings, 40/40 E2E pass (Phase 44 verification)
 - [x] Frontend: ensure all `spawn_local` closures handle errors visibly — fixed 8 silent swallows in main_layout, saved_connections, app
 - [x] Frontend: replace all `web_sys::console::error_1(...)` with unified `log_error(msg)` helper — 2 call sites updated
 - [x] Backend: add `tracing` crate — no println!/eprintln! found in backend, errors already go through AppError
