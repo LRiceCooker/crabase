@@ -3,7 +3,6 @@
 ## In Progress
 
 ## Backlog
-- [ ] Replace manual `HashMap` building with `.collect()` from iterators
 - [ ] Use `&str` instead of `String` for function params that don't need ownership
 - [ ] Replace `Vec::new()` + loop + push with `.iter().map().collect()`
 - [ ] Use `thiserror` for custom error types instead of `String` errors in the backend
@@ -38,6 +37,9 @@
 
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
+
+### Phase 42 (continued)
+- [x] Replace manual `HashMap` building with `.collect()` from iterators
 
 ### Phase 42 (partial)
 - [x] Search the Rust Reference and Clippy lint docs for each idiom below. Add each one to `ralph/reference.md` with a code example and source URL before applying.

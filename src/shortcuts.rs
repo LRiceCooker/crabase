@@ -171,27 +171,29 @@ fn code_to_display(code: &str) -> String {
 
 /// Build the default key bindings for all actions.
 fn default_bindings() -> HashMap<ShortcutAction, KeyBinding> {
-    let mut m = HashMap::new();
-    // General
-    m.insert(ShortcutAction::CommandPalette, KeyBinding::new(true, true, false, "KeyP"));
-    m.insert(ShortcutAction::TableFinder, KeyBinding::new(true, false, false, "KeyP"));
-    m.insert(ShortcutAction::Save, KeyBinding::new(true, false, false, "KeyS"));
-    // Editor
-    m.insert(ShortcutAction::ToggleComment, KeyBinding::new(true, false, false, "Slash"));
-    m.insert(ShortcutAction::ToggleBlockComment, KeyBinding::new(true, true, false, "KeyA"));
-    m.insert(ShortcutAction::Find, KeyBinding::new(true, false, false, "KeyF"));
-    m.insert(ShortcutAction::FindReplace, KeyBinding::new(true, false, true, "KeyF"));
-    m.insert(ShortcutAction::SelectNextOccurrence, KeyBinding::new(true, false, false, "KeyD"));
-    m.insert(ShortcutAction::CopyLineDown, KeyBinding::new(true, true, false, "KeyD"));
-    m.insert(ShortcutAction::MoveLineUp, KeyBinding::new(false, false, true, "ArrowUp"));
-    m.insert(ShortcutAction::MoveLineDown, KeyBinding::new(false, false, true, "ArrowDown"));
-    m.insert(ShortcutAction::DeleteLine, KeyBinding::new(true, true, false, "KeyK"));
-    m.insert(ShortcutAction::GoToLine, KeyBinding::new(true, false, false, "KeyG"));
-    m.insert(ShortcutAction::IndentMore, KeyBinding::new(false, false, false, "Tab"));
-    m.insert(ShortcutAction::IndentLess, KeyBinding::new(false, true, false, "Tab"));
-    // AI
-    m.insert(ShortcutAction::OpenAIChat, KeyBinding::new(true, false, false, "KeyI"));
-    m
+    [
+        // General
+        (ShortcutAction::CommandPalette, KeyBinding::new(true, true, false, "KeyP")),
+        (ShortcutAction::TableFinder, KeyBinding::new(true, false, false, "KeyP")),
+        (ShortcutAction::Save, KeyBinding::new(true, false, false, "KeyS")),
+        // Editor
+        (ShortcutAction::ToggleComment, KeyBinding::new(true, false, false, "Slash")),
+        (ShortcutAction::ToggleBlockComment, KeyBinding::new(true, true, false, "KeyA")),
+        (ShortcutAction::Find, KeyBinding::new(true, false, false, "KeyF")),
+        (ShortcutAction::FindReplace, KeyBinding::new(true, false, true, "KeyF")),
+        (ShortcutAction::SelectNextOccurrence, KeyBinding::new(true, false, false, "KeyD")),
+        (ShortcutAction::CopyLineDown, KeyBinding::new(true, true, false, "KeyD")),
+        (ShortcutAction::MoveLineUp, KeyBinding::new(false, false, true, "ArrowUp")),
+        (ShortcutAction::MoveLineDown, KeyBinding::new(false, false, true, "ArrowDown")),
+        (ShortcutAction::DeleteLine, KeyBinding::new(true, true, false, "KeyK")),
+        (ShortcutAction::GoToLine, KeyBinding::new(true, false, false, "KeyG")),
+        (ShortcutAction::IndentMore, KeyBinding::new(false, false, false, "Tab")),
+        (ShortcutAction::IndentLess, KeyBinding::new(false, true, false, "Tab")),
+        // AI
+        (ShortcutAction::OpenAIChat, KeyBinding::new(true, false, false, "KeyI")),
+    ]
+    .into_iter()
+    .collect()
 }
 
 /// Shortcuts context provided at the app root.

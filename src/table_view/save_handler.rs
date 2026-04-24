@@ -77,11 +77,13 @@ fn build_change_set(
         .into_iter()
         .filter_map(|(row_idx, change_map)| {
             let row = current_rows.get(row_idx)?;
-            let mut pk_values = HashMap::new();
-            for (pk_idx, pk_name) in &pk_cols {
-                let raw = unwrap_tagged_owned(row.get(*pk_idx)?);
-                pk_values.insert(pk_name.clone(), raw);
-            }
+            let pk_values: HashMap<String, serde_json::Value> = pk_cols
+                .iter()
+                .map(|(pk_idx, pk_name)| {
+                    row.get(*pk_idx)
+                        .map(|v| (pk_name.clone(), unwrap_tagged_owned(v)))
+                })
+                .collect::<Option<HashMap<_, _>>>()?;
             let unwrapped_changes: HashMap<String, serde_json::Value> = change_map
                 .into_iter()
                 .map(|(k, v)| (k, unwrap_tagged_owned(&v)))
@@ -98,15 +100,14 @@ fn build_change_set(
         .iter()
         .filter_map(|row_idx| {
             let row = current_rows.get(*row_idx)?;
-            let mut values = HashMap::new();
-            for (i, col) in cols.iter().enumerate() {
-                if let Some(val) = row.get(i) {
-                    let raw = unwrap_tagged_owned(val);
-                    if !raw.is_null() {
-                        values.insert(col.name.clone(), raw);
-                    }
-                }
-            }
+            let values: HashMap<String, serde_json::Value> = cols
+                .iter()
+                .enumerate()
+                .filter_map(|(i, col)| {
+                    let raw = unwrap_tagged_owned(row.get(i)?);
+                    (!raw.is_null()).then(|| (col.name.clone(), raw))
+                })
+                .collect();
             Some(tauri::RowInsert { values })
         })
         .collect();
@@ -116,11 +117,13 @@ fn build_change_set(
         .iter()
         .filter_map(|row_idx| {
             let row = current_rows.get(*row_idx)?;
-            let mut pk_values = HashMap::new();
-            for (pk_idx, pk_name) in &pk_cols {
-                let raw = unwrap_tagged_owned(row.get(*pk_idx)?);
-                pk_values.insert(pk_name.clone(), raw);
-            }
+            let pk_values: HashMap<String, serde_json::Value> = pk_cols
+                .iter()
+                .map(|(pk_idx, pk_name)| {
+                    row.get(*pk_idx)
+                        .map(|v| (pk_name.clone(), unwrap_tagged_owned(v)))
+                })
+                .collect::<Option<HashMap<_, _>>>()?;
             Some(tauri::RowDelete { pk_values })
         })
         .collect();
