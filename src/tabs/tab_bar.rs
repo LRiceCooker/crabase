@@ -96,7 +96,7 @@ impl TabState {
     /// Check if a tab is dirty.
     #[allow(dead_code)]
     pub fn is_dirty(&self, id: usize) -> bool {
-        self.dirty_tabs.get().contains(&id)
+        self.dirty_tabs.with(|s| s.contains(&id))
     }
 
     /// Close a tab by id. If the closed tab was active, activate an adjacent tab.
@@ -209,7 +209,7 @@ pub fn TabBar(
                             }}
                             // Dirty indicator dot
                             {move || {
-                                if dirty_tabs.get().contains(&tab_id) {
+                                if dirty_tabs.with(|s| s.contains(&tab_id)) {
                                     Some(view! {
                                         <span class="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-zinc-500 shrink-0" />
                                     })

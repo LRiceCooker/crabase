@@ -129,7 +129,7 @@ pub fn TablesList(
                     }).collect::<Vec<_>>()
                 }}
             </div>
-            {move || if tables.get().is_empty() {
+            {move || if tables.with(|t| t.is_empty()) {
                 Some(view! {
                     <p class="text-[13px] text-gray-400 dark:text-zinc-500 italic px-3">"No tables found"</p>
                 })

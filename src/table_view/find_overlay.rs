@@ -31,14 +31,14 @@ pub fn FindOverlay(
     });
 
     let go_next = move |_| {
-        let count = matches.get().len();
+        let count = matches.with(|m| m.len());
         if count > 0 {
             current_match.update(|i| *i = (*i + 1) % count);
         }
     };
 
     let go_prev = move |_| {
-        let count = matches.get().len();
+        let count = matches.with(|m| m.len());
         if count > 0 {
             current_match.update(|i| {
                 if *i == 0 {
@@ -82,7 +82,7 @@ pub fn FindOverlay(
                 // Match count
                 <span class="text-[11px] text-gray-400 dark:text-zinc-500 whitespace-nowrap min-w-[40px] text-right">
                     {move || {
-                        let count = matches.get().len();
+                        let count = matches.with(|m| m.len());
                         let query = search_query.get();
                         if query.is_empty() {
                             String::new()

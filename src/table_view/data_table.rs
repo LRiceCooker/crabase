@@ -315,7 +315,7 @@ pub fn DataTable(
                                             let cursor = if is_readonly { "cursor-default" } else { "cursor-pointer" };
                                             let is_find_match = highlighted_cells
                                                 .as_ref()
-                                                .map(|hc| hc.get().contains(&(row_idx, col_idx)))
+                                                .map(|hc| hc.with(|s| s.contains(&(row_idx, col_idx))))
                                                 .unwrap_or(false);
                                             let is_current_find_match = find_current_match
                                                 .as_ref()

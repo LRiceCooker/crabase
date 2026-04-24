@@ -66,9 +66,9 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
 
     // Add row callback
     let on_add_row = Callback::new(move |_: ()| {
-        let col_count = columns.get().len();
+        let col_count = columns.with(|c| c.len());
         rows.update(|r| r.push(vec![serde_json::Value::Null; col_count]));
-        changes.mark_row_added(rows.get().len() - 1);
+        changes.mark_row_added(rows.with(|r| r.len()) - 1);
     });
 
     // Save / discard

@@ -5,12 +5,6 @@
 ## Backlog
 
 ### Phase 43 — Clean Code Pass: Leptos Best Practices
-- [ ] Search the official Leptos docs for each pattern below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
-- [ ] Use `ReadSignal` in props instead of `RwSignal` when the child doesn't write
-- [ ] Use `Memo` for derived computations instead of `Effect` writing to another signal
-- [ ] Replace manual conditional rendering with `Show` component where appropriate
-- [ ] Use `For` component instead of `.into_iter().map().collect::<Vec<_>>()` for reactive lists
-- [ ] Replace `.get()` with `.with(|v| ...)` where you only need a reference
 - [ ] Add `///` doc comments to every component
 - [ ] Ensure every component follows SRP — one responsibility, under 150 lines ideally
 - [ ] Verify: `cargo check`, `just test-e2e`
@@ -34,6 +28,12 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Replace `.get()` with `.with(|v| ...)` where you only need a reference — converted 15 calls on Vec/HashSet/HashMap signals
+- [x] Use `For` component instead of `.into_iter().map().collect()` for reactive lists — all lists are small/static, per Leptos docs .collect() is fine
+- [x] Replace manual conditional rendering with `Show` component where appropriate — no appropriate candidates (multi-branch, lightweight, or equivalent to if/else)
+- [x] Use `Memo` for derived computations instead of `Effect` writing to another signal — no candidates found, all Effects are legitimate side effects
+- [x] Use `ReadSignal` in props instead of `RwSignal` when the child doesn't write — all RwSignal props are correctly used (all write)
+- [x] Search the official Leptos docs for each pattern below — already in `ralph/reference.md` from Phase 39
 - [x] Verify: `cargo check`, `cargo clippy`, `just test-e2e` — zero warnings, 40/40 E2E pass
 - [x] Add `#[must_use]` where appropriate
 - [x] Use `thiserror` for custom error types instead of `String` errors in the backend

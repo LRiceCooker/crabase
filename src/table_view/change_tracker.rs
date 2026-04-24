@@ -54,7 +54,7 @@ impl ChangeTracker {
             s.insert(row);
         });
         // If an added row is deleted, just remove both markers
-        if self.added_rows.get().contains(&row) {
+        if self.added_rows.with(|s| s.contains(&row)) {
             self.added_rows.update(|s| {
                 s.remove(&row);
             });
@@ -73,22 +73,19 @@ impl ChangeTracker {
     }
 
     pub fn is_cell_modified(&self, row: usize, col: usize) -> bool {
-        self.modified_cells.get().contains_key(&(row, col))
+        self.modified_cells.with(|m| m.contains_key(&(row, col)))
     }
 
     pub fn is_row_modified(&self, row: usize) -> bool {
-        self.modified_cells
-            .get()
-            .keys()
-            .any(|(r, _)| *r == row)
+        self.modified_cells.with(|m| m.keys().any(|(r, _)| *r == row))
     }
 
     pub fn is_row_added(&self, row: usize) -> bool {
-        self.added_rows.get().contains(&row)
+        self.added_rows.with(|s| s.contains(&row))
     }
 
     pub fn is_row_deleted(&self, row: usize) -> bool {
-        self.deleted_rows.get().contains(&row)
+        self.deleted_rows.with(|s| s.contains(&row))
     }
 
     /// Total number of pending changes.
@@ -112,9 +109,9 @@ impl ChangeTracker {
     }
 
     pub fn has_changes(&self) -> bool {
-        !self.modified_cells.get().is_empty()
-            || !self.added_rows.get().is_empty()
-            || !self.deleted_rows.get().is_empty()
+        !self.modified_cells.with(|m| m.is_empty())
+            || !self.added_rows.with(|s| s.is_empty())
+            || !self.deleted_rows.with(|s| s.is_empty())
     }
 
     /// Discard all tracked changes.
