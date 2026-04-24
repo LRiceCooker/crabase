@@ -32,6 +32,7 @@ impl Default for DbState {
 }
 
 impl DbState {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -99,6 +100,7 @@ impl DbState {
     }
 }
 
+#[must_use]
 pub fn build_connection_string(info: &ConnectionInfo) -> String {
     let password_part = if info.password.is_empty() {
         String::new()

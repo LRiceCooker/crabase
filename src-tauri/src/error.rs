@@ -2,6 +2,7 @@ use thiserror::Error;
 
 /// Unified error type for all backend operations.
 #[derive(Error, Debug)]
+#[must_use]
 pub enum AppError {
     /// Database pool is not available (not connected).
     #[error("Not connected to any database")]
@@ -46,6 +47,7 @@ pub enum AppError {
 
 impl AppError {
     /// Create a database error with context.
+    #[must_use]
     pub fn db(context: impl Into<String>, source: sqlx::Error) -> Self {
         Self::Database {
             context: context.into(),
@@ -54,6 +56,7 @@ impl AppError {
     }
 
     /// Create an I/O error with context.
+    #[must_use]
     pub fn io(context: impl Into<String>, source: std::io::Error) -> Self {
         Self::Io {
             context: context.into(),
@@ -62,6 +65,7 @@ impl AppError {
     }
 
     /// Create a JSON error with context.
+    #[must_use]
     pub fn json(context: impl Into<String>, source: serde_json::Error) -> Self {
         Self::Json {
             context: context.into(),

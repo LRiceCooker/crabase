@@ -3,6 +3,7 @@ use std::io::BufRead;
 use tauri::Emitter;
 
 /// Get the user's default shell, falling back to /bin/zsh.
+#[must_use]
 pub fn user_shell() -> String {
     std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
 }
@@ -10,6 +11,7 @@ pub fn user_shell() -> String {
 /// Check if claude is available via user's login shell.
 /// Uses -l (login) AND -i (interactive) to ensure ~/.zshrc is sourced,
 /// which is where tools like mise/nvm/volta configure PATH.
+#[must_use]
 pub fn is_installed() -> bool {
     let shell = user_shell();
     std::process::Command::new(&shell)

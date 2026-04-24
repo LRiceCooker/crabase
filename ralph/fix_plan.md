@@ -3,7 +3,6 @@
 ## In Progress
 
 ## Backlog
-- [ ] Add `#[must_use]` where appropriate
 - [ ] Verify: `cargo check`, `cargo clippy`, `just test-e2e`
 
 ### Phase 43 — Clean Code Pass: Leptos Best Practices
@@ -36,6 +35,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Add `#[must_use]` where appropriate
 - [x] Use `thiserror` for custom error types instead of `String` errors in the backend
 - [x] Replace `Vec::new()` + loop + push with `.iter().map().collect()`
 - [x] Use `&str` instead of `String` for function params that don't need ownership

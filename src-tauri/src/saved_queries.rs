@@ -16,11 +16,13 @@ pub struct SavedQuery {
 type QueriesStore = HashMap<String, Vec<SavedQuery>>;
 
 /// Build a connection key from host:port:dbname:user.
+#[must_use]
 pub fn connection_key(host: &str, port: u16, dbname: &str, user: &str) -> String {
     format!("{host}:{port}:{dbname}:{user}")
 }
 
 /// Build a connection key from a `ConnectionInfo` struct.
+#[must_use]
 pub fn connection_key_from_info(info: &crate::db::ConnectionInfo) -> String {
     connection_key(&info.host, info.port, &info.dbname, &info.user)
 }
