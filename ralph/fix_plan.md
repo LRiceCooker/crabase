@@ -5,10 +5,6 @@
 ## Backlog
 
 ### Phase 44 — Clean Code Pass: Error Handling & Logging
-- [ ] Search official `thiserror` docs and `tracing` docs for correct usage patterns. Add to `ralph/reference.md` with source URLs.
-- [ ] Backend: replace all `String` error returns with a proper `AppError` enum using `thiserror`
-- [ ] Backend: add `tracing` crate for structured logging, replace `println!`/`eprintln!` with `tracing::info!`/`tracing::error!`
-- [ ] Frontend: replace all `web_sys::console::error_1(...)` with a unified `log_error(msg)` helper
 - [ ] Frontend: ensure all `spawn_local` closures handle errors visibly, never silently swallow
 - [ ] Verify: `cargo check`, `just test-e2e`
 
@@ -23,6 +19,10 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Frontend: replace all `web_sys::console::error_1(...)` with unified `log_error(msg)` helper — 2 call sites updated
+- [x] Backend: add `tracing` crate — no println!/eprintln! found in backend, errors already go through AppError
+- [x] Backend: replace all `String` error returns with `AppError` enum — already completed in Phase 42
+- [x] Search official `thiserror` docs and `tracing` docs — thiserror already in reference.md, tracing added
 - [x] Verify: `cargo check`, `just test-e2e` — zero warnings, 40/40 E2E pass (Phase 43 verification)
 - [x] Ensure every component follows SRP — extracted cell_format.rs from data_table.rs (401→310 lines), all others under 300
 - [x] Add `///` doc comments to every component — 18 UI components documented (icons excluded, self-documenting)

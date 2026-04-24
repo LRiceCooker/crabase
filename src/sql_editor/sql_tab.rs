@@ -126,7 +126,7 @@ pub fn SqlTab(
                     }
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to save query: {e}").into());
+                    crate::log::log_error(&format!("Failed to save query: {e}"));
                 }
             }
         });

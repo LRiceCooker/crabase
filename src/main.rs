@@ -12,6 +12,7 @@ mod content_area;
 mod global_shortcuts;
 mod header_bar;
 mod header_edit_form;
+mod log;
 pub mod icons;
 mod main_layout;
 pub mod overlay;

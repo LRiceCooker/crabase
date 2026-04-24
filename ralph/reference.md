@@ -497,3 +497,24 @@ where
 
 Source: https://book.leptos.dev/view/09_component_children.html
 
+## Logging & Tracing
+
+### `tracing` crate for structured logging
+Use `tracing` instead of `println!`/`eprintln!` for structured, leveled logging. Macros: `trace!`, `debug!`, `info!`, `warn!`, `error!`. Supports structured fields via `key = value` syntax.
+
+```rust
+use tracing::{info, warn, error};
+
+info!("Connected to database");
+warn!(table = %table_name, "Table not found");
+error!(?err, "Query failed");
+```
+
+Initialize with a subscriber (e.g., `tracing_subscriber::fmt`):
+```rust
+tracing_subscriber::fmt::init();
+```
+
+Source: https://docs.rs/tracing/latest/tracing/
+Source: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/
+

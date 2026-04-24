@@ -31,7 +31,7 @@ pub fn execute_save(
                 refetch.run(());
             }
             Err(e) => {
-                web_sys::console::error_1(&format!("Save failed: {e}").into());
+                crate::log::log_error(&format!("Save failed: {e}"));
             }
         }
     });
