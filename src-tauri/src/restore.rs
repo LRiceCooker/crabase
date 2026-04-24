@@ -84,12 +84,13 @@ pub fn run_pg_restore_streaming(
     let app_clone = app_handle.clone();
     let stderr_thread = std::thread::spawn(move || {
         let reader = std::io::BufReader::new(stderr);
-        let mut lines = Vec::new();
-        for line in reader.lines().flatten() {
-            let _ = app_clone.emit("restore-log", &line);
-            lines.push(line);
-        }
-        lines
+        reader
+            .lines()
+            .flatten()
+            .inspect(|line| {
+                let _ = app_clone.emit("restore-log", line);
+            })
+            .collect()
     });
 
     // Read stdout in current thread
@@ -98,13 +99,15 @@ pub fn run_pg_restore_streaming(
         .take()
         .ok_or_else(|| "Failed to capture pg_restore stdout".to_string())?;
     let reader = std::io::BufReader::new(stdout);
-    let mut stdout_lines = Vec::new();
-    for line in reader.lines().flatten() {
-        let _ = app_handle.emit("restore-log", &line);
-        stdout_lines.push(line);
-    }
+    let stdout_lines: Vec<String> = reader
+        .lines()
+        .flatten()
+        .inspect(|line| {
+            let _ = app_handle.emit("restore-log", line);
+        })
+        .collect();
 
-    let stderr_lines = stderr_thread.join().unwrap_or_default();
+    let stderr_lines: Vec<String> = stderr_thread.join().unwrap_or_default();
     let status = child
         .wait()
         .map_err(|e| format!("Failed to wait for pg_restore: {e}"))?;

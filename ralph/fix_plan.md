@@ -3,7 +3,6 @@
 ## In Progress
 
 ## Backlog
-- [ ] Replace `Vec::new()` + loop + push with `.iter().map().collect()`
 - [ ] Use `thiserror` for custom error types instead of `String` errors in the backend
 - [ ] Add `#[must_use]` where appropriate
 - [ ] Verify: `cargo check`, `cargo clippy`, `just test-e2e`
@@ -38,6 +37,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Replace `Vec::new()` + loop + push with `.iter().map().collect()`
 - [x] Use `&str` instead of `String` for function params that don't need ownership
 - [x] Replace manual `HashMap` building with `.collect()` from iterators
 

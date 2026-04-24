@@ -42,8 +42,7 @@ impl DbState {
 
         let col_names: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c.name.replace('"', "\"\""))).collect();
         let header = format!("-- Export of {}\n", qualified);
-        let mut inserts = Vec::new();
-        for row in &rows {
+        let inserts: Vec<String> = rows.iter().map(|row| {
             let values: Vec<String> = (0..columns.len()).map(|i| {
                 let val = pg_value_to_json(row, i);
                 let inner = if let Some(v) = val.get("value") { v.clone() } else if let Some(r) = val.get("raw") { r.clone() } else { val };
@@ -55,8 +54,8 @@ impl DbState {
                     other => format!("'{}'", serde_json::to_string(&other).unwrap_or_default().replace('\'', "''")),
                 }
             }).collect();
-            inserts.push(format!("INSERT INTO {} ({}) VALUES ({});", qualified, col_names.join(", "), values.join(", ")));
-        }
+            format!("INSERT INTO {} ({}) VALUES ({});", qualified, col_names.join(", "), values.join(", "))
+        }).collect();
         Ok(format!("{header}{}", inserts.join("\n")))
     }
 }
