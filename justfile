@@ -30,3 +30,6 @@ test-server:
 
 test-e2e:
     npx playwright test --config tests/e2e/playwright.config.ts
+
+test-e2e-headed:
+    npx playwright test --config tests/e2e/playwright.config.ts --headed

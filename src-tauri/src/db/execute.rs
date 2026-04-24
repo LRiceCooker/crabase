@@ -29,7 +29,7 @@ impl DbState {
         let mut columns: Vec<String> = Vec::new();
         let mut rows: Vec<Vec<serde_json::Value>> = Vec::new();
 
-        while let Some(either) = stream.try_next().await.map_err(|e| format!("{}", e))? {
+        while let Some(either) = stream.try_next().await.map_err(|e| format!("{e}"))? {
             match either {
                 sqlx::Either::Right(row) => {
                     if columns.is_empty() {
@@ -68,7 +68,7 @@ impl DbState {
         let statements: Vec<&str> = sql.split(';').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
         let mut stmt_idx = 0usize;
 
-        while let Some(either) = stream.try_next().await.map_err(|e| format!("{}", e))? {
+        while let Some(either) = stream.try_next().await.map_err(|e| format!("{e}"))? {
             match either {
                 sqlx::Either::Right(row) => {
                     // Data row — accumulate into current result

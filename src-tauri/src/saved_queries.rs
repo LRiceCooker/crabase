@@ -16,7 +16,7 @@ type QueriesStore = HashMap<String, Vec<SavedQuery>>;
 
 /// Build a connection key from host:port:dbname:user.
 pub fn connection_key(host: &str, port: u16, dbname: &str, user: &str) -> String {
-    format!("{}:{}:{}:{}", host, port, dbname, user)
+    format!("{host}:{port}:{dbname}:{user}")
 }
 
 /// Build a connection key from a `ConnectionInfo` struct.
@@ -28,9 +28,9 @@ fn queries_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
     fs::create_dir_all(&data_dir)
-        .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+        .map_err(|e| format!("Failed to create app data dir: {e}"))?;
     Ok(data_dir.join("saved_queries.json"))
 }
 
@@ -40,15 +40,15 @@ fn read_store(app_handle: &tauri::AppHandle) -> Result<QueriesStore, String> {
         return Ok(HashMap::new());
     }
     let data =
-        fs::read_to_string(&path).map_err(|e| format!("Failed to read saved queries: {}", e))?;
-    serde_json::from_str(&data).map_err(|e| format!("Failed to parse saved queries: {}", e))
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read saved queries: {e}"))?;
+    serde_json::from_str(&data).map_err(|e| format!("Failed to parse saved queries: {e}"))
 }
 
 fn write_store(app_handle: &tauri::AppHandle, store: &QueriesStore) -> Result<(), String> {
     let path = queries_file(app_handle)?;
     let data = serde_json::to_string_pretty(store)
-        .map_err(|e| format!("Failed to serialize saved queries: {}", e))?;
-    fs::write(&path, data).map_err(|e| format!("Failed to write saved queries: {}", e))
+        .map_err(|e| format!("Failed to serialize saved queries: {e}"))?;
+    fs::write(&path, data).map_err(|e| format!("Failed to write saved queries: {e}"))
 }
 
 pub fn save_query(
@@ -63,7 +63,7 @@ pub fn save_query(
     let mut store = read_store(app_handle)?;
     let queries = store.entry(conn_key.to_string()).or_default();
     if queries.iter().any(|q| q.name == name) {
-        return Err(format!("A query named '{}' already exists", name));
+        return Err(format!("A query named '{name}' already exists"));
     }
     queries.push(SavedQuery { name, sql });
     write_store(app_handle, &store)
@@ -80,7 +80,7 @@ pub fn update_query(
     let query = queries
         .iter_mut()
         .find(|q| q.name == name)
-        .ok_or_else(|| format!("Query '{}' not found", name))?;
+        .ok_or_else(|| format!("Query '{name}' not found"))?;
     query.sql = sql;
     write_store(app_handle, &store)
 }
@@ -97,12 +97,12 @@ pub fn rename_query(
     let mut store = read_store(app_handle)?;
     let queries = store.entry(conn_key.to_string()).or_default();
     if queries.iter().any(|q| q.name == new_name) {
-        return Err(format!("A query named '{}' already exists", new_name));
+        return Err(format!("A query named '{new_name}' already exists"));
     }
     let query = queries
         .iter_mut()
         .find(|q| q.name == old_name)
-        .ok_or_else(|| format!("Query '{}' not found", old_name))?;
+        .ok_or_else(|| format!("Query '{old_name}' not found"))?;
     query.name = new_name;
     write_store(app_handle, &store)
 }
@@ -117,7 +117,7 @@ pub fn delete_query(
     let original_len = queries.len();
     queries.retain(|q| q.name != name);
     if queries.len() == original_len {
-        return Err(format!("Query '{}' not found", name));
+        return Err(format!("Query '{name}' not found"));
     }
     write_store(app_handle, &store)
 }
@@ -141,7 +141,7 @@ pub fn load_query(
         .iter()
         .find(|q| q.name == name)
         .cloned()
-        .ok_or_else(|| format!("Query '{}' not found", name))
+        .ok_or_else(|| format!("Query '{name}' not found"))
 }
 
 #[cfg(test)]

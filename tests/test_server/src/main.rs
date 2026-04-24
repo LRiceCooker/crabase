@@ -90,7 +90,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
                     .cloned()
                     .ok_or("Missing info")?,
             )
-            .map_err(|e| format!("Invalid info: {}", e))?;
+            .map_err(|e| format!("Invalid info: {e}"))?;
             state.db.connect(info).await?;
             Ok(serde_json::json!("Connected successfully"))
         }
@@ -167,11 +167,11 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             let filters: Vec<db::Filter> = serde_json::from_value(
                 body.get("filters").cloned().unwrap_or(Value::Array(vec![])),
             )
-            .map_err(|e| format!("Invalid filters: {}", e))?;
+            .map_err(|e| format!("Invalid filters: {e}"))?;
             let sort: Vec<db::SortCol> = serde_json::from_value(
                 body.get("sort").cloned().unwrap_or(Value::Array(vec![])),
             )
-            .map_err(|e| format!("Invalid sort: {}", e))?;
+            .map_err(|e| format!("Invalid sort: {e}"))?;
             let data = state
                 .db
                 .get_table_data_filtered(table_name, page, page_size, filters, sort)
@@ -188,7 +188,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             let changes: db::ChangeSet = serde_json::from_value(
                 body.get("changes").cloned().ok_or("Missing changes")?,
             )
-            .map_err(|e| format!("Invalid changes: {}", e))?;
+            .map_err(|e| format!("Invalid changes: {e}"))?;
             let msg = state.db.save_changes(table_name, changes).await?;
             Ok(serde_json::json!(msg))
         }
@@ -258,7 +258,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
                     .cloned()
                     .ok_or("Missing tableNames")?,
             )
-            .map_err(|e| format!("Invalid tableNames: {}", e))?;
+            .map_err(|e| format!("Invalid tableNames: {e}"))?;
             let result = state.db.get_columns_for_autocomplete(&table_names).await?;
             Ok(serde_json::to_value(result).unwrap())
         }
@@ -279,7 +279,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             let new_settings: Settings = serde_json::from_value(
                 body.get("settings").cloned().ok_or("Missing settings")?,
             )
-            .map_err(|e| format!("Invalid settings: {}", e))?;
+            .map_err(|e| format!("Invalid settings: {e}"))?;
             let mut settings = state.settings.write().await;
             *settings = new_settings;
             Ok(Value::Null)
@@ -294,7 +294,7 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
             let info: db::ConnectionInfo = serde_json::from_value(
                 body.get("info").cloned().ok_or("Missing info")?,
             )
-            .map_err(|e| format!("Invalid info: {}", e))?;
+            .map_err(|e| format!("Invalid info: {e}"))?;
             if name.trim().is_empty() {
                 return Err("Connection name cannot be empty".to_string());
             }
@@ -444,11 +444,11 @@ async fn dispatch(command: &str, body: &Value, state: &AppState) -> Result<Value
                 .and_then(|v| v.as_str())
                 .ok_or("Missing content")?;
             fs::write(path, content)
-                .map_err(|e| format!("Failed to write file: {}", e))?;
+                .map_err(|e| format!("Failed to write file: {e}"))?;
             Ok(Value::Null)
         }
 
-        _ => Err(format!("Unknown command: {}", command)),
+        _ => Err(format!("Unknown command: {command}")),
     }
 }
 

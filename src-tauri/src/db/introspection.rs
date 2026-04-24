@@ -32,7 +32,7 @@ impl DbState {
         )
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to get schema info: {}", e))?;
+        .map_err(|e| format!("Failed to get schema info: {e}"))?;
 
         // Build text representation
         let mut output = String::new();
@@ -44,16 +44,16 @@ impl DbState {
                 if !current_schema.is_empty() {
                     output.push('\n');
                 }
-                output.push_str(&format!("Schema: {}\n", schema));
+                output.push_str(&format!("Schema: {schema}\n"));
                 current_schema = schema;
                 current_table.clear();
             }
             if table != current_table {
-                output.push_str(&format!("  Table: {}\n", table));
+                output.push_str(&format!("  Table: {table}\n"));
                 current_table = table;
             }
             let pk = if constraint.as_deref() == Some("PRIMARY KEY") { " [PK]" } else { "" };
-            output.push_str(&format!("    {} {}{}\n", column, data_type, pk));
+            output.push_str(&format!("    {column} {data_type}{pk}\n"));
         }
 
         Ok(output)

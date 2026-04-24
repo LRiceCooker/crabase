@@ -12,12 +12,12 @@ pub fn set_icon(is_dark: bool, app_handle: &tauri::AppHandle) -> Result<(), Stri
     let decoder = png::Decoder::new(std::io::Cursor::new(png_bytes));
     let mut reader = decoder
         .read_info()
-        .map_err(|e| format!("PNG decode error: {}", e))?;
+        .map_err(|e| format!("PNG decode error: {e}"))?;
     let info = reader.info().clone();
     let mut buf = vec![0u8; info.raw_bytes()];
     reader
         .next_frame(&mut buf)
-        .map_err(|e| format!("PNG frame error: {}", e))?;
+        .map_err(|e| format!("PNG frame error: {e}"))?;
 
     let icon = tauri::image::Image::new_owned(buf, info.width, info.height);
 

@@ -43,14 +43,14 @@ impl DbState {
         // Use quoted identifiers to prevent SQL injection
         let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
         let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
-        let qualified_table = format!("{}.{}", quoted_schema, quoted_table);
+        let qualified_table = format!("{quoted_schema}.{quoted_table}");
 
         // Get total count
-        let count_query = format!("SELECT COUNT(*) as cnt FROM {}", qualified_table);
+        let count_query = format!("SELECT COUNT(*) as cnt FROM {qualified_table}");
         let count_row: (i64,) = sqlx::query_as(&count_query)
             .fetch_one(&pool)
             .await
-            .map_err(|e| format!("Failed to get row count: {}", e))?;
+            .map_err(|e| format!("Failed to get row count: {e}"))?;
         let total_count = count_row.0 as u64;
 
         // Get paginated rows with smart default ordering
@@ -59,14 +59,13 @@ impl DbState {
         let order_clause = default_order_clause(&columns);
         let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
         let data_query = format!(
-            "SELECT {} FROM {}{} LIMIT {} OFFSET {}",
-            select_cols, qualified_table, order_clause, page_size, offset
+            "SELECT {select_cols} FROM {qualified_table}{order_clause} LIMIT {page_size} OFFSET {offset}"
         );
 
         let pg_rows = sqlx::query(&data_query)
             .fetch_all(&pool)
             .await
-            .map_err(|e| format!("Failed to get table data: {}", e))?;
+            .map_err(|e| format!("Failed to get table data: {e}"))?;
 
         let rows: Vec<Vec<serde_json::Value>> = pg_rows
             .iter()
@@ -99,7 +98,7 @@ impl DbState {
 
         let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
         let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
-        let qualified_table = format!("{}.{}", quoted_schema, quoted_table);
+        let qualified_table = format!("{quoted_schema}.{quoted_table}");
 
         // Build WHERE clause from filters
         let where_clause = build_filter_where_clause(&filters);
@@ -119,7 +118,7 @@ impl DbState {
         let count_row: (i64,) = sqlx::query_as(&count_query)
             .fetch_one(&pool)
             .await
-            .map_err(|e| format!("Failed to get row count: {}", e))?;
+            .map_err(|e| format!("Failed to get row count: {e}"))?;
         let total_count = count_row.0 as u64;
 
         // Get paginated filtered rows
@@ -127,14 +126,13 @@ impl DbState {
         let select_cols = build_select_columns(&columns);
         let offset = (page.saturating_sub(1)) as i64 * page_size as i64;
         let data_query = format!(
-            "SELECT {} FROM {}{}{} LIMIT {} OFFSET {}",
-            select_cols, qualified_table, where_clause, order_clause, page_size, offset
+            "SELECT {select_cols} FROM {qualified_table}{where_clause}{order_clause} LIMIT {page_size} OFFSET {offset}"
         );
 
         let pg_rows = sqlx::query(&data_query)
             .fetch_all(&pool)
             .await
-            .map_err(|e| format!("Failed to get table data: {}", e))?;
+            .map_err(|e| format!("Failed to get table data: {e}"))?;
 
         let rows: Vec<Vec<serde_json::Value>> = pg_rows
             .iter()
@@ -161,7 +159,7 @@ fn build_select_columns(columns: &[ColumnInfo]) -> String {
         .map(|col| {
             let quoted = format!("\"{}\"", col.name.replace('"', "\"\""));
             if col.is_enum || col.is_array {
-                format!("{}::text AS {}", quoted, quoted)
+                format!("{quoted}::text AS {quoted}")
             } else {
                 quoted
             }
@@ -224,7 +222,7 @@ fn build_filter_where_clause(filters: &[Filter]) -> String {
                 "XOR" => "XOR",
                 _ => "AND",
             };
-            parts.push(format!("{} {}", comb, condition));
+            parts.push(format!("{comb} {condition}"));
         }
     }
     format!(" WHERE {}", parts.join(" "))
@@ -244,7 +242,7 @@ fn build_order_clause(sort: &[SortCol]) -> String {
             } else {
                 "ASC"
             };
-            format!("{} {}", quoted_col, dir)
+            format!("{quoted_col} {dir}")
         })
         .collect();
     format!(" ORDER BY {}", parts.join(", "))

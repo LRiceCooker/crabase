@@ -41,12 +41,12 @@ impl DbState {
 
         let quoted_schema = format!("\"{}\"", schema.replace('"', "\"\""));
         let quoted_table = format!("\"{}\"", table_name.replace('"', "\"\""));
-        let qualified_table = format!("{}.{}", quoted_schema, quoted_table);
+        let qualified_table = format!("{quoted_schema}.{quoted_table}");
 
         let mut tx = pool
             .begin()
             .await
-            .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+            .map_err(|e| format!("Failed to begin transaction: {e}"))?;
 
         let mut total_affected = 0u64;
 
@@ -56,7 +56,7 @@ impl DbState {
                 continue;
             }
             let (where_clause, values) = build_where_clause(&delete.pk_values, 1);
-            let sql = format!("DELETE FROM {} WHERE {}", qualified_table, where_clause);
+            let sql = format!("DELETE FROM {qualified_table} WHERE {where_clause}");
             let mut query = sqlx::query(&sql);
             for v in &values {
                 query = bind_json_value(query, v);
@@ -64,7 +64,7 @@ impl DbState {
             let result = query
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| format!("Delete failed: {}", e))?;
+                .map_err(|e| format!("Delete failed: {e}"))?;
             total_affected += result.rows_affected();
         }
 
@@ -89,7 +89,7 @@ impl DbState {
             let result = query
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| format!("Update failed: {}", e))?;
+                .map_err(|e| format!("Update failed: {e}"))?;
             total_affected += result.rows_affected();
         }
 
@@ -103,7 +103,7 @@ impl DbState {
                 .iter()
                 .map(|c| format!("\"{}\"", c.replace('"', "\"\"")))
                 .collect();
-            let placeholders: Vec<String> = (1..=cols.len()).map(|i| format!("${}", i)).collect();
+            let placeholders: Vec<String> = (1..=cols.len()).map(|i| format!("${i}")).collect();
             let sql = format!(
                 "INSERT INTO {} ({}) VALUES ({})",
                 qualified_table,
@@ -119,15 +119,15 @@ impl DbState {
             let result = query
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| format!("Insert failed: {}", e))?;
+                .map_err(|e| format!("Insert failed: {e}"))?;
             total_affected += result.rows_affected();
         }
 
         tx.commit()
             .await
-            .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+            .map_err(|e| format!("Failed to commit transaction: {e}"))?;
 
-        Ok(format!("{} rows affected", total_affected))
+        Ok(format!("{total_affected} rows affected"))
     }
 }
 
@@ -139,7 +139,7 @@ fn build_where_clause(pk_values: &HashMap<String, serde_json::Value>, start_idx:
     let mut idx = start_idx;
     for (col, val) in pk_values {
         let quoted_col = format!("\"{}\"", col.replace('"', "\"\""));
-        parts.push(format!("{} = ${}", quoted_col, idx));
+        parts.push(format!("{quoted_col} = ${idx}"));
         values.push(val);
         idx += 1;
     }
@@ -154,7 +154,7 @@ fn build_set_clause(changes: &HashMap<String, serde_json::Value>) -> (String, Ve
     let mut idx = 1;
     for (col, val) in changes {
         let quoted_col = format!("\"{}\"", col.replace('"', "\"\""));
-        parts.push(format!("{} = ${}", quoted_col, idx));
+        parts.push(format!("{quoted_col} = ${idx}"));
         values.push(val);
         idx += 1;
     }

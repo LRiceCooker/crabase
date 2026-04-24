@@ -34,6 +34,26 @@
 - One component per file (split aggressively, follow specs/project.md architecture)
 - **Never silently render a non-NULL value as NULL** because the type isn't supported. Backend must return the value tagged with its Postgres type, frontend must dispatch to the correct specialized editor. See "Postgres Type Support" section in specs/project.md for the full type mapping.
 
+## Testing
+- **Playwright/WebdriverIO cannot drive Tauri's WKWebView on macOS** — do NOT attempt to use them for E2E testing
+- Backend integration tests: Rust `#[tokio::test]` in `src-tauri/tests/` against Docker Postgres on `postgresql://test:test@localhost:5433/crabase_test`
+- **E2E tests**: Playwright + headless Chrome + real Docker Postgres. The app runs via Trunk (localhost:8080) with identical WASM to production. Playwright injects a `window.__TAURI__` shim via `addInitScript()` that routes `invoke()` to a test HTTP server (Rust/axum on port 3001). The test server imports `crabase::db` and talks to Docker Postgres. Zero app code changes needed.
+- Frontend JS bridge tests: Vitest for `codemirror-bridge.js`, `markdown-bridge.js`
+- Docker container must be running before backend tests: `just test-setup` or `just test`
+- Tests must be independent — each test must work regardless of execution order
+- The `tests/seed.sql` must cover ALL Postgres types the app supports
+
+## Known issues to fix during audit
+- `std::sync::Mutex` wrapping async `PgPool` — should be `tokio::sync::RwLock` or leverage PgPool's internal Arc
+- `closure.forget()` on event listeners in components that re-render — memory leak + duplicate handlers
+- `Effect::new` writing signals that trigger other Effects — causes `RefCell::borrow_mut` panics (Out of bounds memory access)
+- `main_layout.rs` and `table_view.rs` are god-files — too many signals and responsibilities
+- Multiple `unwrap()` calls in Tauri commands that could panic in production
+- `inner_html` rendering of markdown without XSS sanitization (DOMPurify needed)
+- Dead code: unused functions in `restore.rs`, unused imports across the codebase
+- Redundant `.clone()` on PgPool (it's Arc internally, cloning is cheap but unnecessary)
+- No cleanup of Tauri event listeners (`listen_chat_response`, `listen_chat_done`) — accumulate on repeated messages
+
 ## Learnings
 - Tauri v2 `app` section has no `title` field — title goes in `app.windows[].title`
 - `tauri::generate_context!()` requires `icons/icon.png` in `src-tauri/`

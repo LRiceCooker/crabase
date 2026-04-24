@@ -37,7 +37,7 @@ impl DbState {
         .bind(&schema)
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to list tables: {}", e))?;
+        .map_err(|e| format!("Failed to list tables: {e}"))?;
 
         Ok(rows.into_iter().map(|(name,)| name).collect())
     }
@@ -89,7 +89,7 @@ impl DbState {
         .bind(table_name)
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to get column info: {}", e))?;
+        .map_err(|e| format!("Failed to get column info: {e}"))?;
 
         let mut columns = Vec::new();
         for (name, data_type, is_nullable, constraint_type, max_len, precision, scale, col_default, udt_name, udt_schema) in rows {
@@ -171,7 +171,7 @@ impl DbState {
         .bind(enum_name)
         .fetch_all(pool)
         .await
-        .map_err(|e| format!("Failed to fetch enum values: {}", e))?;
+        .map_err(|e| format!("Failed to fetch enum values: {e}"))?;
 
         Ok(rows.into_iter().map(|(label,)| label).collect())
     }

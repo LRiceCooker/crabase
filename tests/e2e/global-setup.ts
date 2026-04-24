@@ -27,6 +27,12 @@ export default async function globalSetup() {
   console.log("[e2e] Starting Docker Postgres...");
   execSync("just test-setup", { cwd: ROOT, stdio: "inherit" });
 
+  console.log("[e2e] Building test HTTP server...");
+  execSync("cargo build --manifest-path tests/test_server/Cargo.toml", {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
+
   console.log("[e2e] Starting test HTTP server on port 3001...");
   const testServer = spawn(
     "cargo",

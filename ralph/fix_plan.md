@@ -3,7 +3,6 @@
 ## In Progress
 
 ## Backlog
-- [ ] Replace all `format!("...: {}", e)` with `format!("...: {e}")`
 - [ ] Replace `match` with `if let` / `map` / `unwrap_or` where cleaner
 - [ ] Replace manual `HashMap` building with `.collect()` from iterators
 - [ ] Use `&str` instead of `String` for function params that don't need ownership
@@ -43,6 +42,7 @@
 
 ### Phase 42 (partial)
 - [x] Search the Rust Reference and Clippy lint docs for each idiom below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
+- [x] Replace all `format!("...: {}", e)` with `format!("...: {e}")`
 
 ### Phase 41
 - [x] Split `tauri.rs` (773 lines) into: `tauri/connection.rs`, `tauri/tables.rs`, `tauri/queries.rs`, `tauri/settings.rs`, `tauri/files.rs`, `tauri/chat.rs`

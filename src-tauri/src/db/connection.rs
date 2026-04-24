@@ -59,13 +59,13 @@ impl DbState {
 
         let pool = PgPool::connect(&connection_string)
             .await
-            .map_err(|e| format!("Connection failed: {}", e))?;
+            .map_err(|e| format!("Connection failed: {e}"))?;
 
         // Verify the connection actually works
         sqlx::query("SELECT 1")
             .execute(&pool)
             .await
-            .map_err(|e| format!("Connection validation failed: {}", e))?;
+            .map_err(|e| format!("Connection validation failed: {e}"))?;
 
         *self.pool.write().await = Some(pool);
         *self.connection_info.write().await = Some(info);
@@ -112,7 +112,7 @@ pub fn build_connection_string(info: &ConnectionInfo) -> String {
 
 pub fn parse_connection_string(connection_string: &str) -> Result<ConnectionInfo, String> {
     let url =
-        Url::parse(connection_string).map_err(|e| format!("Invalid connection string: {}", e))?;
+        Url::parse(connection_string).map_err(|e| format!("Invalid connection string: {e}"))?;
 
     let sslmode = url
         .query_pairs()
@@ -134,14 +134,14 @@ pub fn parse_connection_string(connection_string: &str) -> Result<ConnectionInfo
 pub async fn list_schemas(connection_string: &str) -> Result<Vec<String>, String> {
     let pool = PgPool::connect(connection_string)
         .await
-        .map_err(|e| format!("Connection failed: {}", e))?;
+        .map_err(|e| format!("Connection failed: {e}"))?;
 
     let rows: Vec<(String,)> = sqlx::query_as(
         "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('pg_catalog', 'pg_toast', 'information_schema') ORDER BY schema_name",
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| format!("Failed to list schemas: {}", e))?;
+    .map_err(|e| format!("Failed to list schemas: {e}"))?;
 
     pool.close().await;
 

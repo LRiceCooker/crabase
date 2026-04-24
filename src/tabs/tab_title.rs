@@ -75,7 +75,7 @@ pub fn TabTitle(
                 let cursor_class = if editable { "cursor-text" } else { "" };
                 view! {
                     <span
-                        class=format!("truncate max-w-[120px] {}", cursor_class)
+                        class=format!("truncate max-w-[120px] {cursor_class}")
                         on:click=start_editing
                     >
                         {title_display}

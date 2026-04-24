@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const CONNECTION_STRING = "postgresql://test:test@localhost:5433/crabase_test";
 

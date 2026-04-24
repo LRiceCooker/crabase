@@ -14,9 +14,9 @@ fn connections_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
     fs::create_dir_all(&data_dir)
-        .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+        .map_err(|e| format!("Failed to create app data dir: {e}"))?;
     Ok(data_dir.join("saved_connections.json"))
 }
 
@@ -26,9 +26,9 @@ fn read_connections(app_handle: &tauri::AppHandle) -> Result<Vec<SavedConnection
         return Ok(Vec::new());
     }
     let data = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read saved connections: {}", e))?;
+        .map_err(|e| format!("Failed to read saved connections: {e}"))?;
     serde_json::from_str(&data)
-        .map_err(|e| format!("Failed to parse saved connections: {}", e))
+        .map_err(|e| format!("Failed to parse saved connections: {e}"))
 }
 
 fn write_connections(
@@ -37,8 +37,8 @@ fn write_connections(
 ) -> Result<(), String> {
     let path = connections_file(app_handle)?;
     let data = serde_json::to_string_pretty(connections)
-        .map_err(|e| format!("Failed to serialize connections: {}", e))?;
-    fs::write(&path, data).map_err(|e| format!("Failed to write saved connections: {}", e))
+        .map_err(|e| format!("Failed to serialize connections: {e}"))?;
+    fs::write(&path, data).map_err(|e| format!("Failed to write saved connections: {e}"))
 }
 
 pub fn save_connection(
@@ -70,7 +70,7 @@ pub fn delete_saved_connection(
     let original_len = connections.len();
     connections.retain(|c| c.name != name);
     if connections.len() == original_len {
-        return Err(format!("Connection '{}' not found", name));
+        return Err(format!("Connection '{name}' not found"));
     }
     write_connections(app_handle, &connections)
 }

@@ -10,20 +10,20 @@ use tempfile::TempDir;
 pub fn extract_pgsql(tar_gz_path: &str) -> Result<(TempDir, PathBuf), String> {
     let path = Path::new(tar_gz_path);
     if !path.exists() {
-        return Err(format!("File not found: {}", tar_gz_path));
+        return Err(format!("File not found: {tar_gz_path}"));
     }
 
     let file =
-        std::fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
+        std::fs::File::open(path).map_err(|e| format!("Failed to open file: {e}"))?;
     let decoder = GzDecoder::new(file);
     let mut archive = Archive::new(decoder);
 
     let tmp_dir =
-        TempDir::new().map_err(|e| format!("Failed to create temp directory: {}", e))?;
+        TempDir::new().map_err(|e| format!("Failed to create temp directory: {e}"))?;
 
     archive
         .unpack(tmp_dir.path())
-        .map_err(|e| format!("Failed to extract tar.gz: {}", e))?;
+        .map_err(|e| format!("Failed to extract tar.gz: {e}"))?;
 
     // Find the .pgsql file at the root of the archive
     let pgsql_file = find_pgsql_file(tmp_dir.path())?;
@@ -34,10 +34,10 @@ pub fn extract_pgsql(tar_gz_path: &str) -> Result<(TempDir, PathBuf), String> {
 /// Finds a .pgsql file in the given directory (non-recursive, root level only).
 fn find_pgsql_file(dir: &Path) -> Result<PathBuf, String> {
     let entries =
-        std::fs::read_dir(dir).map_err(|e| format!("Failed to read temp directory: {}", e))?;
+        std::fs::read_dir(dir).map_err(|e| format!("Failed to read temp directory: {e}"))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
         let path = entry.path();
         if path.is_file() {
             if let Some(ext) = path.extension() {
@@ -72,7 +72,7 @@ pub fn run_pg_restore_streaming(
             if e.kind() == std::io::ErrorKind::NotFound {
                 "pg_restore not found. Please install PostgreSQL client tools.".to_string()
             } else {
-                format!("Failed to run pg_restore: {}", e)
+                format!("Failed to run pg_restore: {e}")
             }
         })?;
 
@@ -107,7 +107,7 @@ pub fn run_pg_restore_streaming(
     let stderr_lines = stderr_thread.join().unwrap_or_default();
     let status = child
         .wait()
-        .map_err(|e| format!("Failed to wait for pg_restore: {}", e))?;
+        .map_err(|e| format!("Failed to wait for pg_restore: {e}"))?;
 
     let exit_code = status.code().unwrap_or(-1);
     let has_warnings = stderr_lines.iter().any(|l| l.contains("warning:") || l.contains("errors ignored"));
@@ -127,7 +127,7 @@ pub fn run_pg_restore_streaming(
             exit_code,
             stderr_text,
             if !stdout_text.is_empty() {
-                format!("\nstdout:\n{}", stdout_text)
+                format!("\nstdout:\n{stdout_text}")
             } else {
                 String::new()
             }

@@ -405,6 +405,47 @@ New for Phase 19+:
 - `chat_with_claude(prompt) → Stream<String>` — spawns `claude -p "<prompt>" --output-format stream-json --dangerously-skip-permissions` and streams parsed assistant text via Tauri events
 - `get_full_schema_for_chat() → String` — returns a formatted text representation of the current schema (all tables + columns + types) suitable for injecting as context into a Claude prompt
 
+## Testing Strategy
+
+Playwright/WebdriverIO **cannot drive Tauri's WKWebView on macOS**. Therefore, the testing strategy is:
+
+### 1. Test Infrastructure (`tests/`)
+- `docker-compose.yml`: PostgreSQL 16 Alpine container on port 5433 (user: `test`, password: `test`, db: `crabase_test`)
+- `seed.sql`: creates test tables covering ALL supported Postgres types (text, integer, boolean, timestamp, timestamptz, date, uuid, json, jsonb, custom enums, arrays, etc.) with sample data
+- `setup.sh`: starts Docker container + waits for ready + runs seed
+- `teardown.sh`: stops + removes Docker container
+
+### 2. Rust Backend Integration Tests (`src-tauri/tests/`)
+- Test every Tauri command against the real Docker Postgres
+- Connect to `postgresql://test:test@localhost:5433/crabase_test`
+- Cover: connect/disconnect, list_schemas, list_tables, get_column_info, get_table_data (with pagination, filters, sort), save_changes (insert/update/delete), execute_query_multi, drop/truncate/export, saved connections CRUD, saved queries CRUD, settings, enum handling on non-public schemas, timestamp formatting, NULL handling
+- Tests must be independent (runnable in any order)
+
+### 3. E2E Tests (Playwright + real DB)
+True end-to-end tests. Playwright drives headless Chrome against the app running in dev mode (Trunk at localhost:8080). A `window.__TAURI__` shim injected via `page.addInitScript()` routes `invoke()` calls to a test HTTP server (Rust/axum on port 3001) that wraps the real `db.rs` functions against Docker Postgres. **Zero changes to app code** — the WASM binary is identical to production.
+
+```
+Playwright (headless Chrome)
+  → localhost:8080 (Trunk, serves app WASM)
+    → window.__TAURI__.core.invoke(cmd, args)  [injected shim]
+      → fetch("http://localhost:3001/invoke/{cmd}", args)
+        → Test HTTP server (Rust/axum, imports crabase::db)
+          → Docker Postgres (localhost:5433)
+```
+
+- Test files in `tests/e2e/*.spec.ts`, split by feature area
+- Covers: connection flow, table browsing, inline editing + save, filters/sort, SQL editor + multi-statement, command palette, table finder, schema switching, theme toggle, context menus, tabs
+
+### 4. Frontend JS Bridge Tests (Vitest)
+- Test `codemirror-bridge.js` and `markdown-bridge.js`
+- Run with `just test-frontend`
+
+### Justfile commands
+- `just test` — full run (setup Docker → backend tests → E2E tests → JS tests → teardown)
+- `just test-setup` / `just test-teardown` — Docker management
+- `just test-e2e` — Playwright E2E tests only (requires Docker + Trunk + test server running)
+- `just test-frontend` — Vitest JS bridge tests only
+
 ## Constraints
 - Tauri v2 APIs only (not v1)
 - Backend errors with `thiserror` or `anyhow`

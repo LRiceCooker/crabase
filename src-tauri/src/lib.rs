@@ -205,7 +205,7 @@ async fn restore_backup(
         restore::restore_backup_streaming(&file_path, &connection_string, &app_handle)
     })
     .await
-    .map_err(|e| format!("Task failed: {}", e))?
+    .map_err(|e| format!("Task failed: {e}"))?
 }
 
 // ── Saved connections ───────────────────────────────────────────────
@@ -344,7 +344,7 @@ async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), S
 
     tokio::task::spawn_blocking(move || claude::run_streaming(&prompt, &app))
         .await
-        .map_err(|e| format!("Task failed: {}", e))?
+        .map_err(|e| format!("Task failed: {e}"))?
 }
 
 // ── Window & file commands ──────────────────────────────────────────
@@ -361,20 +361,20 @@ async fn open_new_window(app: tauri::AppHandle) -> Result<(), String> {
     use std::sync::atomic::{AtomicU32, Ordering};
     static WINDOW_COUNTER: AtomicU32 = AtomicU32::new(2);
     let id = WINDOW_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let label = format!("main-{}", id);
+    let label = format!("main-{id}");
     tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App("index.html".into()))
         .title("crabase")
         .inner_size(1200.0, 800.0)
         .background_color(tauri::webview::Color(10, 10, 10, 255))
         .build()
-        .map_err(|e| format!("Failed to create window: {}", e))?;
+        .map_err(|e| format!("Failed to create window: {e}"))?;
     Ok(())
 }
 
 /// Write content to a file at the given path (used for table exports).
 #[tauri::command]
 fn write_file(path: String, content: String) -> Result<(), String> {
-    std::fs::write(&path, &content).map_err(|e| format!("Failed to write file: {}", e))
+    std::fs::write(&path, &content).map_err(|e| format!("Failed to write file: {e}"))
 }
 
 // ── App entry point ─────────────────────────────────────────────────

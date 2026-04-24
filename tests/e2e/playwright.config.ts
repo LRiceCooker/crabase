@@ -17,12 +17,6 @@ export default defineConfig({
   projects: [
     {
       name: "e2e",
-      use: {
-        // Inject the Tauri shim before WASM loads
-        contextOptions: {
-          initScripts: [path.resolve(__dirname, "tauri-shim.js")],
-        },
-      },
     },
   ],
 });

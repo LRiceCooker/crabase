@@ -6,8 +6,8 @@ impl DbState {
         let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
         let sql = format!("DROP TABLE {} CASCADE", qualified);
-        sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("DROP TABLE failed: {}", e))?;
-        Ok(format!("Table {} dropped", table_name))
+        sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("DROP TABLE failed: {e}"))?;
+        Ok(format!("Table {table_name} dropped"))
     }
 
     pub async fn truncate_table(&self, table_name: &str) -> Result<String, String> {
@@ -15,8 +15,8 @@ impl DbState {
         let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
         let sql = format!("TRUNCATE TABLE {} CASCADE", qualified);
-        sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("TRUNCATE failed: {}", e))?;
-        Ok(format!("Table {} truncated", table_name))
+        sqlx::query(&sql).execute(&pool).await.map_err(|e| format!("TRUNCATE failed: {e}"))?;
+        Ok(format!("Table {table_name} truncated"))
     }
 
     pub async fn export_table_json(&self, table_name: &str) -> Result<String, String> {
@@ -26,9 +26,9 @@ impl DbState {
         let query = format!("SELECT row_to_json(t) FROM {} t", qualified);
         let rows: Vec<(serde_json::Value,)> = sqlx::query_as(&query)
             .fetch_all(&pool).await
-            .map_err(|e| format!("Export failed: {}", e))?;
+            .map_err(|e| format!("Export failed: {e}"))?;
         let arr: Vec<serde_json::Value> = rows.into_iter().map(|(v,)| v).collect();
-        serde_json::to_string_pretty(&arr).map_err(|e| format!("JSON serialization failed: {}", e))
+        serde_json::to_string_pretty(&arr).map_err(|e| format!("JSON serialization failed: {e}"))
     }
 
     pub async fn export_table_sql(&self, table_name: &str) -> Result<String, String> {
@@ -36,9 +36,9 @@ impl DbState {
         let pool = self.pool().await?;
         let schema = self.schema().await;
         let qualified = format!("\"{}\".\"{}\"", schema.replace('"', "\"\""), table_name.replace('"', "\"\""));
-        let query = format!("SELECT * FROM {}", qualified);
+        let query = format!("SELECT * FROM {qualified}");
         let rows = sqlx::query(&query).fetch_all(&pool).await
-            .map_err(|e| format!("Export failed: {}", e))?;
+            .map_err(|e| format!("Export failed: {e}"))?;
 
         let col_names: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c.name.replace('"', "\"\""))).collect();
         let header = format!("-- Export of {}\n", qualified);
@@ -57,7 +57,7 @@ impl DbState {
             }).collect();
             inserts.push(format!("INSERT INTO {} ({}) VALUES ({});", qualified, col_names.join(", "), values.join(", ")));
         }
-        Ok(format!("{}{}", header, inserts.join("\n")))
+        Ok(format!("{header}{}", inserts.join("\n")))
     }
 }
 

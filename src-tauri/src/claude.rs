@@ -37,13 +37,13 @@ pub fn run_streaming(prompt: &str, app_handle: &tauri::AppHandle) -> Result<(), 
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Failed to spawn claude: {}", e))?;
+        .map_err(|e| format!("Failed to spawn claude: {e}"))?;
 
     if let Some(stdout) = child.stdout.take() {
         let reader = std::io::BufReader::new(stdout);
         for line in reader.lines() {
             let Ok(line) = line else { continue };
-            let _ = app_handle.emit("chat-response", format!("{}\n", line));
+            let _ = app_handle.emit("chat-response", format!("{line}\n"));
         }
     }
 
