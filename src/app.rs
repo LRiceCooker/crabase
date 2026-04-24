@@ -135,10 +135,13 @@ pub fn App() -> impl IntoView {
         set_connection_string.set(cs.clone());
         set_loading_schemas.set(true);
         spawn_local(async move {
-            if let Ok(schemas) = tauri::list_schemas(&cs).await {
-                if !schemas.is_empty() {
-                    set_available_schemas.set(schemas);
+            match tauri::list_schemas(&cs).await {
+                Ok(schemas) => {
+                    if !schemas.is_empty() {
+                        set_available_schemas.set(schemas);
+                    }
                 }
+                Err(e) => crate::log::log_error(&format!("Failed to list schemas: {e}")),
             }
             set_loading_schemas.set(false);
         });

@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 44 — Clean Code Pass: Error Handling & Logging
-- [ ] Frontend: ensure all `spawn_local` closures handle errors visibly, never silently swallow
 - [ ] Verify: `cargo check`, `just test-e2e`
 
 ### Phase 45 — Final Verification
@@ -19,6 +18,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Frontend: ensure all `spawn_local` closures handle errors visibly — fixed 8 silent swallows in main_layout, saved_connections, app
 - [x] Frontend: replace all `web_sys::console::error_1(...)` with unified `log_error(msg)` helper — 2 call sites updated
 - [x] Backend: add `tracing` crate — no println!/eprintln! found in backend, errors already go through AppError
 - [x] Backend: replace all `String` error returns with `AppError` enum — already completed in Phase 42

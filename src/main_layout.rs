@@ -83,8 +83,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
 
     let on_queries_refresh = Callback::new(move |_: ()| {
         spawn_local(async move {
-            if let Ok(queries) = tauri::list_queries().await {
-                set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect());
+            match tauri::list_queries().await {
+                Ok(queries) => set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect()),
+                Err(e) => crate::log::log_error(&format!("Failed to list queries: {e}")),
             }
         });
     });
@@ -108,18 +109,23 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
 
     // Fetch connection info, schemas, and tables on mount
     spawn_local(async move {
-        if let Ok(info) = tauri::get_connection_info().await {
-            let cs = tauri::build_connection_string_js(&info);
-            if let Ok(schemas) = tauri::list_schemas(&cs).await {
-                set_available_schemas.set(schemas);
+        match tauri::get_connection_info().await {
+            Ok(info) => {
+                let cs = tauri::build_connection_string_js(&info);
+                if let Err(e) = tauri::list_schemas(&cs).await.map(|s| set_available_schemas.set(s)) {
+                    crate::log::log_error(&format!("Failed to list schemas: {e}"));
+                }
+                set_connection_info.set(Some(info));
             }
-            set_connection_info.set(Some(info));
+            Err(e) => crate::log::log_error(&format!("Failed to get connection info: {e}")),
         }
-        if let Ok(t) = tauri::list_tables().await {
-            set_tables.set(t);
+        match tauri::list_tables().await {
+            Ok(t) => set_tables.set(t),
+            Err(e) => crate::log::log_error(&format!("Failed to list tables: {e}")),
         }
-        if let Ok(queries) = tauri::list_queries().await {
-            set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect());
+        match tauri::list_queries().await {
+            Ok(queries) => set_saved_query_names.set(queries.into_iter().map(|q| q.name).collect()),
+            Err(e) => crate::log::log_error(&format!("Failed to list queries: {e}")),
         }
     });
 
@@ -159,8 +165,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                         on_select=on_table_select
                         on_tables_changed=Callback::new(move |_: ()| {
                             spawn_local(async move {
-                                if let Ok(t) = tauri::list_tables().await {
-                                    set_tables.set(t);
+                                match tauri::list_tables().await {
+                                    Ok(t) => set_tables.set(t),
+                                    Err(e) => crate::log::log_error(&format!("Failed to list tables: {e}")),
                                 }
                             });
                         })
@@ -172,7 +179,9 @@ pub fn MainLayout(on_disconnect: Callback<()>) -> impl IntoView {
                         state=tab_state.clone()
                         on_tab_rename=Callback::new(move |(_tab_id, old_name, new_name): (usize, String, String)| {
                             spawn_local(async move {
-                                let _ = tauri::rename_query(&old_name, &new_name).await;
+                                if let Err(e) = tauri::rename_query(&old_name, &new_name).await {
+                                    crate::log::log_error(&format!("Failed to rename query: {e}"));
+                                }
                             });
                         })
                     />

@@ -15,8 +15,9 @@ pub fn SavedConnections(
     // Load saved connections on mount
     Effect::new(move || {
         spawn_local(async move {
-            if let Ok(conns) = tauri::list_saved_connections().await {
-                set_connections.set(conns);
+            match tauri::list_saved_connections().await {
+                Ok(conns) => set_connections.set(conns),
+                Err(e) => crate::log::log_error(&format!("Failed to load saved connections: {e}")),
             }
             set_loaded.set(true);
         });
@@ -24,11 +25,13 @@ pub fn SavedConnections(
 
     let delete_connection = Callback::new(move |name: String| {
         spawn_local(async move {
-            if tauri::delete_saved_connection(&name).await.is_ok() {
-                // Refresh the list
-                if let Ok(conns) = tauri::list_saved_connections().await {
-                    set_connections.set(conns);
-                }
+            if let Err(e) = tauri::delete_saved_connection(&name).await {
+                crate::log::log_error(&format!("Failed to delete connection: {e}"));
+                return;
+            }
+            match tauri::list_saved_connections().await {
+                Ok(conns) => set_connections.set(conns),
+                Err(e) => crate::log::log_error(&format!("Failed to refresh connections: {e}")),
             }
         });
     });
