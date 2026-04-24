@@ -4,12 +4,6 @@
 
 ## Backlog
 
-### Phase 41 — Deep Refactor: Frontend `tauri.rs` (773 lines → split by domain)
-- [ ] Split into: `tauri/connection.rs`, `tauri/tables.rs`, `tauri/queries.rs`, `tauri/settings.rs`, `tauri/files.rs`, `tauri/chat.rs`
-- [ ] Create `tauri/mod.rs` that re-exports everything (public API unchanged)
-- [ ] Remove all `#[allow(dead_code)]` — delete truly dead code, make used code public
-- [ ] Verify: `cargo check`, `just test-e2e`
-
 ### Phase 42 — Clean Code Pass: Rust Idioms
 - [ ] Search the Rust Reference and Clippy lint docs for each idiom below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
 - [ ] Replace all `format!("...: {}", e)` with `format!("...: {e}")`
@@ -49,6 +43,12 @@
 
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
+
+### Phase 41
+- [x] Split `tauri.rs` (773 lines) into: `tauri/connection.rs`, `tauri/tables.rs`, `tauri/queries.rs`, `tauri/settings.rs`, `tauri/files.rs`, `tauri/chat.rs`
+- [x] Create `tauri/mod.rs` with FFI bindings and re-exports (public API unchanged)
+- [x] Remove `#[allow(dead_code)]` — deleted unused `execute_query` function
+- [x] Verify: `cargo check` (both crates), `cargo test` (43 pass), `just test-e2e` (40 pass)
 
 ### Phase 40
 - [x] Extract the save logic (`on_save` callback with ChangeSet building) into `table_view/save_handler.rs`
