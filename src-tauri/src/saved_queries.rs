@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -24,31 +25,31 @@ pub fn connection_key_from_info(info: &crate::db::ConnectionInfo) -> String {
     connection_key(&info.host, info.port, &info.dbname, &info.user)
 }
 
-fn queries_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn queries_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, AppError> {
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
+        .map_err(|e| AppError::Internal(format!("Failed to resolve app data dir: {e}")))?;
     fs::create_dir_all(&data_dir)
-        .map_err(|e| format!("Failed to create app data dir: {e}"))?;
+        .map_err(|e| AppError::io("Failed to create app data dir", e))?;
     Ok(data_dir.join("saved_queries.json"))
 }
 
-fn read_store(app_handle: &tauri::AppHandle) -> Result<QueriesStore, String> {
+fn read_store(app_handle: &tauri::AppHandle) -> Result<QueriesStore, AppError> {
     let path = queries_file(app_handle)?;
     if !path.exists() {
         return Ok(HashMap::new());
     }
     let data =
-        fs::read_to_string(&path).map_err(|e| format!("Failed to read saved queries: {e}"))?;
-    serde_json::from_str(&data).map_err(|e| format!("Failed to parse saved queries: {e}"))
+        fs::read_to_string(&path).map_err(|e| AppError::io("Failed to read saved queries", e))?;
+    serde_json::from_str(&data).map_err(|e| AppError::json("Failed to parse saved queries", e))
 }
 
-fn write_store(app_handle: &tauri::AppHandle, store: &QueriesStore) -> Result<(), String> {
+fn write_store(app_handle: &tauri::AppHandle, store: &QueriesStore) -> Result<(), AppError> {
     let path = queries_file(app_handle)?;
     let data = serde_json::to_string_pretty(store)
-        .map_err(|e| format!("Failed to serialize saved queries: {e}"))?;
-    fs::write(&path, data).map_err(|e| format!("Failed to write saved queries: {e}"))
+        .map_err(|e| AppError::json("Failed to serialize saved queries", e))?;
+    fs::write(&path, data).map_err(|e| AppError::io("Failed to write saved queries", e))
 }
 
 pub fn save_query(
@@ -56,14 +57,14 @@ pub fn save_query(
     conn_key: &str,
     name: String,
     sql: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     if name.trim().is_empty() {
-        return Err("Query name cannot be empty".to_string());
+        return Err(AppError::Validation("Query name cannot be empty".into()));
     }
     let mut store = read_store(app_handle)?;
     let queries = store.entry(conn_key.to_string()).or_default();
     if queries.iter().any(|q| q.name == name) {
-        return Err(format!("A query named '{name}' already exists"));
+        return Err(AppError::Validation(format!("A query named '{name}' already exists")));
     }
     queries.push(SavedQuery { name, sql });
     write_store(app_handle, &store)
@@ -74,13 +75,13 @@ pub fn update_query(
     conn_key: &str,
     name: &str,
     sql: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let mut store = read_store(app_handle)?;
     let queries = store.entry(conn_key.to_string()).or_default();
     let query = queries
         .iter_mut()
         .find(|q| q.name == name)
-        .ok_or_else(|| format!("Query '{name}' not found"))?;
+        .ok_or_else(|| AppError::Validation(format!("Query '{name}' not found")))?;
     query.sql = sql;
     write_store(app_handle, &store)
 }
@@ -90,19 +91,19 @@ pub fn rename_query(
     conn_key: &str,
     old_name: &str,
     new_name: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     if new_name.trim().is_empty() {
-        return Err("Query name cannot be empty".to_string());
+        return Err(AppError::Validation("Query name cannot be empty".into()));
     }
     let mut store = read_store(app_handle)?;
     let queries = store.entry(conn_key.to_string()).or_default();
     if queries.iter().any(|q| q.name == new_name) {
-        return Err(format!("A query named '{new_name}' already exists"));
+        return Err(AppError::Validation(format!("A query named '{new_name}' already exists")));
     }
     let query = queries
         .iter_mut()
         .find(|q| q.name == old_name)
-        .ok_or_else(|| format!("Query '{old_name}' not found"))?;
+        .ok_or_else(|| AppError::Validation(format!("Query '{old_name}' not found")))?;
     query.name = new_name;
     write_store(app_handle, &store)
 }
@@ -111,13 +112,13 @@ pub fn delete_query(
     app_handle: &tauri::AppHandle,
     conn_key: &str,
     name: &str,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let mut store = read_store(app_handle)?;
     let queries = store.entry(conn_key.to_string()).or_default();
     let original_len = queries.len();
     queries.retain(|q| q.name != name);
     if queries.len() == original_len {
-        return Err(format!("Query '{name}' not found"));
+        return Err(AppError::Validation(format!("Query '{name}' not found")));
     }
     write_store(app_handle, &store)
 }
@@ -125,7 +126,7 @@ pub fn delete_query(
 pub fn list_queries(
     app_handle: &tauri::AppHandle,
     conn_key: &str,
-) -> Result<Vec<SavedQuery>, String> {
+) -> Result<Vec<SavedQuery>, AppError> {
     let store = read_store(app_handle)?;
     Ok(store.get(conn_key).cloned().unwrap_or_default())
 }
@@ -134,14 +135,15 @@ pub fn load_query(
     app_handle: &tauri::AppHandle,
     conn_key: &str,
     name: &str,
-) -> Result<SavedQuery, String> {
+) -> Result<SavedQuery, AppError> {
     let store = read_store(app_handle)?;
-    let queries = store.get(conn_key).ok_or("No saved queries for this connection")?;
+    let queries = store.get(conn_key)
+        .ok_or_else(|| AppError::Validation("No saved queries for this connection".into()))?;
     queries
         .iter()
         .find(|q| q.name == name)
         .cloned()
-        .ok_or_else(|| format!("Query '{name}' not found"))
+        .ok_or_else(|| AppError::Validation(format!("Query '{name}' not found")))
 }
 
 #[cfg(test)]

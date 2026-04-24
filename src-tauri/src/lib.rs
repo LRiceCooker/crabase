@@ -29,23 +29,26 @@
 mod app_icon;
 mod claude;
 pub mod db;
+pub mod error;
 mod restore;
 pub mod saved_connections;
 pub mod saved_queries;
 pub mod settings;
+
+pub use error::AppError;
 
 // ── Connection commands ─────────────────────────────────────────────
 
 /// Parse a PostgreSQL connection string into its component parts.
 #[tauri::command]
 fn parse_connection_string(connection_string: String) -> Result<db::ConnectionInfo, String> {
-    db::parse_connection_string(&connection_string)
+    Ok(db::parse_connection_string(&connection_string)?)
 }
 
 /// List all schemas available on the PostgreSQL server at the given connection string.
 #[tauri::command]
 async fn list_schemas(connection_string: String) -> Result<Vec<String>, String> {
-    db::list_schemas(&connection_string).await
+    Ok(db::list_schemas(&connection_string).await?)
 }
 
 /// Connect to a PostgreSQL database using the provided connection info.
@@ -70,7 +73,7 @@ async fn disconnect_db(db_state: tauri::State<'_, db::DbState>) -> Result<String
 async fn get_connection_info(
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<db::ConnectionInfo, String> {
-    db_state.get_connection_info().await
+    Ok(db_state.get_connection_info().await?)
 }
 
 // ── Schema & column commands ────────────────────────────────────────
@@ -80,7 +83,7 @@ async fn get_connection_info(
 async fn list_tables(
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<Vec<String>, String> {
-    db_state.list_tables().await
+    Ok(db_state.list_tables().await?)
 }
 
 /// Return column metadata (name, type, nullable, default, PK) for a table.
@@ -89,7 +92,7 @@ async fn get_column_info(
     table_name: String,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<Vec<db::ColumnInfo>, String> {
-    db_state.get_column_info(&table_name).await
+    Ok(db_state.get_column_info(&table_name).await?)
 }
 
 /// Return column names for each given table, used for SQL editor autocomplete.
@@ -98,7 +101,7 @@ async fn get_columns_for_autocomplete(
     table_names: Vec<String>,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
-    db_state.get_columns_for_autocomplete(&table_names).await
+    Ok(db_state.get_columns_for_autocomplete(&table_names).await?)
 }
 
 /// Return the full schema DDL text for all tables, used as context for AI chat.
@@ -106,7 +109,7 @@ async fn get_columns_for_autocomplete(
 async fn get_full_schema_for_chat(
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<String, String> {
-    db_state.get_full_schema_text().await
+    Ok(db_state.get_full_schema_text().await?)
 }
 
 // ── Table data & query commands ─────────────────────────────────────
@@ -119,7 +122,7 @@ async fn get_table_data(
     page_size: u32,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<db::TableData, String> {
-    db_state.get_table_data(&table_name, page, page_size).await
+    Ok(db_state.get_table_data(&table_name, page, page_size).await?)
 }
 
 /// Fetch paginated table data with column filters and sort ordering.
@@ -132,9 +135,9 @@ async fn get_table_data_filtered(
     sort: Vec<db::SortCol>,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<db::TableData, String> {
-    db_state
+    Ok(db_state
         .get_table_data_filtered(&table_name, page, page_size, filters, sort)
-        .await
+        .await?)
 }
 
 /// Execute a single SQL statement and return the result set.
@@ -143,7 +146,7 @@ async fn execute_query(
     sql: String,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<db::QueryResult, String> {
-    db_state.execute_query(&sql).await
+    Ok(db_state.execute_query(&sql).await?)
 }
 
 /// Execute multiple SQL statements (semicolon-separated) and return each result.
@@ -152,7 +155,7 @@ async fn execute_query_multi(
     sql: String,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<Vec<db::StatementResult>, String> {
-    db_state.execute_query_multi(&sql).await
+    Ok(db_state.execute_query_multi(&sql).await?)
 }
 
 /// Apply a set of row inserts, updates, and deletes to a table.
@@ -162,7 +165,7 @@ async fn save_changes(
     changes: db::ChangeSet,
     db_state: tauri::State<'_, db::DbState>,
 ) -> Result<String, String> {
-    db_state.save_changes(&table_name, changes).await
+    Ok(db_state.save_changes(&table_name, changes).await?)
 }
 
 // ── Table operations (drop, truncate, export) ───────────────────────
@@ -170,25 +173,25 @@ async fn save_changes(
 /// Drop a table from the database.
 #[tauri::command]
 async fn drop_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.drop_table(&table_name).await
+    Ok(db_state.drop_table(&table_name).await?)
 }
 
 /// Truncate (delete all rows from) a table.
 #[tauri::command]
 async fn truncate_table(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.truncate_table(&table_name).await
+    Ok(db_state.truncate_table(&table_name).await?)
 }
 
 /// Export all rows of a table as a JSON string.
 #[tauri::command]
 async fn export_table_json(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.export_table_json(&table_name).await
+    Ok(db_state.export_table_json(&table_name).await?)
 }
 
 /// Export a table as SQL INSERT statements.
 #[tauri::command]
 async fn export_table_sql(table_name: String, db_state: tauri::State<'_, db::DbState>) -> Result<String, String> {
-    db_state.export_table_sql(&table_name).await
+    Ok(db_state.export_table_sql(&table_name).await?)
 }
 
 // ── Backup restore ──────────────────────────────────────────────────
@@ -206,6 +209,7 @@ async fn restore_backup(
     })
     .await
     .map_err(|e| format!("Task failed: {e}"))?
+    .map_err(String::from)
 }
 
 // ── Saved connections ───────────────────────────────────────────────
@@ -217,7 +221,7 @@ fn save_connection(
     info: db::ConnectionInfo,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    saved_connections::save_connection(&app_handle, name, info)
+    Ok(saved_connections::save_connection(&app_handle, name, info)?)
 }
 
 /// List all saved connections from the app data directory.
@@ -225,13 +229,13 @@ fn save_connection(
 fn list_saved_connections(
     app_handle: tauri::AppHandle,
 ) -> Result<Vec<saved_connections::SavedConnection>, String> {
-    saved_connections::list_saved_connections(&app_handle)
+    Ok(saved_connections::list_saved_connections(&app_handle)?)
 }
 
 /// Delete a saved connection by name.
 #[tauri::command]
 fn delete_saved_connection(name: String, app_handle: tauri::AppHandle) -> Result<(), String> {
-    saved_connections::delete_saved_connection(&app_handle, &name)
+    Ok(saved_connections::delete_saved_connection(&app_handle, &name)?)
 }
 
 // ── Saved queries ───────────────────────────────────────────────────
@@ -251,7 +255,7 @@ async fn cmd_save_query(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let key = get_conn_key(&db_state).await?;
-    saved_queries::save_query(&app_handle, &key, name, sql)
+    Ok(saved_queries::save_query(&app_handle, &key, name, sql)?)
 }
 
 /// Update the SQL of an existing saved query by name.
@@ -263,7 +267,7 @@ async fn cmd_update_query(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let key = get_conn_key(&db_state).await?;
-    saved_queries::update_query(&app_handle, &key, &name, sql)
+    Ok(saved_queries::update_query(&app_handle, &key, &name, sql)?)
 }
 
 /// Rename a saved query.
@@ -275,7 +279,7 @@ async fn cmd_rename_query(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let key = get_conn_key(&db_state).await?;
-    saved_queries::rename_query(&app_handle, &key, &old_name, new_name)
+    Ok(saved_queries::rename_query(&app_handle, &key, &old_name, new_name)?)
 }
 
 /// Delete a saved query by name.
@@ -286,7 +290,7 @@ async fn cmd_delete_query(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let key = get_conn_key(&db_state).await?;
-    saved_queries::delete_query(&app_handle, &key, &name)
+    Ok(saved_queries::delete_query(&app_handle, &key, &name)?)
 }
 
 /// List all saved queries for the current connection.
@@ -296,7 +300,7 @@ async fn cmd_list_queries(
     app_handle: tauri::AppHandle,
 ) -> Result<Vec<saved_queries::SavedQuery>, String> {
     let key = get_conn_key(&db_state).await?;
-    saved_queries::list_queries(&app_handle, &key)
+    Ok(saved_queries::list_queries(&app_handle, &key)?)
 }
 
 /// Load a single saved query by name for the current connection.
@@ -307,7 +311,7 @@ async fn cmd_load_query(
     app_handle: tauri::AppHandle,
 ) -> Result<saved_queries::SavedQuery, String> {
     let key = get_conn_key(&db_state).await?;
-    saved_queries::load_query(&app_handle, &key, &name)
+    Ok(saved_queries::load_query(&app_handle, &key, &name)?)
 }
 
 // ── Settings ────────────────────────────────────────────────────────
@@ -315,7 +319,7 @@ async fn cmd_load_query(
 /// Load app settings from the data directory, returning defaults if not found.
 #[tauri::command]
 fn load_settings(app_handle: tauri::AppHandle) -> Result<settings::Settings, String> {
-    settings::load_settings(&app_handle)
+    Ok(settings::load_settings(&app_handle)?)
 }
 
 /// Save app settings to the data directory.
@@ -324,7 +328,7 @@ fn save_settings(
     settings: settings::Settings,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    settings::save_settings(&app_handle, &settings)
+    Ok(settings::save_settings(&app_handle, &settings)?)
 }
 
 // ── Claude AI chat ──────────────────────────────────────────────────
@@ -345,6 +349,7 @@ async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), S
     tokio::task::spawn_blocking(move || claude::run_streaming(&prompt, &app))
         .await
         .map_err(|e| format!("Task failed: {e}"))?
+        .map_err(String::from)
 }
 
 // ── Window & file commands ──────────────────────────────────────────
@@ -352,7 +357,7 @@ async fn chat_with_claude(prompt: String, app: tauri::AppHandle) -> Result<(), S
 /// Set the app dock/taskbar icon to the light or dark variant.
 #[tauri::command]
 fn set_app_icon(is_dark: bool, app_handle: tauri::AppHandle) -> Result<(), String> {
-    app_icon::set_icon(is_dark, &app_handle)
+    Ok(app_icon::set_icon(is_dark, &app_handle)?)
 }
 
 /// Open a new application window with the same content.

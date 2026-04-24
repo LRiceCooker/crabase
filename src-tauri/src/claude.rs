@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use std::io::BufRead;
 use tauri::Emitter;
 
@@ -22,7 +23,7 @@ pub fn is_installed() -> bool {
 
 /// Run claude CLI with --print mode and stream output line-by-line via Tauri events.
 /// Emits "chat-response" for each line and "chat-done" when finished.
-pub fn run_streaming(prompt: &str, app_handle: &tauri::AppHandle) -> Result<(), String> {
+pub fn run_streaming(prompt: &str, app_handle: &tauri::AppHandle) -> Result<(), AppError> {
     // Escape single quotes in the prompt for shell
     let escaped_prompt = prompt.replace('\'', "'\\''");
     let shell_cmd = format!(
@@ -37,7 +38,7 @@ pub fn run_streaming(prompt: &str, app_handle: &tauri::AppHandle) -> Result<(), 
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Failed to spawn claude: {e}"))?;
+        .map_err(|e| AppError::io("Failed to spawn claude", e))?;
 
     if let Some(stdout) = child.stdout.take() {
         let reader = std::io::BufReader::new(stdout);

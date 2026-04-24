@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -35,7 +36,7 @@ impl DbState {
         &self,
         table_name: &str,
         change_set: ChangeSet,
-    ) -> Result<String, String> {
+    ) -> Result<String, AppError> {
         let pool = self.pool().await?;
         let schema = self.schema().await;
 
@@ -46,7 +47,7 @@ impl DbState {
         let mut tx = pool
             .begin()
             .await
-            .map_err(|e| format!("Failed to begin transaction: {e}"))?;
+            .map_err(|e| AppError::db("Failed to begin transaction", e))?;
 
         let mut total_affected = 0u64;
 
@@ -64,7 +65,7 @@ impl DbState {
             let result = query
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| format!("Delete failed: {e}"))?;
+                .map_err(|e| AppError::db("Delete failed", e))?;
             total_affected += result.rows_affected();
         }
 
@@ -89,7 +90,7 @@ impl DbState {
             let result = query
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| format!("Update failed: {e}"))?;
+                .map_err(|e| AppError::db("Update failed", e))?;
             total_affected += result.rows_affected();
         }
 
@@ -119,13 +120,13 @@ impl DbState {
             let result = query
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| format!("Insert failed: {e}"))?;
+                .map_err(|e| AppError::db("Insert failed", e))?;
             total_affected += result.rows_affected();
         }
 
         tx.commit()
             .await
-            .map_err(|e| format!("Failed to commit transaction: {e}"))?;
+            .map_err(|e| AppError::db("Failed to commit transaction", e))?;
 
         Ok(format!("{total_affected} rows affected"))
     }
@@ -198,6 +199,6 @@ mod tests {
         };
         let result = state.save_changes("some_table", cs).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Not connected to any database");
+        assert!(matches!(result.unwrap_err(), AppError::NotConnected));
     }
 }

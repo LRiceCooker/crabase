@@ -1,8 +1,10 @@
+use crate::error::AppError;
+
 use super::DbState;
 
 impl DbState {
     /// Get a text representation of ALL schemas in the database for AI context.
-    pub async fn get_full_schema_text(&self) -> Result<String, String> {
+    pub async fn get_full_schema_text(&self) -> Result<String, AppError> {
         let pool = self.pool().await?;
 
         // Get all schemas with their tables and columns
@@ -32,7 +34,7 @@ impl DbState {
         )
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to get schema info: {e}"))?;
+        .map_err(|e| AppError::db("Failed to get schema info", e))?;
 
         // Build text representation
         let mut output = String::new();

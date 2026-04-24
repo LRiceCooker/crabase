@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
 use tokio::sync::RwLock;
@@ -36,12 +37,12 @@ impl DbState {
     }
 
     /// Get a clone of the connection pool, or error if not connected.
-    pub(crate) async fn pool(&self) -> Result<PgPool, String> {
+    pub(crate) async fn pool(&self) -> Result<PgPool, AppError> {
         self.pool
             .read()
             .await
             .clone()
-            .ok_or_else(|| "Not connected to any database".to_string())
+            .ok_or(AppError::NotConnected)
     }
 
     /// Get the current schema name.
@@ -54,18 +55,18 @@ impl DbState {
             .unwrap_or_else(|| "public".to_string())
     }
 
-    pub async fn connect(&self, info: ConnectionInfo) -> Result<(), String> {
+    pub async fn connect(&self, info: ConnectionInfo) -> Result<(), AppError> {
         let connection_string = build_connection_string(&info);
 
         let pool = PgPool::connect(&connection_string)
             .await
-            .map_err(|e| format!("Connection failed: {e}"))?;
+            .map_err(|e| AppError::db("Connection failed", e))?;
 
         // Verify the connection actually works
         sqlx::query("SELECT 1")
             .execute(&pool)
             .await
-            .map_err(|e| format!("Connection validation failed: {e}"))?;
+            .map_err(|e| AppError::db("Connection validation failed", e))?;
 
         *self.pool.write().await = Some(pool);
         *self.connection_info.write().await = Some(info);
@@ -74,27 +75,27 @@ impl DbState {
         Ok(())
     }
 
-    pub async fn disconnect(&self) -> Result<(), String> {
+    pub async fn disconnect(&self) -> Result<(), AppError> {
         *self.pool.write().await = None;
         *self.connection_info.write().await = None;
         *self.connection_string.write().await = None;
         Ok(())
     }
 
-    pub async fn get_connection_string(&self) -> Result<String, String> {
+    pub async fn get_connection_string(&self) -> Result<String, AppError> {
         self.connection_string
             .read()
             .await
             .clone()
-            .ok_or_else(|| "Not connected to any database".to_string())
+            .ok_or(AppError::NotConnected)
     }
 
-    pub async fn get_connection_info(&self) -> Result<ConnectionInfo, String> {
+    pub async fn get_connection_info(&self) -> Result<ConnectionInfo, AppError> {
         self.connection_info
             .read()
             .await
             .clone()
-            .ok_or_else(|| "Not connected to any database".to_string())
+            .ok_or(AppError::NotConnected)
     }
 }
 
@@ -110,9 +111,8 @@ pub fn build_connection_string(info: &ConnectionInfo) -> String {
     )
 }
 
-pub fn parse_connection_string(connection_string: &str) -> Result<ConnectionInfo, String> {
-    let url =
-        Url::parse(connection_string).map_err(|e| format!("Invalid connection string: {e}"))?;
+pub fn parse_connection_string(connection_string: &str) -> Result<ConnectionInfo, AppError> {
+    let url = Url::parse(connection_string)?;
 
     let sslmode = url
         .query_pairs()
@@ -131,17 +131,17 @@ pub fn parse_connection_string(connection_string: &str) -> Result<ConnectionInfo
     })
 }
 
-pub async fn list_schemas(connection_string: &str) -> Result<Vec<String>, String> {
+pub async fn list_schemas(connection_string: &str) -> Result<Vec<String>, AppError> {
     let pool = PgPool::connect(connection_string)
         .await
-        .map_err(|e| format!("Connection failed: {e}"))?;
+        .map_err(|e| AppError::db("Connection failed", e))?;
 
     let rows: Vec<(String,)> = sqlx::query_as(
         "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('pg_catalog', 'pg_toast', 'information_schema') ORDER BY schema_name",
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| format!("Failed to list schemas: {e}"))?;
+    .map_err(|e| AppError::db("Failed to list schemas", e))?;
 
     pool.close().await;
 
@@ -166,7 +166,7 @@ mod tests {
         let state = DbState::new();
         let result = state.get_connection_info().await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Not connected to any database");
+        assert!(matches!(result.unwrap_err(), AppError::NotConnected));
     }
 
     #[test]
@@ -238,7 +238,7 @@ mod tests {
     fn test_parse_connection_string_invalid() {
         let result = parse_connection_string("not-a-url");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Invalid connection string"));
+        assert!(matches!(result.unwrap_err(), AppError::UrlParse(_)));
     }
 
     #[test]
@@ -292,6 +292,6 @@ mod tests {
         };
         let result = state.connect(info).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Connection failed"));
+        assert!(matches!(result.unwrap_err(), AppError::Database { .. }));
     }
 }

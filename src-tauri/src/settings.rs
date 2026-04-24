@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -18,31 +19,31 @@ pub struct Settings {
     pub theme: Theme,
 }
 
-fn settings_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn settings_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, AppError> {
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
+        .map_err(|e| AppError::Internal(format!("Failed to resolve app data dir: {e}")))?;
     fs::create_dir_all(&data_dir)
-        .map_err(|e| format!("Failed to create app data dir: {e}"))?;
+        .map_err(|e| AppError::io("Failed to create app data dir", e))?;
     Ok(data_dir.join("settings.json"))
 }
 
-pub fn load_settings(app_handle: &tauri::AppHandle) -> Result<Settings, String> {
+pub fn load_settings(app_handle: &tauri::AppHandle) -> Result<Settings, AppError> {
     let path = settings_file(app_handle)?;
     if !path.exists() {
         return Ok(Settings::default());
     }
     let data = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read settings: {e}"))?;
-    serde_json::from_str(&data).map_err(|e| format!("Failed to parse settings: {e}"))
+        .map_err(|e| AppError::io("Failed to read settings", e))?;
+    serde_json::from_str(&data).map_err(|e| AppError::json("Failed to parse settings", e))
 }
 
-pub fn save_settings(app_handle: &tauri::AppHandle, settings: &Settings) -> Result<(), String> {
+pub fn save_settings(app_handle: &tauri::AppHandle, settings: &Settings) -> Result<(), AppError> {
     let path = settings_file(app_handle)?;
     let data = serde_json::to_string_pretty(settings)
-        .map_err(|e| format!("Failed to serialize settings: {e}"))?;
-    fs::write(&path, data).map_err(|e| format!("Failed to write settings: {e}"))
+        .map_err(|e| AppError::json("Failed to serialize settings", e))?;
+    fs::write(&path, data).map_err(|e| AppError::io("Failed to write settings", e))
 }
 
 #[cfg(test)]

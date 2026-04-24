@@ -7,6 +7,7 @@ mod schema;
 mod table_ops;
 mod types;
 
+pub use crate::error::AppError;
 pub use connection::*;
 pub use execute::*;
 pub use mutations::*;

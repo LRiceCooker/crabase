@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use sqlx::{Column, Row};
@@ -20,7 +21,7 @@ pub enum StatementResult {
 }
 
 impl DbState {
-    pub async fn execute_query(&self, sql: &str) -> Result<QueryResult, String> {
+    pub async fn execute_query(&self, sql: &str) -> Result<QueryResult, AppError> {
         let pool = self.pool().await?;
 
         // Use raw_sql (simple query protocol) — returns all values as text,
@@ -29,7 +30,7 @@ impl DbState {
         let mut columns: Vec<String> = Vec::new();
         let mut rows: Vec<Vec<serde_json::Value>> = Vec::new();
 
-        while let Some(either) = stream.try_next().await.map_err(|e| format!("{e}"))? {
+        while let Some(either) = stream.try_next().await.map_err(|e| AppError::db("Query failed", e))? {
             if let sqlx::Either::Right(row) = either {
                 if columns.is_empty() {
                     columns = (0..row.len())
@@ -49,7 +50,7 @@ impl DbState {
     /// Execute multiple SQL statements using the simple query protocol (raw_sql).
     /// Returns a Vec<StatementResult> — one entry per statement.
     /// The simple protocol returns all values as text, avoiding binary issues with enums/arrays.
-    pub async fn execute_query_multi(&self, sql: &str) -> Result<Vec<StatementResult>, String> {
+    pub async fn execute_query_multi(&self, sql: &str) -> Result<Vec<StatementResult>, AppError> {
         let pool = self.pool().await?;
 
         // raw_sql sends everything via the simple query protocol.
@@ -65,7 +66,7 @@ impl DbState {
         let statements: Vec<&str> = sql.split(';').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
         let mut stmt_idx = 0usize;
 
-        while let Some(either) = stream.try_next().await.map_err(|e| format!("{e}"))? {
+        while let Some(either) = stream.try_next().await.map_err(|e| AppError::db("Query failed", e))? {
             match either {
                 sqlx::Either::Right(row) => {
                     // Data row — accumulate into current result
@@ -147,6 +148,6 @@ mod tests {
         let state = DbState::new();
         let result = state.execute_query("SELECT 1").await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Not connected to any database");
+        assert!(matches!(result.unwrap_err(), AppError::NotConnected));
     }
 }

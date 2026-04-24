@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
 use std::collections::HashMap;
@@ -27,7 +28,7 @@ pub struct ColumnInfo {
 }
 
 impl DbState {
-    pub async fn list_tables(&self) -> Result<Vec<String>, String> {
+    pub async fn list_tables(&self) -> Result<Vec<String>, AppError> {
         let pool = self.pool().await?;
         let schema = self.schema().await;
 
@@ -37,12 +38,12 @@ impl DbState {
         .bind(&schema)
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to list tables: {e}"))?;
+        .map_err(|e| AppError::db("Failed to list tables", e))?;
 
         Ok(rows.into_iter().map(|(name,)| name).collect())
     }
 
-    pub async fn get_column_info(&self, table_name: &str) -> Result<Vec<ColumnInfo>, String> {
+    pub async fn get_column_info(&self, table_name: &str) -> Result<Vec<ColumnInfo>, AppError> {
         let pool = self.pool().await?;
         let schema = self.schema().await;
 
@@ -89,7 +90,7 @@ impl DbState {
         .bind(table_name)
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to get column info: {e}"))?;
+        .map_err(|e| AppError::db("Failed to get column info", e))?;
 
         let mut columns = Vec::new();
         for (name, data_type, is_nullable, constraint_type, max_len, precision, scale, col_default, udt_name, udt_schema) in rows {
@@ -156,7 +157,7 @@ impl DbState {
         pool: &PgPool,
         schema: &str,
         enum_name: &str,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<Vec<String>, AppError> {
         let rows: Vec<(String,)> = sqlx::query_as(
             r#"
             SELECT e.enumlabel
@@ -171,7 +172,7 @@ impl DbState {
         .bind(enum_name)
         .fetch_all(pool)
         .await
-        .map_err(|e| format!("Failed to fetch enum values: {e}"))?;
+        .map_err(|e| AppError::db("Failed to fetch enum values", e))?;
 
         Ok(rows.into_iter().map(|(label,)| label).collect())
     }
@@ -179,7 +180,7 @@ impl DbState {
     pub async fn get_columns_for_autocomplete(
         &self,
         table_names: &[String],
-    ) -> Result<HashMap<String, Vec<String>>, String> {
+    ) -> Result<HashMap<String, Vec<String>>, AppError> {
         let mut result = HashMap::new();
         for table_name in table_names {
             let columns = self.get_column_info(table_name).await?;
@@ -201,7 +202,7 @@ mod tests {
         let state = DbState::new();
         let result = state.list_tables().await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Not connected to any database");
+        assert!(matches!(result.unwrap_err(), AppError::NotConnected));
     }
 
     #[tokio::test]
@@ -209,6 +210,6 @@ mod tests {
         let state = DbState::new();
         let result = state.get_column_info("some_table").await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Not connected to any database");
+        assert!(matches!(result.unwrap_err(), AppError::NotConnected));
     }
 }

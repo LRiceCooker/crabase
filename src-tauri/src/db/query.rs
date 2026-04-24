@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 
@@ -34,7 +35,7 @@ impl DbState {
         table_name: &str,
         page: u32,
         page_size: u32,
-    ) -> Result<TableData, String> {
+    ) -> Result<TableData, AppError> {
         let columns = self.get_column_info(table_name).await?;
 
         let pool = self.pool().await?;
@@ -50,7 +51,7 @@ impl DbState {
         let count_row: (i64,) = sqlx::query_as(&count_query)
             .fetch_one(&pool)
             .await
-            .map_err(|e| format!("Failed to get row count: {e}"))?;
+            .map_err(|e| AppError::db("Failed to get row count", e))?;
         let total_count = count_row.0 as u64;
 
         // Get paginated rows with smart default ordering
@@ -65,7 +66,7 @@ impl DbState {
         let pg_rows = sqlx::query(&data_query)
             .fetch_all(&pool)
             .await
-            .map_err(|e| format!("Failed to get table data: {e}"))?;
+            .map_err(|e| AppError::db("Failed to get table data", e))?;
 
         let rows: Vec<Vec<serde_json::Value>> = pg_rows
             .iter()
@@ -90,7 +91,7 @@ impl DbState {
         page_size: u32,
         filters: Vec<Filter>,
         sort: Vec<SortCol>,
-    ) -> Result<TableData, String> {
+    ) -> Result<TableData, AppError> {
         let columns = self.get_column_info(table_name).await?;
 
         let pool = self.pool().await?;
@@ -118,7 +119,7 @@ impl DbState {
         let count_row: (i64,) = sqlx::query_as(&count_query)
             .fetch_one(&pool)
             .await
-            .map_err(|e| format!("Failed to get row count: {e}"))?;
+            .map_err(|e| AppError::db("Failed to get row count", e))?;
         let total_count = count_row.0 as u64;
 
         // Get paginated filtered rows
@@ -132,7 +133,7 @@ impl DbState {
         let pg_rows = sqlx::query(&data_query)
             .fetch_all(&pool)
             .await
-            .map_err(|e| format!("Failed to get table data: {e}"))?;
+            .map_err(|e| AppError::db("Failed to get table data", e))?;
 
         let rows: Vec<Vec<serde_json::Value>> = pg_rows
             .iter()
@@ -278,6 +279,6 @@ mod tests {
         let state = DbState::new();
         let result = state.get_table_data("some_table", 1, 25).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Not connected to any database");
+        assert!(matches!(result.unwrap_err(), AppError::NotConnected));
     }
 }

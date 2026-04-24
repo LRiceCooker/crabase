@@ -1,4 +1,5 @@
 use crate::db::ConnectionInfo;
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -10,44 +11,44 @@ pub struct SavedConnection {
     pub info: ConnectionInfo,
 }
 
-fn connections_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn connections_file(app_handle: &tauri::AppHandle) -> Result<PathBuf, AppError> {
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
+        .map_err(|e| AppError::Internal(format!("Failed to resolve app data dir: {e}")))?;
     fs::create_dir_all(&data_dir)
-        .map_err(|e| format!("Failed to create app data dir: {e}"))?;
+        .map_err(|e| AppError::io("Failed to create app data dir", e))?;
     Ok(data_dir.join("saved_connections.json"))
 }
 
-fn read_connections(app_handle: &tauri::AppHandle) -> Result<Vec<SavedConnection>, String> {
+fn read_connections(app_handle: &tauri::AppHandle) -> Result<Vec<SavedConnection>, AppError> {
     let path = connections_file(app_handle)?;
     if !path.exists() {
         return Ok(Vec::new());
     }
     let data = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read saved connections: {e}"))?;
+        .map_err(|e| AppError::io("Failed to read saved connections", e))?;
     serde_json::from_str(&data)
-        .map_err(|e| format!("Failed to parse saved connections: {e}"))
+        .map_err(|e| AppError::json("Failed to parse saved connections", e))
 }
 
 fn write_connections(
     app_handle: &tauri::AppHandle,
     connections: &[SavedConnection],
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let path = connections_file(app_handle)?;
     let data = serde_json::to_string_pretty(connections)
-        .map_err(|e| format!("Failed to serialize connections: {e}"))?;
-    fs::write(&path, data).map_err(|e| format!("Failed to write saved connections: {e}"))
+        .map_err(|e| AppError::json("Failed to serialize connections", e))?;
+    fs::write(&path, data).map_err(|e| AppError::io("Failed to write saved connections", e))
 }
 
 pub fn save_connection(
     app_handle: &tauri::AppHandle,
     name: String,
     info: ConnectionInfo,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     if name.trim().is_empty() {
-        return Err("Connection name cannot be empty".to_string());
+        return Err(AppError::Validation("Connection name cannot be empty".into()));
     }
     let mut connections = read_connections(app_handle)?;
     // Replace existing connection with same name
@@ -58,19 +59,19 @@ pub fn save_connection(
 
 pub fn list_saved_connections(
     app_handle: &tauri::AppHandle,
-) -> Result<Vec<SavedConnection>, String> {
+) -> Result<Vec<SavedConnection>, AppError> {
     read_connections(app_handle)
 }
 
 pub fn delete_saved_connection(
     app_handle: &tauri::AppHandle,
     name: &str,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let mut connections = read_connections(app_handle)?;
     let original_len = connections.len();
     connections.retain(|c| c.name != name);
     if connections.len() == original_len {
-        return Err(format!("Connection '{name}' not found"));
+        return Err(AppError::Validation(format!("Connection '{name}' not found")));
     }
     write_connections(app_handle, &connections)
 }

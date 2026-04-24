@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use flate2::read::GzDecoder;
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
@@ -7,23 +8,23 @@ use tauri::Emitter;
 use tempfile::TempDir;
 
 /// Extracts a .tar.gz file to a temp directory and returns the path to the .pgsql file found inside.
-pub fn extract_pgsql(tar_gz_path: &str) -> Result<(TempDir, PathBuf), String> {
+pub fn extract_pgsql(tar_gz_path: &str) -> Result<(TempDir, PathBuf), AppError> {
     let path = Path::new(tar_gz_path);
     if !path.exists() {
-        return Err(format!("File not found: {tar_gz_path}"));
+        return Err(AppError::Validation(format!("File not found: {tar_gz_path}")));
     }
 
     let file =
-        std::fs::File::open(path).map_err(|e| format!("Failed to open file: {e}"))?;
+        std::fs::File::open(path).map_err(|e| AppError::io("Failed to open file", e))?;
     let decoder = GzDecoder::new(file);
     let mut archive = Archive::new(decoder);
 
     let tmp_dir =
-        TempDir::new().map_err(|e| format!("Failed to create temp directory: {e}"))?;
+        TempDir::new().map_err(|e| AppError::io("Failed to create temp directory", e))?;
 
     archive
         .unpack(tmp_dir.path())
-        .map_err(|e| format!("Failed to extract tar.gz: {e}"))?;
+        .map_err(|e| AppError::io("Failed to extract tar.gz", e))?;
 
     // Find the .pgsql file at the root of the archive
     let pgsql_file = find_pgsql_file(tmp_dir.path())?;
@@ -32,12 +33,12 @@ pub fn extract_pgsql(tar_gz_path: &str) -> Result<(TempDir, PathBuf), String> {
 }
 
 /// Finds a .pgsql file in the given directory (non-recursive, root level only).
-fn find_pgsql_file(dir: &Path) -> Result<PathBuf, String> {
+fn find_pgsql_file(dir: &Path) -> Result<PathBuf, AppError> {
     let entries =
-        std::fs::read_dir(dir).map_err(|e| format!("Failed to read temp directory: {e}"))?;
+        std::fs::read_dir(dir).map_err(|e| AppError::io("Failed to read temp directory", e))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
+        let entry = entry.map_err(|e| AppError::io("Failed to read directory entry", e))?;
         let path = entry.path();
         if path.is_file() {
             if let Some(ext) = path.extension() {
@@ -48,7 +49,7 @@ fn find_pgsql_file(dir: &Path) -> Result<PathBuf, String> {
         }
     }
 
-    Err("No .pgsql file found in the tar.gz archive".to_string())
+    Err(AppError::Validation("No .pgsql file found in the tar.gz archive".into()))
 }
 
 /// Runs pg_restore with real-time log streaming via Tauri events.
@@ -56,7 +57,7 @@ pub fn run_pg_restore_streaming(
     pgsql_path: &Path,
     connection_string: &str,
     app_handle: &tauri::AppHandle,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let mut child = Command::new("pg_restore")
         .arg("--no-owner")
         .arg("--no-privileges")
@@ -70,9 +71,9 @@ pub fn run_pg_restore_streaming(
         .spawn()
         .map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                "pg_restore not found. Please install PostgreSQL client tools.".to_string()
+                AppError::Validation("pg_restore not found. Please install PostgreSQL client tools.".into())
             } else {
-                format!("Failed to run pg_restore: {e}")
+                AppError::io("Failed to run pg_restore", e)
             }
         })?;
 
@@ -80,7 +81,7 @@ pub fn run_pg_restore_streaming(
     let stderr = child
         .stderr
         .take()
-        .ok_or_else(|| "Failed to capture pg_restore stderr".to_string())?;
+        .ok_or_else(|| AppError::Internal("Failed to capture pg_restore stderr".into()))?;
     let app_clone = app_handle.clone();
     let stderr_thread = std::thread::spawn(move || {
         let reader = std::io::BufReader::new(stderr);
@@ -97,7 +98,7 @@ pub fn run_pg_restore_streaming(
     let stdout = child
         .stdout
         .take()
-        .ok_or_else(|| "Failed to capture pg_restore stdout".to_string())?;
+        .ok_or_else(|| AppError::Internal("Failed to capture pg_restore stdout".into()))?;
     let reader = std::io::BufReader::new(stdout);
     let stdout_lines: Vec<String> = reader
         .lines()
@@ -110,7 +111,7 @@ pub fn run_pg_restore_streaming(
     let stderr_lines: Vec<String> = stderr_thread.join().unwrap_or_default();
     let status = child
         .wait()
-        .map_err(|e| format!("Failed to wait for pg_restore: {e}"))?;
+        .map_err(|e| AppError::io("Failed to wait for pg_restore", e))?;
 
     let exit_code = status.code().unwrap_or(-1);
     let has_warnings = stderr_lines.iter().any(|l| l.contains("warning:") || l.contains("errors ignored"));
@@ -125,7 +126,7 @@ pub fn run_pg_restore_streaming(
     } else {
         let stderr_text = stderr_lines.join("\n");
         let stdout_text = stdout_lines.join("\n");
-        Err(format!(
+        Err(AppError::Internal(format!(
             "pg_restore failed (exit code: {}):\n{}{}",
             exit_code,
             stderr_text,
@@ -134,7 +135,7 @@ pub fn run_pg_restore_streaming(
             } else {
                 String::new()
             }
-        ))
+        )))
     }
 }
 
@@ -143,7 +144,7 @@ pub fn restore_backup_streaming(
     file_path: &str,
     connection_string: &str,
     app_handle: &tauri::AppHandle,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let _ = app_handle.emit("restore-log", "Extracting backup archive...");
     let (_tmp_dir, pgsql_path) = extract_pgsql(file_path)?;
     let _ = app_handle.emit(
@@ -170,7 +171,7 @@ mod tests {
     fn test_extract_pgsql_file_not_found() {
         let result = extract_pgsql("/nonexistent/file.tar.gz");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("File not found"));
+        assert!(result.unwrap_err().to_string().contains("File not found"));
     }
 
     #[test]
@@ -179,7 +180,7 @@ mod tests {
         tmp.write_all(b"not a tar.gz file").unwrap();
         let result = extract_pgsql(tmp.path().to_str().unwrap());
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Failed to extract tar.gz"));
+        assert!(result.unwrap_err().to_string().contains("Failed to extract tar.gz"));
     }
 
     #[test]
@@ -241,7 +242,7 @@ mod tests {
 
         let result = extract_pgsql(tar_gz_path.to_str().unwrap());
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("No .pgsql file found"));
+        assert!(result.unwrap_err().to_string().contains("No .pgsql file found"));
     }
 
     #[test]
@@ -249,7 +250,7 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
         let result = find_pgsql_file(tmp_dir.path());
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("No .pgsql file found"));
+        assert!(result.unwrap_err().to_string().contains("No .pgsql file found"));
     }
 
     #[test]
@@ -258,6 +259,6 @@ mod tests {
         // but we can at least verify extract_pgsql catches missing files
         let result = extract_pgsql("/nonexistent/backup.tar.gz");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("File not found"));
+        assert!(result.unwrap_err().to_string().contains("File not found"));
     }
 }
