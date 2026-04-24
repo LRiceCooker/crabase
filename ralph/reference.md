@@ -9,6 +9,122 @@ This file is built incrementally during refactoring. Every entry MUST include:
 
 ---
 
+## Rust Idioms
+
+### Inline format args
+Use captured identifiers directly in format strings instead of passing them as separate arguments. More concise and readable.
+
+```rust
+// Before (avoid)
+let msg = format!("Error: {}", e);
+
+// After (idiomatic)
+let msg = format!("Error: {e}");
+```
+
+Source: https://doc.rust-lang.org/std/fmt/index.html (captured identifiers section)
+
+### `if let` vs `match`
+Use `if let` when you only care about one specific pattern and want to ignore all other cases. Eliminates boilerplate `_ => ()` arms. Use `match` when you need exhaustive checking or handle multiple variants.
+
+```rust
+// Before (avoid) - verbose match for a single pattern
+match config_max {
+    Some(max) => println!("Max is {max}"),
+    _ => (),
+}
+
+// After (idiomatic)
+if let Some(max) = config_max {
+    println!("Max is {max}");
+}
+```
+
+Source: https://doc.rust-lang.org/book/ch06-03-if-let.html
+
+### Iterator `.collect()` for HashMap
+Build HashMaps from iterators by collecting tuples `(K, V)`. Use `.zip()` to combine key/value iterators, then `.collect()`.
+
+```rust
+use std::collections::HashMap;
+
+// Before (avoid) - manual loop with insert
+let mut scores = HashMap::new();
+for i in 0..keys.len() {
+    scores.insert(keys[i], values[i]);
+}
+
+// After (idiomatic)
+let scores: HashMap<_, _> = keys.into_iter().zip(values).collect();
+```
+
+Source: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect
+
+### `&str` vs `String` in function params (C-CALLER-CONTROL)
+If a function does not require ownership, take `&str` instead of `String` so callers don't need to give up ownership or allocate unnecessarily.
+
+```rust
+// Before (avoid) - takes ownership unnecessarily
+fn greet(name: String) {
+    println!("Hello, {name}!");
+}
+
+// After (idiomatic) - borrows, caller keeps control
+fn greet(name: &str) {
+    println!("Hello, {name}!");
+}
+```
+
+Source: https://rust-lang.github.io/api-guidelines/flexibility.html (C-CALLER-CONTROL)
+
+### Iterator chains vs manual loops
+Use iterator adapters (`.iter()`, `.map()`, `.filter()`, `.collect()`) instead of manual `for` loops with `push`. More declarative and composable.
+
+```rust
+// Before (avoid)
+let mut v2 = Vec::new();
+for x in &v1 {
+    v2.push(x + 1);
+}
+
+// After (idiomatic)
+let v2: Vec<_> = v1.iter().map(|x| x + 1).collect();
+```
+
+Source: https://doc.rust-lang.org/book/ch13-02-iterators.html
+
+### `thiserror` for custom error types
+Use `thiserror`'s derive macro for `std::error::Error` with minimal boilerplate. `#[error("...")]` for Display, `#[from]` for automatic `From` conversions (enabling `?`), `#[source]` for error chaining.
+
+```rust
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum DataStoreError {
+    #[error("data store disconnected")]
+    Disconnect(#[from] io::Error),
+    #[error("invalid header (expected {expected:?}, found {found:?})")]
+    InvalidHeader { expected: String, found: String },
+}
+```
+
+Source: https://docs.rs/thiserror/latest/thiserror/
+
+### `#[must_use]` attribute
+Annotate functions and types with `#[must_use]` when discarding the return value is almost certainly a bug. The compiler emits a warning if the value is unused.
+
+```rust
+#[must_use = "this returns the new value and does not modify the original"]
+fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+add(1, 2);          // WARNING: unused return value
+let _ = add(1, 2);  // OK: intentionally discarded
+```
+
+Source: https://doc.rust-lang.org/reference/attributes/diagnostics.html#the-must_use-attribute
+
 ## Rust Module Organization
 
 ### File-to-module mapping (modern convention)

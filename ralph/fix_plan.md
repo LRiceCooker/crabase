@@ -3,9 +3,6 @@
 ## In Progress
 
 ## Backlog
-
-### Phase 42 — Clean Code Pass: Rust Idioms
-- [ ] Search the Rust Reference and Clippy lint docs for each idiom below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
 - [ ] Replace all `format!("...: {}", e)` with `format!("...: {e}")`
 - [ ] Replace `match` with `if let` / `map` / `unwrap_or` where cleaner
 - [ ] Replace manual `HashMap` building with `.collect()` from iterators
@@ -43,6 +40,9 @@
 
 ## Completed
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
+
+### Phase 42 (partial)
+- [x] Search the Rust Reference and Clippy lint docs for each idiom below. Add each one to `ralph/reference.md` with a code example and source URL before applying.
 
 ### Phase 41
 - [x] Split `tauri.rs` (773 lines) into: `tauri/connection.rs`, `tauri/tables.rs`, `tauri/queries.rs`, `tauri/settings.rs`, `tauri/files.rs`, `tauri/chat.rs`
