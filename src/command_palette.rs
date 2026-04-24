@@ -48,6 +48,7 @@ pub fn fuzzy_score(pattern: &str, text: &str) -> Option<i32> {
     }
 }
 
+/// Overlay command palette (Cmd+Shift+P). Fuzzy-matches commands and dispatches the selected one.
 #[component]
 pub fn CommandPalette(
     on_command: Callback<String>,

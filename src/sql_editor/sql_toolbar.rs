@@ -2,6 +2,7 @@ use leptos::prelude::*;
 
 use crate::icons::{IconPlay, IconSave};
 
+/// Toolbar for the SQL editor with Run and Save buttons.
 #[component]
 pub fn SqlToolbar(
     on_run: Callback<()>,

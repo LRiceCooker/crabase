@@ -3,6 +3,7 @@ use leptos::prelude::*;
 
 use crate::theme::{use_theme, ThemePreference};
 
+/// Theme preference selector with Light/Dark/System options.
 #[component]
 pub fn ThemeSetting() -> impl IntoView {
     let theme_ctx = use_theme();
@@ -32,6 +33,7 @@ pub fn ThemeSetting() -> impl IntoView {
     }
 }
 
+/// A single selectable theme option button (Light, Dark, or System).
 #[component]
 fn ThemeButton(
     label: &'static str,

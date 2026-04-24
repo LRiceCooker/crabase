@@ -2,6 +2,7 @@ use leptos::prelude::*;
 
 use crate::table_view::change_tracker::ChangeTracker;
 
+/// Status bar showing pending change count with Save and Discard buttons.
 #[component]
 pub fn DirtyBar(
     changes: ChangeTracker,

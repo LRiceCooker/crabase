@@ -11,6 +11,7 @@ pub struct JsonEditRequest {
     pub value: serde_json::Value,
 }
 
+/// Modal editor for JSON/JSONB columns with CodeMirror syntax highlighting.
 #[component]
 pub fn JsonEditorModal(
     request: JsonEditRequest,

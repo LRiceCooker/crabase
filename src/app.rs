@@ -9,6 +9,8 @@ use crate::shortcuts;
 use crate::tauri::{self, build_connection_string_js, ConnectionInfo, SavedConnection};
 use crate::theme;
 
+/// Root application component. Manages connection state and renders either
+/// the connection screen or the main layout.
 #[component]
 pub fn App() -> impl IntoView {
     // Initialize theme system (provides ThemeCtx via Leptos context)

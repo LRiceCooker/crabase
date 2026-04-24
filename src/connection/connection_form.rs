@@ -3,6 +3,7 @@ use wasm_bindgen::JsCast;
 
 use crate::icons::{IconArrowLeft, IconDatabase, IconAlertTriangle, IconLoader};
 
+/// Two-step connection form: paste a connection string, then review/edit parsed fields.
 #[component]
 pub fn ConnectionForm(
     form_host: RwSignal<String>,

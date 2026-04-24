@@ -138,6 +138,7 @@ impl TabState {
 
 // ── TabBar component ────────────────────────────────────
 
+/// Horizontal tab strip with draggable tabs, close buttons, and dirty indicators.
 #[component]
 pub fn TabBar(
     state: TabState,

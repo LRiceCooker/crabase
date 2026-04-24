@@ -4,6 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::icons::IconTrash2;
 use crate::tauri::{self, SavedConnection};
 
+/// Sidebar list of previously saved database connections with click-to-select and delete.
 #[component]
 pub fn SavedConnections(
     on_select: Callback<SavedConnection>,

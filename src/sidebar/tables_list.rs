@@ -5,6 +5,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::icons::IconTable;
 use crate::tauri;
 
+/// Sidebar list of database tables with search filter and right-click context menu.
 #[component]
 pub fn TablesList(
     tables: ReadSignal<Vec<String>>,

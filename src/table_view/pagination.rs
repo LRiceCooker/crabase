@@ -2,6 +2,7 @@ use leptos::prelude::*;
 
 use crate::icons::{IconChevronLeft, IconChevronRight};
 
+/// Page navigation bar showing current page, total count, and prev/next buttons.
 #[component]
 pub fn Pagination(
     page: ReadSignal<u32>,

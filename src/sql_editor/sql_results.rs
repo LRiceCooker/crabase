@@ -5,6 +5,7 @@ use crate::sql_editor::codemirror::CodeMirrorEditor;
 use crate::table_view::data_table::unwrap_tagged;
 use crate::tauri::StatementResult;
 
+/// Results pane for the SQL editor. Renders query result tables, affected-row counts, and errors.
 #[component]
 pub fn SqlResults(
     result: ReadSignal<Option<Result<Vec<StatementResult>, String>>>,

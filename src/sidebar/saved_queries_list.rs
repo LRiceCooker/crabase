@@ -5,6 +5,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::icons::IconTerminal;
 use crate::tauri;
 
+/// Sidebar section listing saved SQL queries with right-click context menu for rename/delete.
 #[component]
 pub fn SavedQueriesList(
     queries: ReadSignal<Vec<String>>,

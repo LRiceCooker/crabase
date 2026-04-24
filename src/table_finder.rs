@@ -17,6 +17,7 @@ struct FinderItem {
     kind: FinderItemKind,
 }
 
+/// Quick table/query finder overlay (Cmd+P). Fuzzy-matches table names and saved queries.
 #[component]
 pub fn TableFinder(
     tables: ReadSignal<Vec<String>>,

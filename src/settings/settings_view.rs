@@ -5,6 +5,7 @@ use crate::overlay;
 use super::shortcuts_settings::ShortcutsSetting;
 use super::theme_setting::ThemeSetting;
 
+/// Settings overlay panel with theme and keyboard shortcut configuration.
 #[component]
 pub fn SettingsView() -> impl IntoView {
     let overlay_ctx = overlay::use_overlay();

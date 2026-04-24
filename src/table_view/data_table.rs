@@ -110,6 +110,7 @@ fn modal_type(col: &ColumnInfo) -> Option<&'static str> {
     }
 }
 
+/// Virtualized data table grid with inline cell editing, row selection, column sorting, and find highlighting.
 #[component]
 pub fn DataTable(
     columns: Vec<ColumnInfo>,

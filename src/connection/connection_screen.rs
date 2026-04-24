@@ -4,6 +4,7 @@ use crate::connection::saved_connections::SavedConnections;
 use crate::icons::{IconDatabase, IconAlertTriangle, IconLoader};
 use crate::tauri::SavedConnection;
 
+/// Full-screen connection view with the connection form and saved connections sidebar.
 #[component]
 pub fn ConnectionScreen(
     connection_string: ReadSignal<String>,
