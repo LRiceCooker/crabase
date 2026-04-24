@@ -4,9 +4,6 @@
 
 ## Backlog
 
-### Phase 43 — Clean Code Pass: Leptos Best Practices
-- [ ] Verify: `cargo check`, `just test-e2e`
-
 ### Phase 44 — Clean Code Pass: Error Handling & Logging
 - [ ] Search official `thiserror` docs and `tracing` docs for correct usage patterns. Add to `ralph/reference.md` with source URLs.
 - [ ] Backend: replace all `String` error returns with a proper `AppError` enum using `thiserror`
@@ -26,6 +23,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Verify: `cargo check`, `just test-e2e` — zero warnings, 40/40 E2E pass (Phase 43 verification)
 - [x] Ensure every component follows SRP — extracted cell_format.rs from data_table.rs (401→310 lines), all others under 300
 - [x] Add `///` doc comments to every component — 18 UI components documented (icons excluded, self-documenting)
 - [x] Replace `.get()` with `.with(|v| ...)` where you only need a reference — converted 15 calls on Vec/HashSet/HashMap signals
