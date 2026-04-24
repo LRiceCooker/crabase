@@ -231,7 +231,7 @@ fn list_saved_connections(
 /// Delete a saved connection by name.
 #[tauri::command]
 fn delete_saved_connection(name: String, app_handle: tauri::AppHandle) -> Result<(), String> {
-    saved_connections::delete_saved_connection(&app_handle, name)
+    saved_connections::delete_saved_connection(&app_handle, &name)
 }
 
 // ── Saved queries ───────────────────────────────────────────────────

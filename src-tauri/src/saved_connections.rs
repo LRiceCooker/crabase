@@ -64,7 +64,7 @@ pub fn list_saved_connections(
 
 pub fn delete_saved_connection(
     app_handle: &tauri::AppHandle,
-    name: String,
+    name: &str,
 ) -> Result<(), String> {
     let mut connections = read_connections(app_handle)?;
     let original_len = connections.len();
