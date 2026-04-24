@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 use crate::icons::IconX;
 use crate::sql_editor::codemirror::CodeMirrorEditor;
-use crate::table_view::data_table::unwrap_tagged;
+use crate::table_view::cell_format::unwrap_tagged;
 use crate::tauri::StatementResult;
 
 /// Results pane for the SQL editor. Renders query result tables, affected-row counts, and errors.

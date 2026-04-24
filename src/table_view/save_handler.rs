@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::table_view::change_tracker::ChangeTracker;
-use crate::table_view::data_table::unwrap_tagged_owned;
+use crate::table_view::cell_format::unwrap_tagged_owned;
 use crate::tauri;
 
 /// Build a `ChangeSet` from the current tracked changes and persist it via the backend.

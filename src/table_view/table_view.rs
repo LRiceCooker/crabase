@@ -51,7 +51,7 @@ pub fn TableView(table_name: Memo<Option<String>>) -> impl IntoView {
             .and_then(|r| r.get(edit.col))
             .cloned()
             .unwrap_or(serde_json::Value::Null);
-        if crate::table_view::data_table::unwrap_tagged_owned(&original) == edit.value {
+        if crate::table_view::cell_format::unwrap_tagged_owned(&original) == edit.value {
             return;
         }
         changes.track_cell_edit(edit.row, edit.col, original, &edit.value);

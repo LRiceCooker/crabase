@@ -5,7 +5,6 @@
 ## Backlog
 
 ### Phase 43 — Clean Code Pass: Leptos Best Practices
-- [ ] Ensure every component follows SRP — one responsibility, under 150 lines ideally
 - [ ] Verify: `cargo check`, `just test-e2e`
 
 ### Phase 44 — Clean Code Pass: Error Handling & Logging
@@ -27,6 +26,7 @@
 (All prior phases 29-36 completed — tests, audit, E2E fixes)
 
 ### Phase 42 (continued)
+- [x] Ensure every component follows SRP — extracted cell_format.rs from data_table.rs (401→310 lines), all others under 300
 - [x] Add `///` doc comments to every component — 18 UI components documented (icons excluded, self-documenting)
 - [x] Replace `.get()` with `.with(|v| ...)` where you only need a reference — converted 15 calls on Vec/HashSet/HashMap signals
 - [x] Use `For` component instead of `.into_iter().map().collect()` for reactive lists — all lists are small/static, per Leptos docs .collect() is fine

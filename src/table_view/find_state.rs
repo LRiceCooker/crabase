@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use crate::table_view::data_table::unwrap_tagged;
+use crate::table_view::cell_format::unwrap_tagged;
 use crate::tauri;
 
 /// Reactive state for the find overlay (Cmd+F search within the table).

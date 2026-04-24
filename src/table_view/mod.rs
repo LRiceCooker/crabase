@@ -1,5 +1,6 @@
 pub mod cell_editor;
 pub mod cell_editors;
+pub mod cell_format;
 pub mod change_tracker;
 pub mod context_menu;
 pub mod data_fetcher;

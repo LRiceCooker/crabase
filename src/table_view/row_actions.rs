@@ -4,7 +4,7 @@ use leptos::prelude::*;
 
 use crate::table_view::change_tracker::ChangeTracker;
 use crate::table_view::context_menu::ContextMenuItem;
-use crate::table_view::data_table::unwrap_tagged_owned;
+use crate::table_view::cell_format::unwrap_tagged_owned;
 use crate::tauri;
 
 /// Builds context menu items for row actions: delete, duplicate, copy as JSON, copy as SQL.
